@@ -214,11 +214,27 @@ response before native dispatch, while the existing0.167 legacy behavior remains
 All five required DOM lanes passed. Debug and release unit suites each had477
 cases, with two pre-existing skips reported rather than hidden.
 
-A source review identified the next concrete hypothesis: a remote-only stream
-reconnect refreshes the catalog, but an unchanged catalog may leave conversation
-and attention stale until the ten-second fallback. It has not yet been reproduced.
-The integration owner is qualifying automatic recovery through two disposable
-backends and the real gateway/browser, retaining same-ID source isolation and
-proving there are no new work submissions. A separate UI owner is correcting
-observed footer wrapping and menu action placement. These follow-ups are active;
-174 publication is not a claim of complete TUI parity.
+The remote-only stream hypothesis was reproduced: an unchanged catalog left
+conversation and attention stale until the ten-second fallback. A separate503
+status-probe response also stopped retry scheduling. Both are fixed in the live
+web175 gateways: source-specific recovery refreshes history and attention, and
+transient status failures retain bounded reconnect backoff. Actual full-app /
+gateway / two-backend journeys passed normal recovery, one503 recovery, and a
+returned401 refusal control without work submissions. This uses synthetic native
+transport, not a physical Mac-provider outage.
+Android175 has passed the unchanged15-case batch and exact optimized ordering,
+reopen, question and read-only-terminal journeys. Default footer controls now fit
+one row; large-font wrapping preserves the numeric credit balance. The four
+priority session controls appear before verbose account details. Original failed
+IME/menu preconditions remain retained: actual System UI ANR pixels and window
+state dated the obstruction before both attempts; one explicit Wait action
+cleared it, with no assertion or product-code change before the successful run.
+A subsequent runner preflight retains the current hierarchy and refuses existing
+Android error dialogs before test setup. It neither dismisses them nor reclassifies
+a product failure during a test. The actual read-only capture was separately
+verified after the successful batch; the CLI admission test does not constitute
+physical-phone proof.
+
+Monitoring remains active. The next bounded integration audit checks configuration
+changes and conflict refusal through the full web application, without changing
+real native settings or starting model work. Publication is not complete TUI parity.

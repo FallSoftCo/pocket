@@ -1,10 +1,12 @@
-import {spawnSync} from 'node:child_process';
+import {spawn,spawnSync} from 'node:child_process';
+import {once} from 'node:events';
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,symlinkSync} from 'node:fs';
+import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,symlinkSync,chmodSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {sha256,nativeOutputPassed,validateReleaseQualification} from '../scripts/release-qualification.mjs';
+import {sha256,nativeOutputPassed,validateReleaseQualification,productionSourceSha,qualificationInputSha} from '../scripts/release-qualification.mjs';
 import {publishQualifiedUpdate} from '../scripts/publish-qualified-update.mjs';
 const digest=v=>sha256(Buffer.from(JSON.stringify(v)));
 function fixture(){
@@ -142,4 +144,54 @@ test('scoped status publication still rejects missing exact-APK room-list observ
   assert.throws(()=>validateReleaseQualification({...f,optimizedReview:review}),/review did not pass/);
   review.observations.nativeRoomListStatusDrawn=true;assert.equal(validateReleaseQualification({...f,optimizedReview:review}).nativeCases,1);
  }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+// Execute the actual admission CLI against an inert process owner and fake adb.
+// The command transcript proves rejection happens before even force-stop, not
+// merely that a helper recognizes text. No emulator or Android SDK is used.
+test('native admission retains existing Android error dialogs and prevents fixture/test setup',async()=>{
+ const root=fileURLToPath(new URL('..',import.meta.url)),avdName='nextcomp_admission_qa',serial='emulator-5688';
+ const processOwner=spawn(process.execPath,['-e','process.stdin.resume()',avdName,serial.slice(9)],{stdio:['pipe','ignore','ignore']});
+ await once(processOwner,'spawn');
+ const directory=mkdtempSync(join(tmpdir(),'nextcomp-native-admission-'));
+ try{
+  const emulatorStartTicks=readFileSync('/proc/'+processOwner.pid+'/stat','utf8').split(') ').at(-1).split(' ')[19];
+  const build={state:'complete',productionSourceSha:productionSourceSha(root),qualificationInputSha:qualificationInputSha(root),qualificationApkSha:'a'.repeat(64),testApkSha:'b'.repeat(64)};
+  // Resource IDs from the retained 175 System UI overlay; unrelated launcher
+  // content remains a positive control, including the phrase in ordinary text.
+  const samples=[
+   {name:'system-anr',xml:'<hierarchy><node package="android" resource-id="android:id/alertTitle" text="System UI isn’t responding"/><node package="android" resource-id="android:id/aerr_close"/><node package="android" resource-id="android:id/aerr_wait"/></hierarchy>',state:'blocked'},
+   {name:'app-crash',xml:'<hierarchy><node package="android" resource-id="android:id/aerr_restart" text="Open app again"/></hierarchy>',state:'blocked'},
+   {name:'unreadable',xml:'ERROR: could not get idle state.',state:'failed'},
+   {name:'clear',xml:'<hierarchy><node package="com.google.android.apps.nexuslauncher" text="System UI isn’t responding — retained note"/></hierarchy>',state:'complete'}
+  ];
+  for(const sample of samples){
+   const stage=join(directory,sample.name),sdk=join(stage,'sdk'),calls=join(stage,'calls.jsonl'),ownerPath=join(stage,'owner.json');
+   mkdirSync(join(sdk,'platform-tools'),{recursive:true});
+   const caseName='Synthetic#one',id=sha256(Buffer.from(caseName)).slice(0,20);
+   for(const [file,value]of Object.entries({'build.json':build,'policy.json':{requiredNativeCases:[caseName]},'manifest.json':{versionCode:175},'owner.json':{owner:'admission-test',serial,avdName,emulatorPid:processOwner.pid,emulatorStartTicks}}))writeFileSync(join(stage,file),JSON.stringify(value));
+   const adb=join(sdk,'platform-tools','adb');
+   writeFileSync(adb,`#!/usr/bin/env node
+const {appendFileSync}=require('node:fs');const args=process.argv.slice(4);
+appendFileSync(${JSON.stringify(calls)},JSON.stringify(args)+'\\n');
+if(JSON.stringify(args)===JSON.stringify(['shell','getprop','ro.boot.qemu.avd_name'])){process.stdout.write(${JSON.stringify(avdName)});}
+else if(JSON.stringify(args)===JSON.stringify(['exec-out','uiautomator','dump','/proc/self/fd/1'])){process.stdout.write(${JSON.stringify(sample.xml)});}
+else{process.stderr.write('ADMISSION_EFFECT_REACHED');process.exitCode=91;}
+`);chmodSync(adb,0o700);
+   const result=spawnSync(process.execPath,[join(root,'scripts/record-native-qualification.mjs'),stage,caseName],{env:{...process.env,ANDROID_HOME:sdk,NEXTCOMP_QA_OWNER_RECEIPT:ownerPath,NEXTCOMP_QA_OWNER:'admission-test',XDG_STATE_HOME:join(stage,'state')},encoding:'utf8',timeout:10000});
+   assert.equal(result.status,1,sample.name+': '+result.stderr);
+   assert.ok(existsSync(join(stage,'native-'+id+'.json')),sample.name+': '+result.stderr);
+   const receipt=JSON.parse(readFileSync(join(stage,'native-'+id+'.json'))),commands=readFileSync(calls,'utf8').trim().split('\n').map(JSON.parse);
+   assert.equal(receipt.state,'failed');assert.equal(receipt.admission.state,sample.state);
+   assert.equal(readFileSync(join(stage,receipt.admission.hierarchy),'utf8'),sample.xml);
+   assert.equal(receipt.admission.hierarchySha,sha256(Buffer.from(sample.xml)));
+   const expected=[['shell','getprop','ro.boot.qemu.avd_name'],['exec-out','uiautomator','dump','/proc/self/fd/1']];
+   if(sample.state==='complete')expected.push(['shell','am','force-stop','co.fallsoft.pocket']);
+   else assert.match(receipt.error,/No fixture or test input was started/);
+   assert.deepEqual(commands,expected,sample.name+' must stop at the admission boundary');
+   assert.equal(existsSync(join(stage,'fixture-'+id+'.log')),false);
+   assert.equal(JSON.parse(readFileSync(ownerPath)).fixturePid,undefined);
+   assert.equal(receipt.originalPreferencesSha,undefined);
+  }
+ }finally{processOwner.kill();await once(processOwner,'exit');rmSync(directory,{recursive:true,force:true});}
 });

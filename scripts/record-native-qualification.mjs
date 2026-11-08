@@ -39,9 +39,22 @@ const persist=()=>writeFileSync(receiptPath,JSON.stringify(receipt,null,2)+'\n',
 // pairings between cases; a prior fixture must not erase a later real-room target.
 let originalPreferences;
 try{
+ // Boot completion does not exclude an already-visible System UI ANR. Capture
+ // current UI before any app/fixture mutation; never dismiss an OS dialog here.
+ receipt.admission={state:'running',startedAt:Date.now()};persist();
+ const hierarchy=run(['exec-out','uiautomator','dump','/proc/self/fd/1'],15000);
+ const hierarchyFile='native-'+id+'-admission.xml';
+ writeFileSync(join(directory,hierarchyFile),hierarchy,{flag:'wx',mode:0o600});
+ Object.assign(receipt.admission,{hierarchy:hierarchyFile,hierarchySha:sha256(Buffer.from(hierarchy))});
+ if(!/<hierarchy\b[^>]*>[\s\S]*<\/hierarchy>/.test(hierarchy))throw Error('Native admission could not inspect the current Android UI; inspect '+hierarchyFile+'. No fixture or test input was started.');
+ if(/resource-id=["']android:id\/aerr_(?:wait|close|restart|report)["']/.test(hierarchy)){
+  receipt.admission.state='blocked';
+  throw Error('Native admission blocked by an existing Android ANR/crash dialog; inspect '+hierarchyFile+' and resolve the emulator UI explicitly. No fixture or test input was started.');
+ }
+ receipt.admission.state='complete';receipt.admission.finishedAt=Date.now();persist();
  run(['shell','am','force-stop','co.fallsoft.pocket']);
  originalPreferences=requireQaPreferences(run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml']));
-}catch(error){receipt.state='failed';receipt.error=error.message;receipt.finishedAt=Date.now();persist();releaseOwnership();throw error;}
+}catch(error){if(receipt.admission?.state==='running')receipt.admission.state='failed';receipt.state='failed';receipt.error=error.message;receipt.finishedAt=Date.now();persist();releaseOwnership();throw error;}
 
 receipt.originalPreferencesSha=sha256(Buffer.from(originalPreferences));persist();
 

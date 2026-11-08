@@ -177,7 +177,8 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
      const connect=async()=>{
       if(ended)return;
       try{
-       const check=await environments.forward(identity.deviceId,source.id,'/api/status');if(!check.ok)return;
+       const check=await environments.forward(identity.deviceId,source.id,'/api/status');
+       if(!check.ok){if(!ended&&check.status>=500&&check.status<600)schedule();return;}
        if(ended)return;
        const remote=new WebSocket(new URL('/events',source.base.replace(/^http/,'ws')),{headers:{Authorization:'Bearer '+source.token}});remotes.add(remote);
        remote.on('open',()=>{attempts=0;if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'environmentStatus',environmentId:source.id,available:true}));});

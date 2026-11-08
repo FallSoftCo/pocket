@@ -453,17 +453,18 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     if(conversationToolsOpen)ConversationToolsSheet(onClose={conversationToolsOpen=false},onInsert={text->val next=if(editor.text.isBlank())text else editor.text+"\n\n"+text;editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true})
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
             TextButton({actionsOpen=false;conversationToolsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Context & files")}
+            NativeTerminalsControl()
+            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort, tier & mode")}
+            TextButton({actionsOpen=false;nativeSettingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Codex settings & agents")}
             if(reviewCount>0)TextButton({actionsOpen=false;reviewOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Needs you · $reviewCount",color=Coral)}
-            UsageDetails()
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue · ${waiting.size}")}
             TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){BilingualLabel("Keep latest reply in notes")}
-            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort, tier & mode")}
-            TextButton({actionsOpen=false;nativeSettingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Codex settings & agents")}
             TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty().let{TextFieldValue(it,TextRange(0,it.length))};renameOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Rename")}
             TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){BilingualLabel("Archive")}
             TextButton({actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
+            UsageDetails()
     }
     val visibleSpeechKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
     val hasVisibleSpeech=shownRows.any{it.s("id") in visibleSpeechKeys&&it.s("kind")=="message"&&it.s("text").isNotBlank()}
@@ -643,7 +644,6 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
                 if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
                 ConversationActivityControls()
-                NativeTerminalsControl()
             }
             key(important){ReaderPagingButtons(list,hasEarlier=(PocketTranscript.earlier||historyGaps.isNotEmpty())&&!important,
                 onPrepare={up->
