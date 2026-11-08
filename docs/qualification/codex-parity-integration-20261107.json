@@ -167,13 +167,13 @@
       "ownerAnnouncements": 1,
       "notificationId": 2836,
       "macChannel": 177,
-      "phoneInstallation": "Latest read-only check still176;177 offered through both paired channels",
-      "phoneInstalledVersionLastObserved": 176,
+      "phoneInstallation": "Version177 confirmed by read-only package manager",
+      "phoneInstalledVersionLastObserved": 177,
       "macChannelRestartRequired": false,
       "macChannelState": "Published with exact compatible signed artifact; no second announcement",
       "pushState": "accepted_by_fcm",
       "pushAttempts": 1,
-      "phoneReadOnlyCheck": "SSH Android package-manager list confirmed176; no phone input or physical-interaction claim."
+      "phoneReadOnlyCheck": "SSH package-manager check confirmed177; no phone input or physical-interaction claim."
     },
     "coldPageRecovery": {
       "state": "passed",
@@ -404,7 +404,7 @@
         "pairingAndOutgoingPreserved": true
       },
       "native": "All required cases passed on corrected test identity; exact signed APK canonical/reopen/Skip review passed.",
-      "phoneInstalledVersionLastObserved": 176,
+      "phoneInstalledVersionLastObserved": 177,
       "limits": [
         "Seeded SQLite restoration is not an OS process recreation.",
         "Synthetic native UI and isolated account audio do not establish physical handset behavior.",
@@ -471,7 +471,7 @@
     }
   },
   "remaining": [
-    "Verify owner installation and physical handset interactions separately; latest read-only package check is176.",
+    "Monitor installed177 behavior; verify physical handset interactions separately.",
     "Monitor optional work-record diagnostics and installed-client history behavior without worker/model polling.",
     "Retain required Pocket review gate; no bypass.",
     "Continue useful integration monitoring; full TUI parity remains open."

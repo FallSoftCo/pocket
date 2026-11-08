@@ -16,7 +16,7 @@
     {
       "id": "history-availability-background-admission-20261107",
       "request": "Continue monitoring installed NextComp and fix observed history failures without restarting historical work or losing cached conversations.",
-      "status": "Android177/alpha159 published on both channels; backend/web177 live on workstation and Mac. One announcement accepted by FCM. Latest phone package check still176; monitoring and separate optional work-record scan follow-up remain active.",
+      "status": "Android177/alpha159 published on both channels and confirmed installed by read-only phone package check; backend/web history repair live, with subsequent source-bound scanner diagnostics on both backends. One announcement accepted by FCM. Monitoring remains active.",
       "findings": [
         "Android requeues persisted dirty history on activation/reconnect without current catalog admission.",
         "Archived stored history can load but optional catch-up capture rejects it, failing the whole read.",
@@ -38,7 +38,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Android177 published on both channels with history availability repair;18 required native cases and exact signed APK review passed. Backend/web177 live. Latest phone check176; one177 announcement accepted by FCM. Full parity and monitoring remain active.",
+      "status": "Android177 published on both channels and confirmed installed;18 required native cases and exact signed APK review passed. Backend/web repair and scanner diagnostics live. Full parity and monitoring remain active; physical phone interactions separately unverified.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
