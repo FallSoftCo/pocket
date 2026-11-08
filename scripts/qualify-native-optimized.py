@@ -1,5 +1,5 @@
 from pathlib import Path
-import os,json,time,subprocess,urllib.request,xml.etree.ElementTree as ET,uuid,hashlib,re,socket
+import os,json,time,subprocess,urllib.request,xml.etree.ElementTree as ET,uuid,hashlib,re,socket,struct
 
 # Package replacement can start Application from install broadcasts. Stop it
 # AFTER every install before touching preferences or claiming a cold launch.
@@ -57,13 +57,69 @@ def read_visible_hierarchy(adb,q):
    if attempt<2:time.sleep(.25)
  raise RuntimeError('UIAutomation returned no valid current hierarchy; raw capture retained at '+str(stem))
 
+def catalog_observation(xml):
+ # One current snapshot must contain the catalog identity, preview and action.
+ tree=ET.fromstring(xml)
+ nodes=list(tree.iter('node'))
+ titles=[n for n in nodes if n.get('text')=='Native canonical work']
+ previews=[n for n in nodes if 'Native answer two' in n.get('text','')]
+ chats=[n for n in nodes if n.get('content-desc')=='Open Chat for Native canonical work']
+ if len(titles)!=1 or len(previews)!=1 or len(chats)!=1:return None
+ if any(n.get('text') in ('Native request two','Native pending question') or n.get('content-desc')=='Close questions' for n in nodes):return None
+ chat=chats[0]
+ if chat.get('enabled')!='true' or chat.get('clickable')!='true':return None
+ relevant=[titles[0],previews[0],chat]
+ signature=[]
+ for node in relevant:
+  bounds=list(map(int,re.findall(r'-?\d+',node.get('bounds',''))))
+  if len(bounds)!=4 or bounds[0]<0 or bounds[1]<0 or bounds[2]<=bounds[0] or bounds[3]<=bounds[1]:return None
+  if node.get('package')!='co.fallsoft.pocket' or node.get('enabled')!='true':return None
+  signature.append({'text':node.get('text',''),'description':node.get('content-desc',''),'bounds':bounds})
+ return tree,chat,signature
+
+def capture_stable_catalog(adb,q,data,timeout=15):
+ # Observe twice before capture and once after. A changing layout retries only
+ # observation; it never repeats navigation or an external action. Ignore clock
+ # text by comparing only this exact catalog card's identity/action geometry.
+ deadline=time.monotonic()+timeout;attempt=0
+ while time.monotonic()<deadline:
+  attempt+=1;stem=q/('catalog-observation-'+str(attempt))
+  first=read_visible_hierarchy(adb,q);stem.with_suffix('.first.xml').write_bytes(first)
+  a=catalog_observation(first)
+  if a is None:time.sleep(.15);continue
+  time.sleep(.15)
+  before=read_visible_hierarchy(adb,q);stem.with_suffix('.before.xml').write_bytes(before)
+  b=catalog_observation(before)
+  if b is None or a[2]!=b[2]:continue
+  capturedAt=time.time();png=adb('exec-out','screencap','-p')
+  stem.with_suffix('.png').write_bytes(png)
+  after=read_visible_hierarchy(adb,q);stem.with_suffix('.after.xml').write_bytes(after)
+  c=catalog_observation(after)
+  if c is None or b[2]!=c[2]:continue
+  if len(png)<24 or png[:8]!=b'\x89PNG\r\n\x1a\n' or png[12:16]!=b'IHDR':raise RuntimeError('Catalog capture is not a PNG')
+  width,height=struct.unpack('>II',png[16:24])
+  if any(v['bounds'][2]>width or v['bounds'][3]>height for v in c[2]):continue
+  files={'optimized-native-catalog-before.xml':before,'optimized-native-catalog-after.xml':after,'optimized-native-catalog.png':png}
+  for name,value in files.items():(data/name).write_bytes(value)
+  proof={'capturedAt':capturedAt,'attempt':attempt,'dimensions':[width,height],'signature':c[2],
+         'artifacts':[{ 'path':name,'sha256':hashlib.sha256(value).hexdigest()} for name,value in files.items()],
+         'limit':'Stable catalog semantics and bounds bracket the screenshot; optical review of the retained PNG remains required.'}
+  (data/'optimized-native-catalog-proof.json').write_text(json.dumps(proof,indent=2)+'\n')
+  return c[0],c[1],proof
+ raise RuntimeError('Catalog did not remain stable around its screenshot; observation attempts retained in '+str(q))
+
 def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",signer_sha="22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",room_capture=None,room_evidence=None):
  assert re.fullmatch(r'(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)',avd_name)
- assert adb('shell','getprop','ro.boot.qemu.avd_name').decode().strip()==avd_name,'Owned NextComp emulator required'
  manifest=json.loads((data/'manifest.json').read_text());build=json.loads((data/'build.json').read_text())
+ # The method itself belongs to qualificationInputSha. Reject an old build
+ # receipt before any device access, even when the production APK is unchanged.
+ identities=json.loads(subprocess.check_output(['node','--input-type=module','-e',
+  "import {qualificationInputSha,productionSourceSha} from './scripts/release-qualification.mjs'; console.log(JSON.stringify({qualificationInputSha:qualificationInputSha(process.cwd()),productionSourceSha:productionSourceSha(process.cwd())}));"],cwd=root))
+ if any(build.get(key)!=value for key,value in identities.items()):raise RuntimeError('Current source/qualification inputs differ from build receipt; fresh matching qualification required')
+ assert adb('shell','getprop','ro.boot.qemu.avd_name').decode().strip()==avd_name,'Owned NextComp emulator required'
  variant=next(v for v in manifest['variants'] if v['signerSha256']==signer_sha)
  apk=data/variant['path'];assert hashlib.sha256(apk.read_bytes()).hexdigest()==variant['sha256']
- result={'state':'running','kind':'exact-optimized-native-canonical','versionCode':manifest['versionCode'],'apkSha256':variant['sha256'],'productionSourceSha':build['productionSourceSha'],'phoneTouched':False}
+ result={'state':'running','kind':'exact-optimized-native-canonical','versionCode':manifest['versionCode'],'apkSha256':variant['sha256'],'productionSourceSha':build['productionSourceSha'],'qualificationInputSha':build['qualificationInputSha'],'phoneTouched':False}
  path=q/'optimized-native-canonical.json'
  def save():path.write_text(json.dumps(result,indent=2)+'\n')
  save();port=20143;fixture=None;original=None
@@ -130,12 +186,9 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
     if time.monotonic()>deadline:raise RuntimeError('Questions drawer did not close before Back navigation')
     time.sleep(.1)
   qa('disconnect');adb('shell','input','keyevent','KEYCODE_BACK');qa('recover')
-  xml,tree=wait('Native canonical work');xml,tree=wait('Native answer two',contains=True)
-  # Idle status and preview share one text node. Open the actual Chat region,
-  # not the editable title or an assumed standalone preview node.
-  openChat=[n for n in tree.iter('node')if n.get('content-desc')=='Open Chat for Native canonical work']
-  assert len(openChat)==1,'Native catalog lacks its explicit Chat action'
-  beforeReopen=len(qa('state')['reads']);tap(openChat[0]);xml,tree=wait('Native request two')
+  tree,openChat,catalogProof=capture_stable_catalog(adb,q,data)
+  result['catalogSnapshotProof']=catalogProof;result['catalogSnapshotStable']=True;save()
+  beforeReopen=len(qa('state')['reads']);tap(openChat);xml,tree=wait('Native request two')
   deadline=time.monotonic()+15
   while len(qa('state')['reads'])<=beforeReopen or texts(tree,'Native pending question'):
    if time.monotonic()>deadline:raise RuntimeError('Exact optimized reopen did not reconcile current state')
@@ -143,7 +196,9 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
   assert len(texts(tree,'Native request two'))==len(texts(tree,'Native answer two'))==1
   (data/'optimized-native-canonical.xml').write_bytes(xml);(data/'optimized-native-canonical.png').write_bytes(adb('exec-out','screencap','-p'))
   state=qa('state');assert state['legacyReads']==state['positionReads']==state['workSubmissions']==0 and state['answers']==1
-  (data/'optimized-native-catalog.png').write_bytes(adb('exec-out','screencap','-p'))
+  # Private review assembly is manual; provide the two actual visual artifacts
+  # without claiming that the automated semantic check performed optical review.
+  result['optimizedReviewArtifactCandidates']=[{'path':name,'sha256':hashlib.sha256((data/name).read_bytes()).hexdigest()} for name in ('optimized-native-catalog.png','optimized-native-canonical.png')]
   result.update(state='complete',codexCatalogDrawn=True,optimizedPayloadVerified=True,canonicalPairOrder=True,reopenOriginalPairExactlyOnce=True,questionSkipOnce=True,legacyReads=0,positionRepair=0,workSubmissions=0,reads=len(state['reads']),finishedAt=time.time());save()
  except BaseException as error:
   result.update(state='failed',error=str(error));save()
