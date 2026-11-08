@@ -10,7 +10,21 @@ function inputSha(root,inputs){
  inputs.forEach(name=>walk(resolve(root,name)));if(!files.length)fail('No source inputs.');
  const hash=createHash('sha256');for(const path of files.sort()){hash.update(relative(root,path));hash.update('\0');hash.update(fileSha(path));hash.update('\0');}return hash.digest('hex');
 }
-export const qualificationInputSha=root=>inputSha(root,['android/app/src/test','android/app/src/androidTest','tests/fixtures','server/timeline.mjs']);
+// Fixtures execute shared production modules (including native timeline, request
+// contracts and browser history), not just their own source. Bind conservative
+// source families instead of a brittle hand-maintained transitive import list.
+// Keep runner/build helpers and locked dependencies in the same identity; do not
+// hash generated build/cache trees, node_modules or external private QA state.
+export const qualificationInputSha=root=>inputSha(root,[
+ 'android/app/src/test','android/app/src/androidTest','tests/fixtures','tests/helpers','server','web',
+ 'package.json','package-lock.json',
+ 'android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts',
+ 'android/gradle.properties','android/gradle','android/gradlew',
+ 'scripts/build-release.mjs','scripts/build-storage.mjs','scripts/native-test-plan.mjs',
+ 'scripts/release-policy.json','scripts/release-qualification.mjs','scripts/record-native-qualification.mjs',
+ 'scripts/owned-fixture.mjs','scripts/qualify-native-optimized.py',
+ 'scripts/prepare-app-update.mjs','scripts/publish-qualified-update.mjs'
+]);
 export const productionSourceInputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
 export function productionSourceSha(root){return inputSha(root,productionSourceInputs);}
 export function nativeOutputPassed(output,expectedTests=1){
