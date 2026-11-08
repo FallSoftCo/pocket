@@ -13,16 +13,22 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
  const dir=await mkdtemp(join(tmpdir(),'pocket-history-http-')),socket=join(dir,'codex.sock');
  const upstream=http.createServer(),wss=new WebSocketServer({server:upstream});await new Promise(r=>upstream.listen(socket,r));
  const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));
- const calls=[];let disconnect=false;const blockedRecovery=[];
+ const calls=[];let disconnect=false,holdRead=null;const blockedRecovery=[],readFaults=new Map(),readMetadata=new Map();
  const metadata={id:'large-thread',historyMode:'paginated',name:'Large conversation',status:{type:'idle'},turns:[]};
  wss.on('connection',ws=>ws.on('message',raw=>{
    const m=JSON.parse(raw);if(!m.id)return;calls.push(m);
+   if(m.method==='thread/read'&&holdRead?.threadId===m.params.threadId){
+    const held=holdRead,thread=structuredClone(readMetadata.get(m.params.threadId));holdRead=null;
+    held.release=()=>ws.send(JSON.stringify({id:m.id,result:{thread}}));held.started();return;
+   }
+   const fault=readFaults.get(m.method+':'+m.params?.threadId);
+   if(fault){ws.send(JSON.stringify({id:m.id,error:fault}));return;}
    if(m.method==='thread/turns/list'&&m.params.itemsView==='summary'){blockedRecovery.push(m);return;}
    if(disconnect&&m.method==='thread/read'){disconnect=false;ws.terminate();return;}
    if(m.method==='thread/read'&&m.params.includeTurns||m.method==='thread/resume'&&!m.params.excludeTurns){ws.close(1009,'Full history is too large');return;}
    if(m.method==='thread/timeline/list'){ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:'thread/timeline/list is not supported yet'}}));return;}
    let result={};
-   if(['thread/read','thread/resume'].includes(m.method))result={thread:m.params.threadId==='cold-thread'?{...metadata,id:'cold-thread',historyMode:undefined}:metadata};
+   if(['thread/read','thread/resume'].includes(m.method))result={thread:readMetadata.get(m.params.threadId)||(m.params.threadId==='cold-thread'?{...metadata,id:'cold-thread',historyMode:undefined}:metadata)};
    if(m.method==='thread/list')result={data:m.params.archived?[{...metadata,id:'archived-thread',name:'Archived conversation'}]:[metadata]};
    if(m.method==='thread/turns/list'){
      const end=m.params.cursor?Number(m.params.cursor):16;const limit=m.params.limit;result={data:Array.from({length:Math.min(limit,end)},(_,i)=>({id:'turn-'+(end-i-1),status:'completed',items:[]})),nextCursor:end>limit?String(end-limit):null,backwardsCursor:String(end)};
@@ -30,7 +36,7 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
    if(m.method==='thread/items/list')result={data:[{turnId:m.params.turnId,item:{id:'answer',type:'agentMessage',text:m.params.turnId}}]};
    ws.send(JSON.stringify({id:m.id,result}));
  }));
- const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:String(port),POCKET_DATA:dir,CODEX_SOCKET:socket},stdio:'ignore'});
+ const child=spawn(process.execPath,['server/index.mjs'],{env:{PATH:process.env.PATH,HOME:dir,CODEX_HOME:dir,PORT:String(port),POCKET_DATA:dir,CODEX_SOCKET:socket},stdio:'ignore'});
  t.after(async()=>{if(child.exitCode===null){const done=once(child,'exit');child.kill();await done;}for(const ws of wss.clients)ws.terminate();wss.close();await new Promise(r=>upstream.close(r));await rm(dir,{recursive:true,force:true});});
  for(let i=0;i<100;i++){try{if((await fetch(`http://127.0.0.1:${port}/health`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,30));}
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json')));
@@ -92,4 +98,68 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
  const listCalls=calls.filter(c=>c.method==='thread/list');assert.ok(listCalls.length>=3);assert.ok(listCalls.every(c=>c.params.useStateDbOnly===true),'interactive lists must bypass expensive JSONL repair scans');
  assert.ok(listCalls.some(c=>c.params.archived===false&&c.params.sourceKinds?.includes('appServer')));assert.ok(listCalls.some(c=>c.params.archived===true&&c.params.sourceKinds?.includes('exec')));assert.ok(listCalls.some(c=>c.params.limit===100&&c.params.archived===false));
  assert.equal((await api('/api/status')).data.problem,null);
+
+ // Exercise the production route, native RPC transport and retained catalog:
+ // unavailable history must never become an empty successful transcript.
+ const evidenceDb=new DatabaseSync(join(dir,'pocket.sqlite'));t.after(()=>evidenceDb.close());
+ const cached=(id,ephemeral,path=null)=>{
+  const thread={...metadata,id,ephemeral,path};readMetadata.set(id,thread);
+  evidenceDb.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,?,?)').run(id,JSON.stringify(thread),path?.includes('/archived_sessions/')?1:0,1);return thread;
+ };
+ cached('temporary-thread',true);cached('durable-thread',false,'/missing/source.jsonl');
+ cached('archived-readable',false,'/fixture/archived_sessions/source.jsonl');
+ const failedReadCount=calls.length;
+ for(const [id,code,kind] of [['temporary-thread','THREAD_EPHEMERAL_UNAVAILABLE','ephemeralUnavailable'],['durable-thread','THREAD_HISTORY_UNAVAILABLE','historyUnavailable'],['unknown-thread','THREAD_HISTORY_UNAVAILABLE','historyUnavailable']]){
+  readFaults.set('thread/read:'+id,{code:-32600,message:`thread not loaded: ${id}`});
+  for(const suffix of ['/native-timeline','/head','?view=timeline']){
+   const response=await api('/api/threads/'+id+suffix);assert.equal(response.status,409);assert.equal(response.data.code,code);
+   assert.deepEqual(response.data.readAvailability,{threadId:id,kind,operation:'thread/read'});
+   assert.equal(response.data.timeline,undefined);assert.equal(response.data.catchup,undefined);assert.ok(!JSON.stringify(response.data).includes('/missing/'));
+  }
+ }
+ assert.ok(calls.slice(failedReadCount).every(c=>c.method==='thread/read'),'metadata refusal must not dispatch page, resume, or work RPCs');
+ assert.equal(evidenceDb.prepare('SELECT count(*) AS n FROM pocket_discovered_threads WHERE thread_id IN (?,?)').get('durable-thread','temporary-thread').n,2);
+ // A later successful native read is immediately usable; no terminal cache or
+ // inferred permanent loss may suppress it.
+ readFaults.delete('thread/read:durable-thread');
+ const recovered=await api('/api/threads/durable-thread/head');assert.equal(recovered.status,200);assert.equal(recovered.data.thread.id,'durable-thread');assert.ok(recovered.data.timeline.rows.length>0);
+ // The runtime can unload between metadata and page reads. Preserve the
+ // failure's phase instead of classifying the already successful metadata.
+ readFaults.delete('thread/read:temporary-thread');
+ readFaults.set('thread/timeline/list:temporary-thread',{code:-32600,message:'thread not loaded: temporary-thread'});
+ const pageUnavailable=await api('/api/threads/temporary-thread/native-timeline');assert.equal(pageUnavailable.status,409);assert.equal(pageUnavailable.data.code,'THREAD_EPHEMERAL_UNAVAILABLE');assert.equal(pageUnavailable.data.readAvailability.operation,'thread/timeline/list');
+ readFaults.set('thread/turns/list:durable-thread',{code:-32600,message:'thread not loaded: durable-thread'});
+ const legacyUnavailable=await api('/api/threads/durable-thread/head');assert.equal(legacyUnavailable.status,409);assert.equal(legacyUnavailable.data.code,'THREAD_HISTORY_UNAVAILABLE');assert.equal(legacyUnavailable.data.readAvailability.operation,'history/read');assert.equal(legacyUnavailable.data.timeline,undefined);
+ readFaults.delete('thread/turns/list:durable-thread');
+ // Native chronology refuses an archive, but the ordinary read-only history
+ // path still returns its rows without a forbidden catch-up capture.
+ readFaults.set('thread/timeline/list:archived-readable',{code:-32600,message:'thread archived-readable is archived'});
+ const archivedNative=await api('/api/threads/archived-readable/native-timeline');assert.equal(archivedNative.status,409);assert.equal(archivedNative.data.code,'THREAD_ARCHIVED');
+ assert.deepEqual(archivedNative.data.readAvailability,{threadId:'archived-readable',kind:'archived',operation:'thread/timeline/list'});
+ const captureCount=()=>evidenceDb.prepare('SELECT count(*) AS n FROM session_catchup_captures WHERE thread_id=?').get('archived-readable').n;
+ const beforeCapture=captureCount();
+ for(const suffix of ['/head','?view=timeline']){
+  const readable=await api('/api/threads/archived-readable'+suffix);assert.equal(readable.status,200);assert.equal(readable.data.thread.id,'archived-readable');assert.ok(readable.data.timeline.rows.length>0);assert.equal(readable.data.catchup,undefined);
+ }
+ assert.equal(captureCount(),beforeCapture);assert.equal(evidenceDb.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get('archived-readable').archived,1);
+ // An ordinary read started before an explicit archive must not undo the
+ // confirmed archive when its old metadata finally arrives.
+ cached('archive-during-read',false,'/fixture/sessions/source.jsonl');
+ let started;const readStarted=new Promise(resolve=>started=resolve);
+ const held={threadId:'archive-during-read',started};holdRead=held;
+ const staleHead=api('/api/threads/archive-during-read/head');
+ let timer;try{await Promise.race([readStarted,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Metadata read did not reach barrier')),2000);})]);}finally{clearTimeout(timer);}
+ const archiveResponse=await fetch(`http://127.0.0.1:${port}/api/threads/archive-during-read/archive`,{method:'POST',headers:{Authorization:`Bearer ${adminToken}`,'Content-Type':'application/json'},body:'{}'});
+ assert.equal(archiveResponse.status,200);assert.equal(evidenceDb.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get('archive-during-read').archived,1);
+ held.release();const staleReadable=await staleHead;
+ assert.equal(staleReadable.status,200);assert.equal(staleReadable.data.thread.id,'archive-during-read');assert.ok(staleReadable.data.timeline.rows.length>0);assert.equal(staleReadable.data.catchup,undefined);
+ assert.equal(evidenceDb.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get('archive-during-read').archived,1);
+ assert.equal(evidenceDb.prepare('SELECT count(*) AS n FROM session_catchup_captures WHERE thread_id=?').get('archive-during-read').n,0);
+ assert.equal(calls.filter(c=>c.method==='thread/archive'&&c.params.threadId==='archive-during-read').length,1,'only the explicit synthetic action may archive');
+ // Auth failures and mismatched identities are not lifecycle evidence.
+ readFaults.set('thread/read:durable-thread',{code:-32001,message:'thread not loaded: durable-thread'});
+ let other=await api('/api/threads/durable-thread/head');assert.equal(other.status,400);assert.equal(other.data.code,undefined);assert.equal(other.data.readAvailability,undefined);
+ readFaults.set('thread/read:durable-thread',{code:-32600,message:'thread not loaded: another-thread'});
+ other=await api('/api/threads/durable-thread/native-timeline');assert.equal(other.status,400);assert.equal(other.data.code,undefined);assert.equal(other.data.readAvailability,undefined);
+ assert.ok(calls.slice(failedReadCount).every(c=>!['thread/resume','thread/unarchive','turn/start','turn/steer'].includes(c.method)));
 });

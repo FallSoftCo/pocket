@@ -54,7 +54,7 @@ async function api(path,body,options={}){
  const method=options.method||(body===undefined?'GET':'POST'),binary=body instanceof Blob||body instanceof ArrayBuffer;
  const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),priority:options.priority||'high',...(method==='GET'?{signal:AbortSignal.any([AbortSignal.timeout(options.timeout||20000),...(options.signal?[options.signal]:[])])}:{})});
  let data;try{data=await r.json();}catch{data={error:`Backend returned HTTP ${r.status}.`};}
- if(!r.ok){if(r.status===401&&authenticated){authenticated=false;ws?.close();$('app').hidden=true;$('pairing').hidden=false;}throw Object.assign(Error(data.error||`Request failed (${r.status}).`),{status:r.status,code:data.code});}if(outgoingThread&&data.outbox)observeOutbox(outgoingThread,data.outbox);return data;
+ if(!r.ok){if(r.status===401&&authenticated){authenticated=false;ws?.close();$('app').hidden=true;$('pairing').hidden=false;}throw Object.assign(Error(data.error||`Request failed (${r.status}).`),{status:r.status,code:data.code,readAvailability:data.readAvailability});}if(outgoingThread&&data.outbox)observeOutbox(outgoingThread,data.outbox);return data;
 }
 const error=e=>{if($('startup')){$('startup').hidden=true;if($('app').hidden&&$('pairing').hidden)$('pairing').hidden=false;}$('error').textContent=e.message||String(e);$('error').hidden=false;};
 const run=fn=>async(...args)=>{try{$('error').hidden=true;await fn(...args);}catch(e){error(e);}};

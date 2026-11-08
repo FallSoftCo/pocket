@@ -10,6 +10,9 @@ let archiveHold=false,archiveError=false,archiveOrigins=[];
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
+// Opt-in repository lifecycle evidence; all identities/content remain synthetic.
+let historyLifecycle=false;const lifecycleReads=[],lifecycleThreads=new Map();
+const lifecycleMeta=(id,state)=>({...meta(),id,name:'History '+id,archived:state.archived===true,ephemeral:state.ephemeral===true,path:state.ephemeral?null:'/synthetic/retained-rollout',status:{type:state.status||'idle'},updatedAt:state.revision||1,activityAt:state.revision||1});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,startedAtMs:1794017100000+position*60000,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
 function page(){
  return {data:[
@@ -44,6 +47,34 @@ const server=http.createServer(async(req,res)=>{
  if(!String(req.headers.authorization||'').startsWith('Bearer synthetic-system76')){res.writeHead(401).end('{}');return;}
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
+ if(path==='/_qa/history-lifecycle'){
+  historyLifecycle=true;const change=JSON.parse(raw||'{}');
+  if(change.releaseHolds)for(const state of lifecycleThreads.values()){state.holdNative=false;state.holdHead=false;}
+  if(change.id)lifecycleThreads.set(change.id,{...lifecycleThreads.get(change.id),...change});
+  res.end(JSON.stringify({reads:lifecycleReads,threads:[...lifecycleThreads.entries()].map(([id,state])=>lifecycleMeta(id,state)),workSubmissions}));return;
+ }
+ if(historyLifecycle&&path==='/api/threads'){
+  res.end(JSON.stringify({threads:[...lifecycleThreads.entries()].filter(([,state])=>state.catalog!==false&&!!state.archived===(url.searchParams.get('archived')==='true')).map(([id,state])=>lifecycleMeta(id,state))}));return;
+ }
+ if(historyLifecycle&&/^\/api\/threads\/[^/]+(?:\/native-timeline|\/head)?$/.test(path)){
+  const id=decodeURIComponent(path.split('/')[3]),state=structuredClone(lifecycleThreads.get(id)||{code:'THREAD_HISTORY_UNAVAILABLE'});
+  const origin=req.headers.authorization.endsWith('-beta')?'B':'A',native=path.endsWith('/native-timeline');
+  const entry={id,origin,path,cursor:url.searchParams.get('before'),at:Date.now(),settled:false};lifecycleReads.push(entry);
+  while((native?lifecycleThreads.get(id)?.holdNative:lifecycleThreads.get(id)?.holdHead)&&!res.destroyed)await new Promise(r=>setTimeout(r,20));
+  if(res.destroyed)return;
+  entry.settled=true;
+  const code=origin==='B'?null:state.code;
+  if(code&&(code!=='THREAD_ARCHIVED'||native)){
+   const kind={THREAD_HISTORY_UNAVAILABLE:'historyUnavailable',THREAD_EPHEMERAL_UNAVAILABLE:'ephemeralUnavailable',THREAD_ARCHIVED:'archived'}[code];
+   entry.code=code;res.writeHead(409).end(JSON.stringify({code,error:'Synthetic history unavailable',readAvailability:{threadId:state.wrongIdentity?'another-thread':id,kind,operation:'thread/read'}}));return;
+  }
+  if(!native){
+   if(entry.cursor&&entry.cursor!=='archive-earlier'){res.writeHead(400).end('{"error":"Foreign archive cursor"}');return;}
+   const rows=[{id:'archive/'+(entry.cursor?'earlier':'current'),kind:'message',turnId:'archive',text:entry.cursor?'Archived earlier response':'Archived retained response'}];
+   res.end(JSON.stringify({thread:lifecycleMeta(id,{...state,archived:true}),timeline:{rows,canonicalIds:rows.map(row=>row.id),hasEarlier:!entry.cursor,before:entry.cursor?null:'archive-earlier'},historyHead:{threadId:id,epoch,version:1},notes:[],pending:[],notifications:[],outgoing:[]}));return;
+  }
+  res.end(JSON.stringify({thread:lifecycleMeta(id,state),timeline:projectNativeTimeline(page(),{threadId:id,revision:state.revision||1}),historyHead:{threadId:id,epoch,version:state.revision||1},notes:[],pending:[],notifications:[],outgoing:[]}));return;
+ }
  if(path==='/api/status')body={host:'Native canonical source',connected:!offline,deviceId:'synthetic-device-a',capabilities:{readOnlyTimeline:true,canonicalTimeline:1},...(url.searchParams.has('threadId')?{historyHead:{threadId:'same-thread',epoch,version:revision}}:{})};
  else if(path==='/api/threads/legacy-thread/native-timeline'){res.writeHead(409).end(JSON.stringify({code:'NATIVE_TIMELINE_UNSUPPORTED',error:'This session uses turn history rather than native timeline history.'}));return;}
  else if(path==='/api/threads/denied-thread/native-timeline'){res.writeHead(403).end(JSON.stringify({code:'DENIED',error:'Synthetic permission refusal'}));return;}

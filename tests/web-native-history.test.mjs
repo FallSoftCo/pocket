@@ -17,6 +17,68 @@ test('native and legacy session protocols coexist and authorization failures nev
  await reader.read('legacy',{before:'exact-legacy',background:true});assert.ok(calls.at(-1).path.endsWith('before=exact-legacy'));assert.equal(calls.at(-1).options.timeout,5000);
  await assert.rejects(reader.read('denied'),/Forbidden/);assert.equal(calls.filter(c=>c.path.includes('denied')).length,1);
 });
+test('only source-matching archived head refusal enables a read-only history fallback, without pinning the session to legacy history',async()=>{
+ const calls=[];let archived=true,kind='archived',source='session',code='THREAD_ARCHIVED';
+ const reader=new HistoryReader(async path=>{
+  calls.push(path);
+  if(path.includes('/native-timeline')){
+   if(archived)throw Object.assign(Error('Unavailable'),{status:409,code,readAvailability:{threadId:source,kind,operation:'thread/timeline/list'}});
+   return page('session',[row(3,'Current response')]);
+  }
+  return {thread:{id:'session'},timeline:{rows:[row(1,'Retained response').row],before:'stored-cursor',hasEarlier:true}};
+ });
+ for(const context of [{source:'other',kind:'archived',code:'THREAD_ARCHIVED'},{source:'session',kind:'historyUnavailable',code:'THREAD_HISTORY_UNAVAILABLE'},{source:'session',kind:'ephemeralUnavailable',code:'THREAD_EPHEMERAL_UNAVAILABLE'}]){
+  ({source,kind,code}=context);const before=calls.length;await assert.rejects(reader.read('session'),/Unavailable/);assert.equal(calls.length,before+1);assert.equal(reader.protocols.size,0);
+ }
+ source='session';kind='archived';code='THREAD_ARCHIVED';
+ await assert.rejects(reader.read('session',{background:true}),/Unavailable/);
+ const data=await reader.read('session');assert.equal(data.timeline.rows[0].text,'Retained response');assert.equal(reader.protocols.get('session'),'archived-turns');
+ await reader.read('session',{before:'stored-cursor'});assert.equal(calls.at(-1),'/api/threads/session?view=timeline&before=stored-cursor');
+ archived=false;await reader.read('session');assert.equal(calls.at(-1),'/api/threads/session/native-timeline');assert.equal(reader.protocols.get('session'),'native');
+});
+test('reader and retained store switch native to archived history without mixing source cursors',async()=>{
+ let archived=false;const calls=[],store=new SessionStore();
+ const reader=new HistoryReader(async path=>{
+  calls.push(path);
+  if(path.includes('/native-timeline')){
+   if(archived)throw Object.assign(Error('Archived'),{status:409,code:'THREAD_ARCHIVED',readAvailability:{threadId:'session',kind:'archived',operation:'thread/timeline/list'}});
+   return page('session',[row(9,'Latest native')],'native-cursor');
+  }
+  const older=path.includes('before=stored-cursor');
+  return {thread:{id:'session'},timeline:{rows:[row(older?1:8,older?'Earlier stored':'Latest stored').row],before:older?null:'stored-cursor',hasEarlier:!older}};
+ });
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ assert.equal(store.get('session').before,'native-cursor');archived=true;
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ assert.equal(store.get('session').before,'stored-cursor');assert.equal(store.get('session').protocol,'turns');
+ assert.deepEqual(store.get('session').rows.map(row=>row.text),['Latest stored']);
+ const cursor=store.get('session').before;
+ store.head('session',await reader.read('session',{before:cursor}),{older:true,cursor,ticket:store.ticket()});
+ assert.equal(calls.at(-1),'/api/threads/session?view=timeline&before=stored-cursor');
+ assert.deepEqual(store.get('session').rows.map(row=>row.text),['Earlier stored','Latest stored']);
+ archived=false;store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ assert.equal(store.get('session').protocol,'native');assert.equal(store.get('session').before,'native-cursor');
+});
+test('a delayed archived older page cannot override a newer native head protocol',async()=>{
+ const calls=[],store=new SessionStore();let archived=true,releaseOlder,markStarted;
+ const started=new Promise(resolve=>{markStarted=resolve;});
+ const held=new Promise(resolve=>{releaseOlder=resolve;});
+ const reader=new HistoryReader(async path=>{
+  calls.push(path);
+  if(path.includes('/native-timeline')){
+   if(archived)throw Object.assign(Error('Archived'),{status:409,code:'THREAD_ARCHIVED',readAvailability:{threadId:'session',kind:'archived',operation:'thread/timeline/list'}});
+   return page('session',[row(9,'Current native')],'native-cursor');
+  }
+  if(path.includes('before=')){markStarted();await held;}
+  return {thread:{id:'session'},timeline:{rows:[row(1,'Stored').row],before:'stored-cursor',hasEarlier:true}};
+ });
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ const older=reader.read('session',{before:store.get('session').before});await started;
+ archived=false;store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ releaseOlder();const awaitedOlder=await older;assert.throws(()=>store.head('session',awaitedOlder,{older:true}),/History protocol changed/);
+ await reader.read('session',{before:store.get('session').before});
+ assert.equal(calls.at(-1),'/api/threads/session/native-timeline?before=native-cursor');
+});
 test('one session entity supplies canonical user/answer order, catalog invalidation and local latest navigation',()=>{
  const s=new SessionStore();s.catalog([{id:'s',previewRole:'codex',preview:'a'}],s.ticket());s.catalog([{id:'s',previewRole:'codex',preview:'b'}],s.ticket());assert.deepEqual(s.catalogChanges,['s']);
  s.head('s',page('s',[row(1,'old passage')],'old-before'),{ticket:s.ticket()});

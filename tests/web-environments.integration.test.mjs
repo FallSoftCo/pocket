@@ -5,8 +5,27 @@ import {WebSocket,WebSocketServer} from 'ws';
 import {createWebClient} from '../server/web-client.mjs';
 import {WebEnvironments,scopedId,CatalogPresentation,qualifyPayload} from '../server/web-environments.mjs';
 import {catalogVisible,catalogTitle,environmentPath} from '../web/environments.mjs';
+import {HistoryReader} from '../web/native-history.mjs';
 const listen=server=>new Promise(r=>server.listen(0,'127.0.0.1',()=>r('http://127.0.0.1:'+server.address().port)));
 const stop=server=>new Promise(r=>{server.closeAllConnections?.();server.close(r)});
+test('archived remote history crosses the authenticated gateway with source identity and never resumes a task',async t=>{
+ const id='same-native-thread',token='a'.repeat(64),local=express(),remote=express(),reads=[],writes=[];
+ local.use(express.json());local.post('/api/pair',(_req,res)=>res.json({token,id:'browser-a'}));
+ local.get('/api/status',(req,res)=>req.get('Authorization')==='Bearer '+token?res.json({deviceId:'browser-a'}):res.sendStatus(401));
+ remote.use((req,res,next)=>{if(req.get('Authorization')!=='Bearer remote-token')return res.sendStatus(401);if(req.method!=='GET')writes.push(req.path);else reads.push(req.path);next();});
+ remote.get('/api/status',(_req,res)=>res.json({deviceId:'remote-a'}));
+ remote.get('/api/threads/:id/native-timeline',(req,res)=>res.status(409).json({error:'Archived history',code:'THREAD_ARCHIVED',readAvailability:{threadId:req.params.id,kind:'archived',operation:'thread/timeline/list'}}));
+ remote.get('/api/threads/:id',(req,res)=>res.json({thread:{id:req.params.id},timeline:{rows:[{id:'answer',kind:'message',text:'Retained archived answer'}],before:null,hasEarlier:false}}));
+ const ls=local.listen(0,'127.0.0.1'),rs=remote.listen(0,'127.0.0.1');await Promise.all([new Promise(r=>ls.once('listening',r)),new Promise(r=>rs.once('listening',r))]);
+ const environments=new WebEnvironments({secure:false,profiles:{'browser-a':[{id:'macbook',name:'MacBook',base:'http://127.0.0.1:'+rs.address().port,token:'remote-token',deviceId:'remote-a'}]}});
+ const gateway=createWebClient({backend:'http://127.0.0.1:'+ls.address().port,origin:'http://browser.test',secure:false,environments});
+ const url=await listen(gateway.server);t.after(async()=>{gateway.sockets.clients.forEach(s=>s.terminate());await stop(gateway.server);await stop(ls);await stop(rs);});
+ const paired=await fetch(url+'/web/pair',{method:'POST',headers:{Origin:'http://browser.test','Content-Type':'application/json'},body:'{}'}),cookie=paired.headers.get('set-cookie').split(';')[0];
+ const errors=[],reader=new HistoryReader(async path=>{const response=await fetch(url+path,{headers:{Cookie:cookie}}),body=await response.json();if(!response.ok){errors.push(body);throw Object.assign(Error(body.error),{status:response.status,code:body.code,readAvailability:body.readAvailability});}return body;});
+ const scoped=scopedId('macbook',id),data=await reader.read(scoped);
+ assert.equal(errors[0].readAvailability.threadId,scoped);assert.equal(data.thread.id,scoped);assert.equal(data.timeline.rows[0].text,'Retained archived answer');
+ assert.deepEqual(reads.filter(p=>p.startsWith('/api/threads/')),['/api/threads/'+id+'/native-timeline','/api/threads/'+id]);assert.deepEqual(writes,[]);
+});
 test('two actual HTTP authorities preserve source-bound catalog, open, reply, question and authorization with identical native IDs',async t=>{
  const id='same-native-thread',token='a'.repeat(64),remoteToken='paired-remote-credential';let revoked=false,localValid=true,audioBytes=null;
  const local=express(),remote=express();local.use(express.json());remote.use(express.json());const writes=[];

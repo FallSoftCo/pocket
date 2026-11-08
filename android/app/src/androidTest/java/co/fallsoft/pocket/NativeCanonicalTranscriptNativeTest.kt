@@ -7,6 +7,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancel
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
@@ -22,6 +24,16 @@ class NativeCanonicalTranscriptNativeTest{
         JSONObject().put("key",action.key).put("source",action.source).put("title",action.title)
             .put("operation",action.operation).put("pending",action.pending).put("error",action.error?:JSONObject.NULL)
     })
+    /** A live-region update can leave an old text node in UiAutomation's cache
+     * even while a new sibling and the rendered pixels are current. Read the
+     * actual accessibility tree before judging progress/refusal visibility.
+     * This is observation only: it never repeats the archive or dismiss action.
+     */
+    private fun freshArchiveNode(selector:BySelector):UiObject2?{
+        if(android.os.Build.VERSION.SDK_INT>=34)
+            assertTrue("Accessibility observation cache did not clear",instrumentation.uiAutomation.clearCache())
+        return device.findObject(selector)
+    }
     private fun await(message:String,timeout:Long=15000,condition:()->Boolean){
         val end=android.os.SystemClock.elapsedRealtime()+timeout
         var passed=condition()
@@ -104,20 +116,22 @@ class NativeCanonicalTranscriptNativeTest{
         val entry=WorkEntry(WorkItemKey(source,WorkKind.SESSION,"","same-thread"),1L,
             WorkCatalogPayload(destination,JSONObject().put("id","same-thread").put("name","Mac archive test").toString()))
         main{WorkSourceActions.actions.archive(entry);WorkSourceActions.actions.archive(entry)}
-        await("Visible archive progress"){device.hasObject(By.text("Archiving…"))}
+        await("Visible archive progress"){freshArchiveNode(By.text("Archiving…"))!=null}
         assertEquals("Repeated activation must not dispatch twice",1,qa("state").getInt("archiveCalls"))
         assertEquals("workstation",Pocket.environmentId)
         qa("archive-refuse")
         await("Archive refusal recorded"){WorkSourceActions.feedback.values.any{it.error!=null}}
         device.dumpWindowHierarchy(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native.xml"))
         android.util.Log.i("ArchiveQA",feedbackEvidence().toString())
-        await("Refusal visible above footer"){device.hasObject(By.textContains("Close this session in its Mac terminal"))}
+        await("Refusal visible above footer"){freshArchiveNode(By.textContains("Close this session in its Mac terminal"))!=null}
         assertEquals("Close this session in its Mac terminal before archiving.",WorkSourceActions.feedback.values.single().error)
-        val bounds=device.findObject(By.textContains("Close this session in its Mac terminal")).visibleBounds
+        val bounds=requireNotNull(freshArchiveNode(By.textContains("Close this session in its Mac terminal"))).visibleBounds
         assertTrue("Action feedback must remain at bottom of viewport",bounds.centerY()>device.displayHeight/2)
+        device.dumpWindowHierarchy(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native-fresh.xml"))
+        device.takeScreenshot(java.io.File(context.getExternalFilesDir(null),"archive-feedback-native-fresh.png"))
         assertEquals("synthetic-system76-mac-archive",qa("state").getJSONArray("archiveOrigins").getString(0).removePrefix("Bearer "))
         assertFalse(qa("state").getBoolean("archived"));assertEquals(0,qa("state").getInt("workSubmissions"))
-        device.findObject(By.text("Dismiss")).click()
+        requireNotNull(freshArchiveNode(By.text("Dismiss"))).click()
         await("Dismiss clears feedback"){WorkSourceActions.feedback.isEmpty()}
         assertEquals(1,qa("state").getInt("archiveCalls"));assertEquals("workstation",Pocket.environmentId)
     }
@@ -239,6 +253,168 @@ class NativeCanonicalTranscriptNativeTest{
             assertEquals("Native unsent draft",context.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
         }finally{qa("release");main{Pocket.closeTask();PocketLive.stop()}}
     }
+    @Test fun backgroundHistoryEligibilityPreservesExplicitReadsAndRecovery(){
+        requireOwnedNativeTarget(device)
+        val token="synthetic-system76-"+java.util.UUID.randomUUID()+"-alpha"
+        val endpoint="http://127.0.0.1:18880"
+        val prefs=context.getSharedPreferences("pocket",Context.MODE_PRIVATE)
+        prefs.edit().clear().putString("server",endpoint).putString("token",token).putString("deviceId","synthetic-device-a")
+            .putString("environment:history_beta:server",endpoint).putString("environment:history_beta:token",token.removeSuffix("alpha")+"beta")
+            .putString("environment:history_beta:deviceId","synthetic-device-b")
+            .putString("environments:v1",org.json.JSONArray().put(JSONObject().put("id","workstation").put("name","Alpha")).put(JSONObject().put("id","history_beta").put("name","Beta")).toString())
+            .putString("draft:archive-history","Retained archive draft").commit()
+        val owner=transcriptCacheOwner("workstation",endpoint,token)
+        val retained="""{"windowSchema":2,"thread":{"id":"dormant-history"},"timeline":{"rows":[{"id":"retained","kind":"message","text":"Retained old content"}],"canonicalIds":["retained"],"hasEarlier":false}}"""
+        // Seed an old dirty cache row in this disposable pairing before activation.
+        // This exercises SQLite restoration, not a claimed OS process restart.
+        context.openOrCreateDatabase("codex-session-messages-v1.sqlite",Context.MODE_PRIVATE,null).use{db->
+            db.execSQL("CREATE TABLE IF NOT EXISTS recent(scope TEXT NOT NULL,thread TEXT NOT NULL,body TEXT,notification INTEGER NOT NULL DEFAULT 0,dirty INTEGER NOT NULL DEFAULT 0,updated INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(scope,thread))")
+            if(db.version==0)db.version=1
+            db.execSQL("INSERT OR REPLACE INTO recent(scope,thread,body,dirty,updated) VALUES(?,?,?,1,?)",arrayOf<Any>(owner,"dormant-history",retained,System.currentTimeMillis()))
+        }
+        main{Pocket.init(context)}
+        val destination=requireNotNull(Pocket.captureEnvironment())
+        fun control(id:String?=null,code:String?=null,extra:JSONObject=JSONObject()):JSONObject=runBlocking{
+            if(id!=null)extra.put("id",id).put("code",code?:JSONObject.NULL)
+            Pocket.apiEnvironment(destination,"/_qa/history-lifecycle",extra)
+        }
+        fun reads(id:String,origin:String="A")=control().getJSONArray("reads").objects().filter{it.s("id")==id&&it.s("origin")==origin}
+        fun refusal(id:String):JSONObject?=context.openOrCreateDatabase("codex-session-messages-v1.sqlite",Context.MODE_PRIVATE,null).use{db->
+            if(db.version<2)return@use null
+            db.rawQuery("SELECT code,retry_at FROM background_refusal WHERE scope=? AND thread=?",arrayOf(owner,id)).use{cursor->
+                if(cursor.moveToFirst())JSONObject().put("code",cursor.getString(0)).put("retryAt",cursor.getLong(1))else null
+            }
+        }
+        fun catalog()=runBlocking{CodexCatalog.source(destination).readPage("history-lifecycle")}
+        fun foreground(id:String)=runBlocking{CodexSessionRepository.readCurrent(destination,id)}
+        try{
+        control("durable-history","THREAD_HISTORY_UNAVAILABLE",JSONObject().put("status","notLoaded"))
+        control("ephemeral-history","THREAD_EPHEMERAL_UNAVAILABLE",JSONObject().put("ephemeral",true).put("status","notLoaded"))
+        control("healthy-history")
+        val capabilities=runBlocking{Pocket.apiEnvironment(destination,"/api/status")}.getJSONObject("capabilities")
+        main{CodexSessionRepository.observeCapabilities(destination,capabilities);CodexSessionRepository.activate()}
+        catalog()
+        await("Typed refusals and positive control did not settle"){
+            refusal("durable-history")!=null&&refusal("ephemeral-history")!=null&&reads("healthy-history").any{it.optBoolean("settled")}
+        }
+        assertTrue("Restoration admitted historical dirty cache",reads("dormant-history").isEmpty())
+        val durableBefore=reads("durable-history").size;val ephemeralBefore=reads("ephemeral-history").size
+        main{CodexConversations.reconnected();CodexSessionRepository.observeCapabilities(destination,null);CodexSessionRepository.observeCapabilities(destination,capabilities)}
+        catalog();control("healthy-history",extra=JSONObject().put("revision",2));catalog()
+        await("Eligible current conversation stopped refreshing"){reads("healthy-history").count{it.optBoolean("settled")}>1}
+        assertEquals("Reconnect retried unchanged durable failure before backoff",durableBefore,reads("durable-history").size)
+        assertEquals("Reconnect retried unavailable ephemeral history",ephemeralBefore,reads("ephemeral-history").size)
+        assertTrue(reads("dormant-history").isEmpty())
+        val other=requireNotNull(Pocket.captureEnvironment("history_beta"))
+        assertEquals("Source B could not read its same-ID history",1,runBlocking{CodexSessionRepository.readCurrent(other,"durable-history")}.getJSONObject("timeline").getInt("native"))
+        assertNotNull("Source B cleared source A's refusal",refusal("durable-history"))
+        // Availability recovers without changing status/path/timestamps. Only an
+        // existing catalog observation after the persisted backoff may re-admit it.
+        control("durable-history")
+        val retryAt=requireNotNull(refusal("durable-history")).getLong("retryAt")
+        while(System.currentTimeMillis()<retryAt)Thread.sleep(minOf(250,retryAt-System.currentTimeMillis()).coerceAtLeast(1))
+        catalog()
+        await("Unchanged durable metadata never recovered after bounded re-admission"){refusal("durable-history")==null&&reads("durable-history").size>durableBefore}
+        assertEquals("Durable retry also woke ephemeral history",ephemeralBefore,reads("ephemeral-history").size)
+        control("ephemeral-history")
+        assertEquals(1,foreground("ephemeral-history").getJSONObject("timeline").getInt("native"))
+        assertNull("Successful explicit read did not release ephemeral suspension",refusal("ephemeral-history"))
+        control("wrong-envelope","THREAD_HISTORY_UNAVAILABLE",JSONObject().put("wrongIdentity",true).put("catalog",false))
+        val wrong=runCatching{foreground("wrong-envelope")}.exceptionOrNull()
+        assertTrue("Wrong-thread envelope retained typed authority",wrong is PocketApiException&&wrong.code==null)
+        assertNull(refusal("wrong-envelope"))
+        // Only a complete current catalog can withdraw absent membership; the
+        // repeated partial search pages above never erased its other entries.
+        control("healthy-history",extra=JSONObject().put("catalog",false))
+        runBlocking{CodexCatalog.source(destination).head()}
+        val removedCount=reads("healthy-history").size
+        main{CodexSessionRepository.invalidate("healthy-history",destination);CodexConversations.reconnected()}
+        control("durable-history",extra=JSONObject().put("revision",2));catalog()
+        await("Full-catalog withdrawal stopped other current work"){reads("durable-history").size>durableBefore+1}
+        assertEquals("Removed entry re-entered background queue",removedCount,reads("healthy-history").size)
+        assertEquals(1,foreground("healthy-history").getJSONObject("timeline").getInt("native"))
+        control("healthy-history",extra=JSONObject().put("catalog",true).put("revision",3));catalog()
+
+        // Hold one background archive refusal; an explicit reader joins that
+        // exact single flight, then alone receives the archived /head fallback.
+        control("archive-history","THREAD_ARCHIVED",JSONObject().put("holdNative",true))
+        catalog();await("Archive background request did not enter"){reads("archive-history").size==1}
+        val scope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+kotlinx.coroutines.Dispatchers.IO)
+        try{
+            val joined=scope.async(start=kotlinx.coroutines.CoroutineStart.UNDISPATCHED){CodexSessionRepository.readCurrent(destination,"archive-history")}
+            control("archive-history","THREAD_ARCHIVED",JSONObject().put("holdNative",false))
+            val archive=runBlocking{joined.await()}
+            assertEquals("Archived retained response",archive.getJSONObject("timeline").getJSONArray("rows").getJSONObject(0).s("text"))
+            assertEquals("Shared reader submitted duplicate native read",1,reads("archive-history").count{it.s("path").endsWith("/native-timeline")})
+            assertEquals("Explicit read did not use one archive fallback",1,reads("archive-history").count{it.s("path").endsWith("/head")})
+            val beforeCursor=reads("archive-history").size
+            assertTrue(runCatching{runBlocking{CodexSessionRepository.readOlder(destination,"archive-history","native-local:obsolete")}}.isFailure)
+            assertEquals("Native cursor leaked into archived history",beforeCursor,reads("archive-history").size)
+            assertEquals("Archived earlier response",runBlocking{CodexSessionRepository.readOlder(destination,"archive-history","archive-earlier")}.getJSONObject("timeline").getJSONArray("rows").getJSONObject(0).s("text"))
+
+            // Subsequent archived heads have the same ownership requirement as
+            // the initial fallback, even when a new native head becomes eligible.
+            control("archive-history","THREAD_ARCHIVED",JSONObject().put("holdHead",true))
+            val heldHead=scope.async{runCatching{CodexSessionRepository.readCurrent(destination,"archive-history")}}
+            await("Subsequent archived head was not held"){reads("archive-history").any{it.s("path").endsWith("/head")&&!it.optBoolean("settled")}}
+            control("archive-history",extra=JSONObject().put("archived",false))
+            main{CodexCatalog.archiveChanged(destination,"archive-history",false)}
+            await("Unarchive did not restore native protocol"){CodexSessionRepository.nativeEnabled(destination,"archive-history")}
+            control("archive-history",extra=JSONObject().put("holdHead",false))
+            assertTrue("Late archived head survived unarchive",runBlocking{heldHead.await()}.isFailure)
+            assertEquals(1,foreground("archive-history").getJSONObject("timeline").getInt("native"))
+            control("archive-history","THREAD_ARCHIVED",JSONObject().put("archived",true))
+            main{CodexCatalog.archiveChanged(destination,"archive-history",true)}
+            foreground("archive-history")
+
+            // A late archived older page cannot overwrite an unarchived native head.
+            control("archive-history","THREAD_ARCHIVED",JSONObject().put("holdHead",true))
+            val heldOlder=scope.async{runCatching{CodexSessionRepository.readOlder(destination,"archive-history","archive-earlier")}}
+            await("Older archive read was not held"){reads("archive-history").any{it.s("cursor")=="archive-earlier"&&!it.optBoolean("settled")}}
+            control("archive-history",extra=JSONObject().put("archived",false))
+            main{CodexCatalog.archiveChanged(destination,"archive-history",false)}
+            await("Unarchive did not re-admit native history"){CodexSessionRepository.nativeEnabled(destination,"archive-history")&&reads("archive-history").count{it.s("path").endsWith("/native-timeline")}>1}
+            control("archive-history",extra=JSONObject().put("holdHead",false))
+            assertTrue("Late legacy page survived unarchive",runBlocking{heldOlder.await()}.isFailure)
+            assertTrue(CodexSessionRepository.nativeEnabled(destination,"archive-history"))
+
+            // An archive/unarchive ABA with identical catalog fields must reject
+            // the old refusal; source identity alone cannot detect that race.
+            control("race-history","THREAD_HISTORY_UNAVAILABLE",JSONObject().put("holdNative",true))
+            catalog();await("Old refusal was not held"){reads("race-history").any{!it.optBoolean("settled")}}
+            main{CodexCatalog.archiveChanged(destination,"race-history",true);CodexCatalog.archiveChanged(destination,"race-history",false)}
+            control("race-history",extra=JSONObject().put("holdNative",false))
+            await("New native read after archive cycle did not settle"){reads("race-history").count{it.optBoolean("settled")}>1}
+            assertNull("Old refusal survived archive/unarchive cycle",refusal("race-history"))
+        }finally{scope.cancel()}
+        control("archive-history","THREAD_ARCHIVED",JSONObject().put("archived",true))
+        main{CodexCatalog.archiveChanged(destination,"archive-history",true)}
+        val archivedCount=reads("archive-history").size
+        val healthyCount=reads("healthy-history").size
+        runBlocking{CodexCatalog.source(destination,true).readPage("history-lifecycle")}
+        main{CodexSessionRepository.activate()}
+        control("healthy-history",extra=JSONObject().put("revision",4));catalog()
+        await("Archive withdrawal blocked healthy work"){reads("healthy-history").count{it.optBoolean("settled")}>healthyCount}
+        assertEquals("Archive catalog/reconnect scheduled history",archivedCount,reads("archive-history").size)
+        main{context.startActivity(Intent(context,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("archive-history")}
+            await("Explicit archived open did not render retained history"){PocketTranscript.currentHistoryVerified&&PocketTranscript.rows.any{it.s("text")=="Archived retained response"}}
+            assertTrue(device.wait(Until.hasObject(By.text("Archived retained response")),4000))
+            assertEquals("Retained archive draft",prefs.getString("draft:archive-history",null))
+            context.openOrCreateDatabase("codex-session-messages-v1.sqlite",Context.MODE_PRIVATE,null).use{db->
+                db.rawQuery("SELECT body FROM recent WHERE scope=? AND thread=?",arrayOf(owner,"dormant-history")).use{cursor->assertTrue(cursor.moveToFirst());assertEquals("Historical body was deleted",retained,cursor.getString(0))}
+            }
+            val evidence=control();assertEquals(0,evidence.getInt("workSubmissions"))
+            context.filesDir.resolve("background-history-lifecycle.json").writeText(evidence.put("scope","Seeded SQLite restore and actual repository/catalog HTTP lifecycle; not an OS process restart").toString(2))
+        }catch(failure:Throwable){
+            runCatching{context.filesDir.resolve("background-history-lifecycle-failure.json").writeText(control().toString(2))}
+            runCatching{device.takeScreenshot(context.filesDir.resolve("background-history-lifecycle-failure.png"))}
+            throw failure
+        }finally{
+            runCatching{control(extra=JSONObject().put("releaseHolds",true))}
+            main{Pocket.closeTask();PocketLive.stop()}
+        }
+    }
+
     @Test fun mixedHistoryProtocolsStaySessionScopedAndKeepTheirOriginalCursors(){
         prepare()
         try{
