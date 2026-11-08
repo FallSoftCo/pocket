@@ -1,0 +1,58 @@
+{
+  "at": 1794099354.461174,
+  "state": "passed-test-only",
+  "cases": [
+    {
+      "case": "co.fallsoft.pocket.NativeParityControlsNativeTest#contextRecoveryRevertAndSettingsPreserveDrafts",
+      "runnerElapsedMs": 103536,
+      "instrumentationSeconds": 95.718,
+      "receiptSha256": "dec0d1b7c944ce374d0ac19652e0e450ab92a2ccc9c9621310141e89f33e8481",
+      "logSha256": "b065c0e074b19e1a3977b43b37aac004802726659dd8b3ecf8ef8905d8ad59a6",
+      "profilesRestored": true,
+      "fixtureStopped": true
+    },
+    {
+      "case": "co.fallsoft.pocket.NativeParityControlsNativeTest#requestsKeepOriginalIdentityAndReturnToCommandOutput",
+      "runnerElapsedMs": 32687,
+      "instrumentationSeconds": 27.08,
+      "receiptSha256": "40109bae0a5e7688ddb4958826e58acf66b6d88e4e785a66690eb7112b9935b2",
+      "logSha256": "59204ba876068e84afb1e45ecb4ea85400262b8d441bc1135d65652bb84c2d30",
+      "profilesRestored": true,
+      "fixtureStopped": true
+    },
+    {
+      "case": "co.fallsoft.pocket.NativeParityControlsNativeTest#executionInspectionAndTerminationStaySourceBound",
+      "runnerElapsedMs": 54819,
+      "instrumentationSeconds": 49.55,
+      "receiptSha256": "073c5f557727f7bf4b48f04f5a18766878e738014a6fbeb2eb24ae57f5338f24",
+      "logSha256": "b9d1475ed555627b58ec5f9fab3d2656fffe2671b88f17177848905414821f50",
+      "profilesRestored": true,
+      "fixtureStopped": true
+    }
+  ],
+  "productionVersion": 176,
+  "productionSourceChanged": false,
+  "newAppPublished": false,
+  "phoneTouched": false,
+  "providerOrBusinessWork": false,
+  "limits": [
+    "Retained software emulator and synthetic authority only.",
+    "Existing176 app qualification APK reused byte-exact; changed instrumentation only.",
+    "Overall runner times include setup; instrumentation Time is separately reported.",
+    "No immutable176 release receipt rewritten."
+  ],
+  "sourceCommit": "6e42623c",
+  "qualificationInputSha": "6d44c4c87d9dee1ddec70efbb6bdb7d5b8248eb566c6d3724e38394a11c35574",
+  "buildTasks": [
+    "assembleQualification",
+    "assembleQualificationAndroidTest"
+  ],
+  "existingChecks": {
+    "releaseAndOwnershipTests": 18,
+    "failed": 0,
+    "skipped": 0
+  },
+  "setupFailure": "Initial focused command named two nonexistent test files and ran no tests; corrected command selected the existing release-qualification and owned-fixture suites.",
+  "publicationGate": "Partial test-only build does not claim full release tasks and cannot qualify a release.",
+  "comparativeTiming": "Current instrumentation sum172.348s versus prior158.44s; fresh setups and preserved transition checks increase total time. This is not a controlled performance benchmark."
+}

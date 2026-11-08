@@ -277,3 +277,12 @@ Its focused regression rejects stale evidence; the first review remains held and
 a fresh review passed on the same APK. Exact optimized output paging was also
 visually inspected after scrolling, with two original-source revision-bound reads.
 These are emulator/fixture observations, not physical-phone proof.
+
+The [three-workflow decomposition](NATIVE-PARITY-WORKFLOW-PLAN.md) is now implemented
+and natively qualified against the byte-identical176 qualification APK. Requests,
+execution and context recovery reported27.08s,49.55s and95.718s respectively;
+total instrumentation172.348s includes repeated setup and preserved cross-feature
+transitions, versus the prior combined158.44s. This improves failure attribution
+and maximum-case duration, not overall throughput. All original assertion blocks
+remain byte-exact. The policy changes atomically for future releases; no prior
+release receipt was rewritten and no new APK was published for this test work.

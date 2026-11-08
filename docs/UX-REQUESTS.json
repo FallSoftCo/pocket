@@ -16,7 +16,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Android176/alpha158 published both channels; approval callbacks bound to original source and output-page scroll resets.15 native cases and exact optimized history/output review passed. One176 announcement accepted by FCM. Phone last verified175;176 installation not claimed. Web175 and backend174 retained; monitoring active.",
+      "status": "Android176/alpha158 published both channels; approval callbacks bound to original source and output-page scroll resets.15 native cases and exact optimized history/output review passed. One176 announcement accepted by FCM. Phone package-manager read confirms176 installed; physical interaction remains separately unverified. Web175 and backend174 retained; monitoring active.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",
@@ -78,7 +78,8 @@
           "Keep fixture, DOM, rendered UI, native runtime and physical phone evidence distinct.",
           "Coordinate heavy emulator/build work with root; no production/model actions or new agents."
         ]
-      }
+      },
+      "test_workflow_quality": "Three independent native request/execution/context workflows qualified on unchanged176 APK, original assertions and cross-feature transitions retained; future release policy updated atomically. Not a new phone release."
     },
     {
       "id": "archive-action-feedback-20261107",

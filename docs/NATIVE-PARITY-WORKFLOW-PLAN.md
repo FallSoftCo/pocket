@@ -1,4 +1,6 @@
-# Native parity workflow decomposition proposal
+# Native parity workflow decomposition
+
+Implementation update: the three workflows and atomic release-policy replacement landed in `6e42623c`. All three actual native cases passed against the unchanged176 qualification APK. See [the qualification record](qualification/native-parity-workflows-20261107.json). The original proposal below preserves the reviewed assertion and state-dependency map; it is no longer pending implementation. Published176 artifacts remain unchanged.
 
 Reviewed source: `4a13353f289d4659dc2c375557802e05e1129a4b` (Android 176). This is a source review and proposed ownership map, not an implemented split or a new native qualification. No Android source, fixture, release policy, timeout or runner behavior changes accompany this document.
 
