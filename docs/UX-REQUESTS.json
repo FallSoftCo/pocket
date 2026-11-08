@@ -69,7 +69,7 @@
         "reasoning": "high",
         "branch": "parity/integration-quality-20261107",
         "base": "77636b61",
-        "status": "Cold-page send and remote reconnect integration delivered; read-only pre-existing OS-dialog preflight integrated. Now checking rendered configuration changes/conflict refusal through actual app/gateway/backend with synthetic native wire; no real settings mutation or recurring model wake.",
+        "status": "Cold-page send, remote reconnect and rendered configuration/conflict journeys delivered and reviewed, with negative controls. No real native settings changed. Monitoring remains active; no recurring model wake timers.",
         "requirements": [
           "Map user journeys and actual production integration seams to evidence.",
           "Assess disjoint unit tests, mocked behavior, silent skips and release failure detection.",

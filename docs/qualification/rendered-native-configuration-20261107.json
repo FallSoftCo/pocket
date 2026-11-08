@@ -1,0 +1,85 @@
+{
+  "productChanges": false,
+  "productDefectsObserved": false,
+  "inputSha256": {
+    "web/app.mjs": "cb7370be60dfad063f66c248bb3c1f16b0cae8f6f69f875e1f4fcd09459b1d84",
+    "web/native-settings.mjs": "750efff1e7de8d5deeb92a46343b028024efded0788229df415113af181caa24",
+    "server/native-configuration.mjs": "7f6090116569ca62df99e96ac5c4a90cfeb038c53461a11f04c05c546c875197",
+    "server/web-client.mjs": "6cf2fd2c1b5c367e9e33ba7ae4062e4edc8dae66d623a9a03e5b0df936d527bd",
+    "server/web-environments.mjs": "ef04ec0a102e7d1eb72fac409afa380adde0aa602cc25983d94ce4b4185cb10a",
+    "tests/configuration.browser.mjs": "1f37373ef9f7f229e173df36551b2e08f403e06c4d8e9a71c7c951e1933f2a4d",
+    "tests/helpers/production-native-fixture.mjs": "55ffd81e11dedc1ab1589134d6d54c29dc561133829d0c042175ff1cf0ffeb2d",
+    "tests/fixtures/native-contract-0167/schemas.json": "7a6e2ca70130ea23a460ccdbecdb8b72c8f2bc021f895191a1dc95fa8e73d8f2"
+  },
+  "normalObserved": {
+    "configurationPosts": 2,
+    "statuses": [
+      200,
+      409
+    ],
+    "nativeConfigWrites": {
+      "local": 0,
+      "remote": 1
+    },
+    "draftsPreserved": true,
+    "staleClickPost": false,
+    "unrelatedWork": 0,
+    "staleClickObservation": {
+      "heldResponseFinished": true,
+      "subsequentRenderedRemoteCatalog": true,
+      "remoteReadsBefore": 5,
+      "remoteReadsAfter": 6
+    }
+  },
+  "negativeObserved": {
+    "mutation": "Removed only post-version-read origin guard from served native-settings.mjs; repository/product source unchanged.",
+    "configurationPosts": 3,
+    "nativeConfigWrites": {
+      "local": 0,
+      "remote": 2
+    },
+    "failedAssertion": "CONFIGURATION_STALE_CLICK_MUST_NOT_WRITE",
+    "cleanupComplete": true,
+    "staleClickObservation": {
+      "heldResponseFinished": true,
+      "subsequentRenderedRemoteCatalog": true,
+      "remoteReadsBefore": 5,
+      "remoteReadsAfter": 7
+    }
+  },
+  "scope": [
+    "New browser qualifier reuses actual web app, gateway, two real production backends with same raw native thread/app IDs, and existing production-native-fixture.",
+    "Opt-in fixture supports only config/read, app/installed(forceRefresh:false), config/value/write for one synthetic connector.",
+    "Six generated0.167 schemas merged unchanged with file hashes; existing definitions checked identical."
+  ],
+  "limits": [
+    "Existing registered Chrome context and disposable local tabs only; no browser-process restart or visual/layout certification.",
+    "Synthetic configuration stored only in fixture memory, no actual native configuration filesystem or provider/model work.",
+    "No Mac0.163 mutation support claim; two synthetic0.167 authorities used. Existing Mac compatibility refusal HTTP tests retained.",
+    "Conflict is induced between frontend version read and backend pre-dispatch verification; native race after that verification is not separately exercised.",
+    "Browser qualifier is explicitly invoked, not automatically included in npm test or CI.",
+    "No shared checkout edits, device access, build, deployment, release or service restart."
+  ],
+  "cleanupComplete": true,
+  "reviewCorrection": "Removed fixed300ms wait. Match exact held Playwright Request, await its response finished/body/version, then perform actual source navigation and render a new remote catalog through HTTP/backend/native before zero-extra-write assertions.",
+  "rerunScope": "Only normal and guard-removal composed browser journey rerun; earlier focused regression logs remain bound to unchanged fixture/schema/backend files.",
+  "schemaVersion": 1,
+  "date": "2026-11-07",
+  "sourceCommits": [
+    "8732dc2f",
+    "7ddfcde9"
+  ],
+  "integratedCommits": [
+    "06f5fec1",
+    "80c7267e"
+  ],
+  "normalReceiptSha256": "d70195887636558892092e6f403f573ab6b48dbe313a49a5f0b1840b85847e78",
+  "negativeReceiptSha256": "087d16a69d2f4c7f549786da8cb1f07e333597bbf634eb2766451ac22726a987",
+  "focusedRegressions": {
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "domPassed": 2,
+    "retainedSetupFailure": "First DOM command used a package name instead of the required absolute installed-module path; corrected affected cases passed."
+  }
+}
