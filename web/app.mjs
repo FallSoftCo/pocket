@@ -153,6 +153,7 @@ function currentReadAnchor(id){if(id!==scope||follow)return null;const list=$('t
 function saveView(){if(!openedScope)return;const list=$('transcript'),first=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top);readerViews.set(readerKey(openedScope),{follow,anchor:first?.dataset.id,offset:first?first.getBoundingClientRect().top-list.getBoundingClientRect().top:0,top:list.scrollTop});}
 function restoreView(view){if(!view||view.follow)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.dataset.id===view.anchor);if(anchor)list.scrollTop+=anchor.getBoundingClientRect().top-list.getBoundingClientRect().top-view.offset;else list.scrollTop=view.top;}
 async function open(id){
+ historyReader.invalidate(id);
  if(isRoom(id))throw Error('Rooms are retired from NextComp. Original drafts and receipts are retained.');
  saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;if(isRoom(id)){const saved=read('roomView.'+deviceId+'.'+id,'all'),valid=roomLead(rooms.entry(id).room)?['all','conversation','activity','coordination','archive']:['all','conversation','activity'];roomView=valid.includes(saved)?saved:'all';}cache.protect(scope);readFeedback.select(scope);write('scope',scope);const view=readerViews.get(readerKey(id));follow=view?.follow??true;
  current=id==='coordinator'?null:cache.get(id)?.snapshot||null;openedDraftKey=draftKey();$('draft').value=read(openedDraftKey,'');openedScope=scope;$('requests').dataset.signature='';$('error').hidden=true;$('transcript').replaceChildren();$('attention-panel').hidden=true;$('reports-panel').hidden=true;document.body.classList.add('chat-open');renderHeader();renderList();renderTranscript();renderRequests();renderOutbox();renderNotes();restoreView(view);
@@ -234,7 +235,7 @@ async function refreshList({invalidate=false}={}){
   try{data=await api('/api/threads'+suffix);}catch(error){catalogFailure=true;data={threads};}
   if(deviceId!==profile||$('filter').value!==filter||$('search').value.trim()!==query)return;
   catalogSettled=true;threads=cache.catalog((data.threads||[]).map(t=>({...t,archived:filter==='archived'})),metadataTicket);$('catalog-note').textContent=(data.environments?.some(e=>!e.available)?'An environment is unavailable; its last known work remains visible.':data.catalogPartial?'Showing a bounded inventory. Search or open known work.':'');renderList();setSymbolMotionReady(true);
-  for(const id of cache.catalogChanges){if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
+  for(const id of cache.catalogChanges){historyReader.invalidate(id);if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
  },{invalidate});
 }
 async function send(){const text=$('draft').value.trim();if(!text)return;if(deliveryFlight)await deliveryFlight;if(pending)throw Error('Check the saved message delivery before sending another.');if($('send').disabled)throw Error('This conversation is currently unavailable for input. Your draft remains saved.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId,draftKey:draftKey(),draftRevision:read('revision.'+draftKey(),0),state:'prepared'};
@@ -299,6 +300,8 @@ function handleEvent(m){
   if(recovered)scheduleRefresh({head:true,catalog:true,attention:true});return;
  }
  const threadId=m.threadId||m.notification?.thread_id||m.event?.params?.threadId;
+ if(threadId&&['timeline','sessionInteraction','sessionStarted','conversationChanged','notification','reply'].includes(m.type))historyReader.invalidate(threadId);
+ if(threadId&&m.type==='codex'&&['turn/started','item/started','item/completed'].includes(m.event?.method))historyReader.invalidate(threadId);
  if(m.type==='conversationChanged'){if(m.kind==='revert'){cache.replaceHistory(threadId,m.historyHead);loadSerial++;}scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='timeline'){
   const known=cache.timeline(threadId,m.row);

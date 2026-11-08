@@ -108,3 +108,32 @@ test('a repaired source generation replaces larger old positions and releases un
  const repaired=page('mac',[row(20,'current question','user'),row(21,'current answer')],'current');repaired.historyHead.epoch='after-repair';
  const result=h.accept(repaired,'mac');assert.deepEqual(result.rows.map(r=>r.text),['current question','current answer']);assert.equal(h.components.length,1);assert.equal(result.before,'current');
 });
+
+test('explicit initial-message refusal retains cached messages and stops reads until reinspection',async()=>{
+ const store=new SessionStore();let empty=false,calls=0;
+ const reader=new HistoryReader(async()=>{
+  calls++;
+  if(empty)throw Object.assign(Error('Codex has not stored a first message for this session yet. Previously saved messages are retained.'),{status:409,code:'THREAD_NOT_MATERIALIZED',readAvailability:{threadId:'session',kind:'notMaterialized',operation:'history/read'}});
+  return page('session',[row(1,'Saved message')]);
+ });
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});empty=true;
+ await assert.rejects(reader.read('session'),{code:'THREAD_NOT_MATERIALIZED'});
+ const refusedAt=calls;
+ for(let n=0;n<3;n++)await assert.rejects(reader.read('session',{background:!!(n%2)}),{code:'THREAD_NOT_MATERIALIZED'});
+ assert.equal(calls,refusedAt);assert.deepEqual(store.get('session').rows.map(r=>r.text),['Saved message']);
+ empty=false;reader.invalidate('other');await assert.rejects(reader.read('session'),{code:'THREAD_NOT_MATERIALIZED'});assert.equal(calls,refusedAt);
+ reader.invalidate('session');store.head('session',await reader.read('session'),{ticket:store.ticket()});assert.equal(calls,refusedAt+1);
+});
+
+test('new inspection evidence during a pending refusal is not suppressed by its late result',async()=>{
+ let rejectRead,calls=0;
+ const reader=new HistoryReader(async()=>{
+  calls++;
+  if(calls===1)return new Promise((resolve,reject)=>rejectRead=reject);
+  return page('session',[row(1,'First message')]);
+ });
+ const pending=reader.read('session');reader.invalidate('session');
+ rejectRead(Object.assign(Error('Not materialized'),{status:409,code:'THREAD_NOT_MATERIALIZED',readAvailability:{threadId:'session',kind:'notMaterialized',operation:'history/read'}}));
+ await assert.rejects(pending,{code:'THREAD_NOT_MATERIALIZED'});
+ await reader.read('session');assert.equal(calls,2);
+});

@@ -12,7 +12,11 @@ export function cachedThreadMetadata(db,threadId){
 
 export function threadReadError(error,{threadId,metadata=null,operation}){
  let code,message,kind;
- if(isThreadNotLoaded(error,threadId)){
+ if(operation==='history/read'&&error?.rpcMethod==='thread/turns/list'&&error?.rpc?.code===-32600&&
+    error.rpc.message===`thread ${threadId} is not materialized yet; thread/turns/list is unavailable before first user message`){
+  code='THREAD_NOT_MATERIALIZED';kind='notMaterialized';
+  message='Codex has not stored a first message for this session yet. Previously saved messages are retained.';
+ }else if(isThreadNotLoaded(error,threadId)){
   if(metadata?.id===threadId&&metadata.ephemeral===true){
    code='THREAD_EPHEMERAL_UNAVAILABLE';kind='ephemeralUnavailable';
    message='This temporary session is no longer loaded in Codex, and Codex cannot provide its history for this read. Previously saved messages are retained.';
