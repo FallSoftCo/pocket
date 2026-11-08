@@ -13,6 +13,7 @@ import {NativeSubscriptions} from './native-subscriptions.mjs';
 import {NativeTimelineReader,projectNativeTimeline} from './native-timeline.mjs';
 import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
+import {cachedThreadMetadata,readThreadMetadata} from './thread-read-availability.mjs';
 import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
 import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
 import {loadFleet} from './fleet.mjs';
@@ -110,7 +111,8 @@ if(automation)chmodSync(automationPath,0o600);
 const push=loadPush(db,dir);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex(undefined,{managedStart:process.env.POCKET_CODEX_MANAGED_START});
-const nativeTimelineReader=new NativeTimelineReader(codex);
+const knownThreadMetadata=id=>cachedThreadMetadata(db,id);
+const nativeTimelineReader=new NativeTimelineReader(codex,{known:knownThreadMetadata});
 const coordinatorHeadReader=new CoordinatorHeadReader({codex,native:nativeTimelineReader});
 const nativeSubscriptions=new NativeSubscriptions(codex);
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
@@ -760,8 +762,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
  if(cursor!==null&&(typeof cursor!=='string'||!cursor||cursor.length>16384))
   return res.status(400).json({error:'Invalid native timeline cursor.'});
  await codex.connect();
- const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
- if(thread?.id!==id)throw Error('Native timeline belongs to another session.');
+ const thread=await readThreadMetadata(codex,id,{known:knownThreadMetadata});
  if(cursor===null&&req.query.observeOnly!=='1')void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).catch(error=>console.error('Native live subscription unavailable',error.message));
  const revision=timeline.version,historyHead=historyHeads.snapshot(id);
  const head=await coordinatorHeadReader.read(id,{cursor,limit:64,observationOnly:req.query.observeOnly==='1'});
@@ -774,12 +775,12 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
   notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(id).map(notificationRow),req.device.id),
   ...outgoingProjection.fields(id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(id)
  };
- if(cursor===null){if(req.query.observeOnly!=='1')response.catchup=sessionCatchup.capture(req.device.id,id,response);coordinatorHub.memory.capture(id,response);}
+ if(cursor===null){if(req.query.observeOnly!=='1'&&!catchupHidden(id))response.catchup=sessionCatchup.capture(req.device.id,id,response);coordinatorHub.memory.capture(id,response);}
  res.set('Cache-Control','no-store').json(response);
 }));
 app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   const timelineView=req.query.view==='timeline'||req.path.endsWith('/head');
-  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
+  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery,known:knownThreadMetadata},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
   const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
@@ -788,7 +789,7 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
   const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:timelineView?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),...outgoingProjection.fields(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
-  if(!req.query.before)response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
+  if(!req.query.before&&!catchupHidden(t.id))response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));
 app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
@@ -941,7 +942,7 @@ server.on('upgrade',async(req,socket,head)=>{
   if(fleet&&device.id!=='owner'){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
 });
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
-app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);if(res.destroyed||res.headersSent)return;res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{})});});
+app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);if(res.destroyed||res.headersSent)return;res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{}),...(err.readAvailability?{readAvailability:err.readAvailability}:{})});});
 const port=Number(process.env.PORT||18880);
 server.listen(port,'127.0.0.1',()=>{
  if(fleet)fleet.startRevocationSync();
