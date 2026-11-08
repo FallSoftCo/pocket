@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-11-08",
+  "status": "published-both-channels-phone-installed-monitoring",
+  "versionCode": 178,
+  "versionName": "0.5.0-alpha.160",
+  "runtimeSource": "41c841744a00483033a7c6606b8c5817eea4da2c",
+  "qualificationSource": "4f4f100b53e2c8d559475cd043b742ac88c7a394",
+  "backendDigest": "0cd93755f6871c9071a800bdb951e87ed5d188c29487427d1b2bdb410bd46c00",
+  "phoneApkSha256": "840782e81322e5cd9a1558e44984ffa04534e470e16ea46753efddf2f0224cbb",
+  "validation": {
+    "backend": {
+      "tests": 753,
+      "passed": 751,
+      "skipped": 2,
+      "failed": 0
+    },
+    "androidUnitPerVariant": {
+      "tests": 477,
+      "failed": 0,
+      "skipped": 2
+    },
+    "bothLints": true,
+    "nativeJourneysPassed": 18,
+    "optimizedCanonicalOrderQuestionReopen": true,
+    "renderedBrowserCatalog": "desktop, narrow and short viewport; explicit negative control retained",
+    "nativeAudio": "existing account audio-only emulator journey, no business turn",
+    "phone": "read-only package-manager version and exact APK hash"
+  },
+  "deployment": {
+    "workstationBackend": true,
+    "webBothRoutes": true,
+    "macBackend": true,
+    "nativeProcessesRestarted": false,
+    "pairingQueuesAndUnknownReceiptsPreserved": true,
+    "phoneUiOrAudioObserved": false,
+    "updateAnnouncement": "one; FCM accepted on first attempt; handset display not independently observed"
+  },
+  "retainedFailures": [
+    "Owned emulator aborted before native admission; bounded same-AVD restart, root cause undetermined.",
+    "Initial plugin detail native journey timed out while loading. Product code unchanged; diagnostic rerun passed with server response completion1\u20137ms. Earlier stall cause remains unresolved.",
+    "Rendered short-window settings failure was reproduced and fixed with one scroll area and reachable bottom controls."
+  ],
+  "limits": [
+    "No live plugin install/uninstall, provider login success or operational readiness proof.",
+    "Mac 0.163 remains read-only; unsupported worktree, hooks and verification actions remain explicit.",
+    "179 initial-message history recovery is a separate candidate, not part of 178."
+  ]
+}
