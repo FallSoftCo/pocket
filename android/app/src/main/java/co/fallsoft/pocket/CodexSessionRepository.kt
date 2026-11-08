@@ -220,7 +220,7 @@ internal object CodexSessionRepository {
     }
     private fun retainBackgroundRefusal(key:Pair<String,String>,refusal:BackgroundRefusal){
         backgroundRefusals[key]=refusal;pending.remove(key)
-        db.execSQL("INSERT OR REPLACE INTO background_refusal(scope,thread,evidence,code,notification,attempts,retry_at) VALUES(?,?,?,?,?,?,?)",arrayOf(key.first,key.second,refusal.evidence,refusal.code,refusal.notification,refusal.attempts,refusal.retryAt))
+        db.execSQL("INSERT OR REPLACE INTO background_refusal(scope,thread,evidence,code,notification,attempts,retry_at) VALUES(?,?,?,?,?,?,?)",arrayOf<Any>(key.first,key.second,refusal.evidence,refusal.code,refusal.notification,refusal.attempts,refusal.retryAt))
     }
     /** Accepted catalog membership, not absence from a partial head/search page. */
     fun catalogObserved(destination:EnvironmentRequest,threads:List<JSONObject>,complete:Boolean,archived:Boolean){

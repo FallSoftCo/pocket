@@ -38,17 +38,18 @@ test('real gateway reconciles temporary runtime residency across cached/live/sea
  const db=new DatabaseSync(join(dir,'pocket.sqlite'));
  for(const row of [temporary,{...late,ephemeral:undefined},missing,offline])db.prepare('INSERT INTO pocket_discovered_threads VALUES(?,?,0,?)').run(row.id,JSON.stringify(row),Date.now());
  // Existing stale rows are encountered through native/cache metadata, not names.
- const normal=await get('/api/threads');assert.deepEqual(new Set(normal.threads.map(t=>t.id)),new Set([durable.id,child.id,pending.id,offline.id,external.id]));
+ const normal=await get('/api/threads');assert.deepEqual(new Set(normal.threads.map(t=>t.id)),new Set([durable.id,child.id,pending.id,missing.id,offline.id,external.id]));
  for(const query of ['?search=Temporary','?cursor=older','?archived=true','?view=coordinator&includeChildren=true']){
-  const p=await get('/api/threads'+query);assert.ok(p.threads.every(t=>![temporary.id,late.id,missing.id].includes(t.id)),query);
+  const p=await get('/api/threads'+query);assert.ok(p.threads.every(t=>![temporary.id,late.id].includes(t.id)),query);
  }
  // A new native ephemeral creation is never broadcast into a saved work catalog.
  const event={method:'thread/started',params:{thread:{...temporary,id:'new-temporary'}}};for(const ws of wss.clients)ws.send(JSON.stringify(event));
  await get('/api/threads');assert.equal(db.prepare("SELECT kind FROM pocket_internal_sessions WHERE thread_id='new-temporary'").get()?.kind,'temporary-runtime');
  assert.ok(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(temporary.id),'old cache preserved, not a destructive cleanup');
- await stop();await boot();assert.ok((await get('/api/threads')).threads.every(t=>![temporary.id,late.id,missing.id].includes(t.id)));
+ await stop();await boot();const restarted=await get('/api/threads');assert.ok(restarted.threads.every(t=>![temporary.id,late.id].includes(t.id)));
+ assert.ok(restarted.threads.some(t=>t.id===missing.id),'unloaded durable history remains discoverable after restart; missing source does not prove permanent loss');
  assert.ok(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(missing.id),'unavailable history cache remains retained');
- reappeared=true;assert.ok((await get('/api/threads')).threads.some(t=>t.id===missing.id),'fresh native evidence restores membership');
+ reappeared=true;assert.equal((await get('/api/threads')).threads.filter(t=>t.id===missing.id).length,1,'fresh native evidence reconciles the retained durable identity without duplication');
  promoted=true;assert.ok((await get('/api/threads')).threads.some(t=>t.id===temporary.id),'explicit native persistence makes the same ID discoverable');
  assert.equal(db.prepare('SELECT 1 FROM pocket_internal_sessions WHERE thread_id=?').get(temporary.id),undefined);
  externalArchived=true;for(let i=0;i<2;i++)assert.ok(!(await get('/api/threads')).threads.some(t=>t.id===external.id),'native external archive cannot reappear from cached metadata');
