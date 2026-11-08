@@ -1,5 +1,9 @@
 const node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 const button=(label,fn)=>{const n=node('button',label);n.onclick=fn;return n;};
+const yesNo=value=>value===true?'Yes':value===false?'No':'Unavailable';
+const policyLabel=value=>({AVAILABLE:'Installation allowed',NOT_AVAILABLE:'Installation restricted',INSTALLED_BY_DEFAULT:'Managed installation'}[value]||'Installation policy unavailable');
+const authLabel=value=>({ON_INSTALL:'Authentication during setup',ON_USE:'Authentication when used'}[value]||'Authentication policy unavailable');
+const operationLabel=value=>({dispatching:'Waiting for Codex',acknowledged:'Reply received',unknown:'Outcome unconfirmed'}[value]||'Status unavailable');
 // This pane lives inside the existing settings dialog. Every callback retains
 // its opening and source; tab changes and close/reopen invalidate old callbacks.
 export function pluginDetailsButton(panel,item,label='Review plugin'){
@@ -17,17 +21,17 @@ class PluginDetails {
   try{
    const view=await this.panel.api('/api/native/plugins/detail?key='+encodeURIComponent(this.key)+(this.origin.threadId?'&threadId='+encodeURIComponent(this.origin.threadId):''),undefined,{scope:this.origin.scope});
    if(!current())return;this.view=view;this.panel.feedback.textContent='';this.render();
-  }catch(error){if(!current())return;this.panel.feedback.textContent=error.message;try{const saved=await this.panel.api('/api/native/plugins/receipts?key='+encodeURIComponent(this.key),undefined,{scope:this.origin.scope});if(current())for(const receipt of saved.receipts||[])this.panel.body.append(node('p',`${receipt.name} · ${receipt.action} · ${receipt.state}: ${receipt.notice}`));}catch{}if(current())this.panel.body.append(button('Reload plugin details',()=>this.load()));}
+  }catch(error){if(!current())return;this.panel.feedback.textContent=error.message;try{const saved=await this.panel.api('/api/native/plugins/receipts?key='+encodeURIComponent(this.key),undefined,{scope:this.origin.scope});if(current())for(const receipt of saved.receipts||[])this.panel.body.append(node('p',`${receipt.name} · ${receipt.action} · ${operationLabel(receipt.state)}: ${receipt.notice}`));}catch{}if(current())this.panel.body.append(button('Reload plugin details',()=>this.load()));}
  }
  render(){
-  const {panel,view}=this,d=view.detail,revision=this.loadRevision,confirm=(...args)=>{if(this.loadRevision===revision)return this.confirm(...args);};panel.body.replaceChildren(node('h3',d.name),node('p',d.marketplace),node('p',`Installed: ${d.installed} · Enabled: ${d.enabled} · ${d.installPolicy} · Authentication: ${d.authPolicy}`));
+  const {panel,view}=this,d=view.detail,revision=this.loadRevision,confirm=(...args)=>{if(this.loadRevision===revision)return this.confirm(...args);};panel.body.replaceChildren(node('h3',d.name),node('p',d.marketplace),node('p',`Installed: ${yesNo(d.installed)} · Enabled: ${yesNo(d.enabled)} · ${policyLabel(d.installPolicy)} · ${authLabel(d.authPolicy)}`));
   if(d.developer)panel.body.append(node('p','Developer: '+d.developer));
   if(d.description)panel.body.append(node('p',d.description));
   for(const [label,values]of [['Capabilities',d.capabilities],['Skills',d.skills],['Hooks',d.hooks],['MCP servers',d.mcpServers],['Apps',d.apps?.map(a=>a.name||a.id)]])if(values?.length)panel.body.append(node('p',`${label}: ${values.join(', ')}`));
   panel.body.append(node('p','Readiness is unverified. Review MCP and Apps status after installation; host authentication cannot be completed here.'));
   if(view.reason)panel.body.append(node('p',view.reason));
   for(const receipt of view.receipts||[]){
-   const row=node('article');row.append(node('p',`${receipt.action} · ${receipt.state}${receipt.acknowledgedAt?' · reviewed':''}`),node('p',receipt.notice));
+   const row=node('article');row.append(node('p',`${receipt.action} · ${operationLabel(receipt.state)}${receipt.acknowledgedAt?' · reviewed':''}`),node('p',receipt.notice));
    if(receipt.appsNeedingAuth?.length)row.append(node('p','Apps requiring authentication: '+receipt.appsNeedingAuth.map(a=>a.name||a.id).join(', ')));
    if(receipt.canAcknowledge===true)row.append(button('Review uncertain outcome',()=>confirm('acknowledge',receipt.attemptId)));
    panel.body.append(row);

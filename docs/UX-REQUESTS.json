@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-07",
+  "updated": "2026-11-08",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,24 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "codex-plugin-lifecycle-parity-20261108",
+      "request": "Complete accepted Codex parity work while continuously monitoring delivery and independently reviewing meaningful integration evidence.",
+      "status": "178/alpha160 source candidate; not built, published or installed. Live177 remains unchanged.",
+      "architecture": [
+        "Use supported0.167 native plugin discovery/detail/install/uninstall in existing settings; preserve custom Mac0.163 read-only gates.",
+        "Original source/account observation, policy and human confirmation bound to durable operation receipts; no automatic installation or uncertain replay.",
+        "Retain one original native mutation response across caller timeout; ordinary read deadlines unchanged. Disconnect/restart remains explicit uncertainty.",
+        "Use existing usage-cache identity; plugin browsing initiates no new account/provider discovery. Native plugin operations may have documented download/authentication effects."
+      ],
+      "review": "Initial candidate c2894e79 rejected for stale preflight, reload ordering and native terminality/account gaps. Revised9a56f2f1 independently approved in backend and client/test-quality scopes. Root is qualifying native and readable policy/status labels.",
+      "validation": "17 focused backend/socket checks,8 composed HTTP/DOM cases, both negative controls and5 transport checks passed on reviewed revision. Android compile/emulator and rendered plugin review pending; no live plugin/account changes performed.",
+      "limits": [
+        "No atomic native expected-account CAS guarantee.",
+        "Unknown transport outcomes cannot be cleared by inventory readback.",
+        "Native host-browser authentication is not a fabricated remote continuation; installation does not prove readiness."
+      ]
+    },
     {
       "id": "history-availability-background-admission-20261107",
       "request": "Continue monitoring installed NextComp and fix observed history failures without restarting historical work or losing cached conversations.",

@@ -15,6 +15,25 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.UUID
 
+private fun pluginYesNo(value:Any?):String=when(value){true->"Yes";false->"No";else->"Unavailable"}
+private fun pluginPolicyLabel(value:String):String=when(value){
+    "AVAILABLE"->"Installation allowed"
+    "NOT_AVAILABLE"->"Installation restricted"
+    "INSTALLED_BY_DEFAULT"->"Managed installation"
+    else->"Installation policy unavailable"
+}
+private fun pluginAuthLabel(value:String):String=when(value){
+    "ON_INSTALL"->"Authentication during setup"
+    "ON_USE"->"Authentication when used"
+    else->"Authentication policy unavailable"
+}
+private fun pluginOperationLabel(value:String):String=when(value){
+    "dispatching"->"Waiting for Codex"
+    "acknowledged"->"Reply received"
+    "unknown"->"Outcome unconfirmed"
+    else->"Status unavailable"
+}
+
 /** Plugin controls capture the same environment and thread as their settings opening.
  * No automatic auth, retry, or ready claim. Durable native receipts own recovery. */
 @Composable internal fun NativePluginDialog(destination:EnvironmentRequest?,threadId:String?,pluginKey:String,onDismiss:()->Unit){
@@ -37,7 +56,7 @@ import java.util.UUID
             if(current())view=result
         }catch(e:CancellationException){throw e}catch(e:Exception){if(current()){
             message=e.message?:"Plugin details unavailable"
-            try{val saved=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/plugins/receipts?key=${Uri.encode(pluginKey)}");if(current())message+="\n"+saved.optJSONArray("receipts")?.objects().orEmpty().joinToString("\n"){"${it.s("name")} · ${it.s("action")} · ${it.s("state")}: ${it.s("notice")}"}}catch(c:CancellationException){throw c}catch(_:Exception){}
+            try{val saved=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/plugins/receipts?key=${Uri.encode(pluginKey)}");if(current())message+="\n"+saved.optJSONArray("receipts")?.objects().orEmpty().joinToString("\n"){"${it.s("name")} · ${it.s("action")} · ${pluginOperationLabel(it.s("state"))}: ${it.s("notice")}"}}catch(c:CancellationException){throw c}catch(_:Exception){}
         }}finally{if(current())loading=false}
     }
     fun confirm(action:String,id:String?=null){if(current()){confirmation=action to id;interstitial=false}}
@@ -63,7 +82,7 @@ import java.util.UUID
         view?.let{snapshot->
             val detail=snapshot.optJSONObject("detail")?:JSONObject()
             BilingualLabel(detail.s("name"));WorkflowText(detail.s("marketplace"),fontSize=12.sp,color=Muted)
-            WorkflowText("Installed: ${detail.opt("installed")} · Enabled: ${detail.opt("enabled")} · ${detail.s("installPolicy")} · Authentication: ${detail.s("authPolicy")}",fontSize=12.sp)
+            WorkflowText("Installed: ${pluginYesNo(detail.opt("installed"))} · Enabled: ${pluginYesNo(detail.opt("enabled"))} · ${pluginPolicyLabel(detail.s("installPolicy"))} · ${pluginAuthLabel(detail.s("authPolicy"))}",fontSize=12.sp)
             val pending=confirmation
             if(pending!=null){
                 val action=pending.first
@@ -84,7 +103,7 @@ import java.util.UUID
                 WorkflowText("Readiness is unverified. Review MCP and Apps status after installation; host authentication cannot be completed here.",fontSize=12.sp,color=Muted)
                 if(snapshot.s("reason").isNotBlank())WorkflowText(snapshot.s("reason"),fontSize=12.sp,color=Coral)
                 snapshot.optJSONArray("receipts")?.objects()?.forEach{receipt->
-                    HorizontalDivider();WorkflowText("${receipt.s("action")} · ${receipt.s("state")}"+(if(receipt.optLong("acknowledgedAt")>0)" · reviewed" else ""),fontSize=12.sp)
+                    HorizontalDivider();WorkflowText("${receipt.s("action")} · ${pluginOperationLabel(receipt.s("state"))}"+(if(receipt.optLong("acknowledgedAt")>0)" · reviewed" else ""),fontSize=12.sp)
                     WorkflowText(receipt.s("notice"),fontSize=12.sp,color=Muted)
                     receipt.optJSONArray("appsNeedingAuth")?.objects()?.takeIf{it.isNotEmpty()}?.let{apps->WorkflowText("Apps requiring authentication: "+apps.joinToString(", "){it.s("name").ifBlank{it.s("id")}},fontSize=12.sp)}
                     if(receipt.optBoolean("canAcknowledge"))TextButton({confirm("acknowledge",receipt.s("attemptId"))},enabled=current()&&!loading){BilingualLabel("Review uncertain outcome")}
