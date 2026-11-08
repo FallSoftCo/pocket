@@ -61,7 +61,16 @@ try{
  await run('execution-dom',['scripts/qualify-execution-ui.mjs'],env,(output,check)=>{
   const results=output.split(/\r?\n/).filter(line=>line.startsWith('{')).map(line=>JSON.parse(line));
   assert.equal(results.length,1,'Expected one completed execution DOM receipt.');
-  const [result]=results;assert.equal(result.ok,true);assert.equal(result.journeys?.length,6);assert.equal(new Set(result.journeys).size,6);
+  const [result]=results;assert.equal(result.ok,true);
+  assert.deepEqual(result.journeys,[
+   'offered structured approvals and duplicate send',
+   'MCP fields and focus during competing request',
+   'masked secret question and reconnected request identity',
+   'MCP titled multi-select and older gateway approvals',
+   'verification unavailable guidance with decline/cancel only',
+   'output replacement paging',
+   'confirmed exact terminal, explicit false and missing outcome, unknown mutation without replay'
+  ],'Required execution journeys must each finish, including verification availability.');
   check.journeys=result.journeys;
  });
  await run('execution-capabilities-dom',['--test','--test-reporter=tap','tests/native-execution.dom.mjs'],env,(output,check)=>{
