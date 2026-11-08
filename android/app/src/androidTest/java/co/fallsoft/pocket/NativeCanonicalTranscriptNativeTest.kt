@@ -258,7 +258,7 @@ class NativeCanonicalTranscriptNativeTest{
         context.openOrCreateDatabase("codex-session-messages-v1.sqlite",Context.MODE_PRIVATE,null).use{db->
             db.execSQL("CREATE TABLE IF NOT EXISTS recent(scope TEXT NOT NULL,thread TEXT NOT NULL,body TEXT,notification INTEGER NOT NULL DEFAULT 0,dirty INTEGER NOT NULL DEFAULT 0,updated INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(scope,thread))")
             if(db.version==0)db.version=1
-            db.execSQL("INSERT OR REPLACE INTO recent(scope,thread,body,dirty,updated) VALUES(?,?,?,1,?)",arrayOf(owner,"dormant-history",retained,System.currentTimeMillis()))
+            db.execSQL("INSERT OR REPLACE INTO recent(scope,thread,body,dirty,updated) VALUES(?,?,?,1,?)",arrayOf<Any>(owner,"dormant-history",retained,System.currentTimeMillis()))
         }
         main{Pocket.init(context)}
         val destination=requireNotNull(Pocket.captureEnvironment())
