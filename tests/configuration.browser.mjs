@@ -38,12 +38,12 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
   });
   await page.route(origin+'/web/pair',async route=>{const response=await route.fetch(),paired=await response.json();assert.ok(paired.id);environments.profiles[paired.id]=[{id:'remote',name:'Remote fixture',base:b.base+'/',token:b.token,deviceId:b.deviceId}];await route.fulfill({response});});
   const local=a.thread.id,remote=scopedId('remote',b.thread.id),configurationPath='/api/environments/remote/native/configuration';
-  let conflict=false,holdSettings=false;const settingsEntered=deferred(),settingsReleased=deferred();releaseSettings=settingsReleased.resolve;
+  let conflict=false,holdSettings=false,heldSettingsRequest;const settingsReleased=deferred();releaseSettings=settingsReleased.resolve;
   await page.route(url=>url.pathname===configurationPath,async route=>{
    const request=route.request();
    if(request.method()==='POST'&&conflict){conflict=false;b.configuration.version++;receipt.conflictVersion='fixture-config-'+b.configuration.version;}
    if(request.method()==='GET'&&new URL(request.url()).searchParams.get('section')==='settings'&&holdSettings){
-    holdSettings=false;const response=await route.fetch();settingsEntered.resolve();await settingsReleased.promise;await route.fulfill({response});return;
+    holdSettings=false;const response=await route.fetch();heldSettingsRequest=request;await settingsReleased.promise;await route.fulfill({response});return;
    }
    await route.continue();
   });
@@ -75,16 +75,25 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
   assert.equal(nativeWrites(b).length,1,'Conflict must be refused before any second native configuration dispatch');assert.equal(b.configuration.enabled,false);
   assert.equal(await dialog.getByRole('button',{name:'Enable for this environment',exact:true}).isDisabled(),true,'Failed change requires explicit inspection, not automatic retry');
   phase='stale-click';await dialog.getByRole('button',{name:'Reload Apps',exact:true}).click();await until(()=>dialog.getByRole('button',{name:'Enable for this environment',exact:true}).isEnabled(),Boolean,'explicit reload');
-  holdSettings=true;await dialog.getByRole('button',{name:'Enable for this environment',exact:true}).click();await settingsEntered.promise;
+  holdSettings=true;await dialog.getByRole('button',{name:'Enable for this environment',exact:true}).click();await until(()=>heldSettingsRequest,Boolean,'original version response held');
   await close();await select(local,'Local');assert.equal(await page.locator('#draft').inputValue(),'Local draft remains original');await openSettings();await apps('Local');
-  releaseSettings();
+  const remoteReadsBefore=b.calls.filter(c=>c.method==='app/installed').length;
+  const delivered=page.waitForResponse(response=>response.request()===heldSettingsRequest,{timeout:8000});releaseSettings();
+  const heldResponse=await delivered;assert.equal(await heldResponse.finished(),null);assert.equal((await heldResponse.json()).configVersion,'fixture-config-3');
+  assert.equal(await dialog.getByRole('heading',{name:'Local connector',exact:true}).count(),1);assert.equal(await dialog.getByRole('heading',{name:'Remote connector',exact:true}).count(),0);
+  // Network completion alone does not establish the old async handler ran.
+  // Follow it with real UI navigation and a rendered catalog read through the
+  // gateway/backend/native wire before observing the absence of another write.
+  phase='reconcile-after-held-response';await close();await select(remote,'Remote');assert.equal(await page.locator('#draft').inputValue(),'Remote draft remains original');await openSettings();await apps('Remote');
+  const remoteReadsAfter=b.calls.filter(c=>c.method==='app/installed').length;
+  assert.ok(remoteReadsAfter>remoteReadsBefore,'Subsequent rendered catalog must cross the native read boundary');
+  assert.ok(requests.some(r=>r.phase===phase&&r.method==='GET'&&r.path.startsWith(configurationPath+'?section=apps')&&r.status===200));
   if(negativeControl)await until(()=>posts().length,n=>n>2,'negative stale dispatch');
-  else await page.evaluate(()=>new Promise(r=>setTimeout(r,300)));
+  receipt.staleClickObservation={heldResponseFinished:true,subsequentRenderedRemoteCatalog:true,remoteReadsBefore,remoteReadsAfter};
   receipt.configurationPosts=posts();receipt.nativeWrites={local:nativeWrites(a).length,remote:nativeWrites(b).length};
   assert.equal(posts().length,2,'CONFIGURATION_STALE_CLICK_MUST_NOT_WRITE');
   assert.equal(nativeWrites(a).length,0);assert.equal(nativeWrites(b).length,1);assert.equal(a.configuration.enabled,true);assert.equal(b.configuration.enabled,false);
-  assert.equal(await dialog.getByRole('heading',{name:'Local connector',exact:true}).count(),1);assert.equal(await dialog.getByRole('heading',{name:'Remote connector',exact:true}).count(),0);
-  await close();await select(remote,'Remote');assert.equal(await page.locator('#draft').inputValue(),'Remote draft remains original');await openSettings();await apps('Remote');await dialog.getByRole('button',{name:'Enable for this environment',exact:true}).waitFor();
+  await dialog.getByRole('button',{name:'Enable for this environment',exact:true}).waitFor();
   for(const f of [a,b]){f.assertClean();assert.equal(f.calls.some(c=>/^(?:turn\/|review\/|thread\/(?:start|resume|fork|compact)|.*terminate)/.test(c.method)),false);}
   assert.ok(requests.filter(r=>r.method==='POST').every(r=>['/web/pair','/web/tailnet-login',configurationPath].includes(r.path)||r.path.endsWith('/catchup/read')),'No unrelated mutations');
   assert.deepEqual(pageErrors,[]);receipt.state='passed';receipt.draftsPreserved=true;receipt.workSubmissions=0;return receipt;
