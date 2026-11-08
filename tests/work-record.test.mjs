@@ -4,6 +4,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {WorkRecord} from '../server/work-record.mjs';
 import {displayItem} from '../server/timeline.mjs';
 import {ThreadHistory} from '../server/history.mjs';
+import {InternalSessions} from '../server/internal-sessions.mjs';
+import {SessionDiscovery} from '../server/session-discovery.mjs';
 const make=()=>{const db=new DatabaseSync(':memory:');return {db,record:new WorkRecord(db,{version:'test',clock:()=>500000})};};
 const request={id:'u',type:'userMessage',content:[{type:'text',text:'Improve NextComp and publish the output'}]};
 const answer={id:'a',type:'agentMessage',phase:'final_answer',text:'Added the work record. [Output](/project/result.md)'};
@@ -114,4 +116,49 @@ test('scan diagnostics preserve source identity and omit arbitrary metadata and 
  await assert.rejects(record.scan(history,()=>{throw Error('invalid private metadata contents');}),error=>{
   assert.deepEqual(error.workRecordDiagnostic,{source:{backend:'codex',threadId:'original'},operation:'catalog/read',code:'WORK_RECORD_METADATA_UNAVAILABLE'});return true;
  });db.close();
+});
+
+test('canonical retirement stops native backfill after enrollment while retaining evidence and allowing healthy progress and explicit reclassification',async()=>{
+ const db=new DatabaseSync(':memory:');let now=1000;const registry=new InternalSessions(db),calls=[];
+ const discovery=new SessionDiscovery({db,hidden:(id,thread)=>registry.owns(id,thread),codex:{call(){throw Error('Scan admission must not query native discovery');}}});
+ const record=new WorkRecord(db,{clock:()=>now,scanAllowed:(id,thread)=>!discovery.hidden(id,thread)});
+ const retired={id:'a-retired',ephemeral:false,historyMode:'paginated',status:{type:'notLoaded'}};
+ // Similar workspace/title wording is not ownership. Ordinary archives and
+ // native children remain eligible for read-only history reconciliation.
+ const healthy={id:'b-healthy',ephemeral:false,archived:true,parentThreadId:'native-parent',cwd:'/lax-host/agents/room/work',name:'Retired room investigation',historyMode:'paginated'};
+ const metadata=new Map([[retired.id,retired],[healthy.id,healthy]]);
+ record.remember({...retired,turns:[{id:'old',status:'completed',items:[{id:'saved',type:'agentMessage',text:'Retained historical evidence'}]}]});record.enroll(healthy);
+ const cursor='page:'+Buffer.from('saved-native-position').toString('base64url');
+ db.prepare('UPDATE work_record_sessions SET cursor=? WHERE id=?').run(cursor,retired.id);
+ const retained=()=>({session:db.prepare('SELECT id,cursor,hydrated,first_seen FROM work_record_sessions WHERE id=?').get(retired.id),items:db.prepare('SELECT * FROM work_record_items WHERE session=?').all(retired.id)});
+ const original=retained();registry.register(retired.id,'retired-room-agent');
+ const history=new ThreadHistory({async call(method,params){
+  calls.push({method,params});assert.ok(['thread/turns/list','thread/items/list'].includes(method));
+  if(method==='thread/turns/list')return {data:[{id:'turn',status:'completed'}],nextCursor:null,backwardsCursor:'anchor'};
+  return {data:[{turnId:'turn',item:{id:'answer',type:'agentMessage',text:'Observed current output'}}],nextCursor:null};
+ }});
+ const scan=()=>{now+=15000;return record.scan(history,id=>metadata.get(id));};
+ await scan();assert.equal(calls.length,0);assert.deepEqual(retained(),original);
+ assert.ok(db.prepare('SELECT last_scan FROM work_record_sessions WHERE id=?').get(retired.id).last_scan>0,'skip advances fairness without changing history');
+ await scan();assert.ok(record.list().entries.some(e=>e.session===healthy.id));assert.ok(calls.every(c=>c.params.threadId===healthy.id));
+ await scan();assert.deepEqual(retained(),original);assert.ok(calls.every(c=>c.params.threadId!==retired.id));
+ // Simulate an explicit authoritative removal of the ownership marker. The
+ // scanner itself never clears retirement or caches a permanent exclusion.
+ db.prepare('DELETE FROM pocket_internal_sessions WHERE thread_id=?').run(retired.id);
+ await scan();const before=calls.length;await scan();
+ assert.equal(calls[before].params.threadId,retired.id);assert.equal(calls[before].params.cursor,'saved-native-position');
+ assert.equal(db.prepare('SELECT hydrated FROM work_record_sessions WHERE id=?').get(retired.id).hydrated,1);
+ assert.ok(record.list().entries.some(e=>e.session===retired.id&&e.items.some(i=>i.text==='Retained historical evidence')));
+ assert.equal(db.prepare('SELECT count(*) AS n FROM work_record_sessions').get().n,2);db.close();
+});
+
+test('scan admission reuses native temporary-to-persisted classification without unretiring room producers',async()=>{
+ const db=new DatabaseSync(':memory:');const registry=new InternalSessions(db);let thread={id:'session',ephemeral:true};let reads=0;
+ const record=new WorkRecord(db,{scanAllowed:(id,metadata)=>!registry.owns(id,metadata)});record.enroll(thread);
+ const history={async read(metadata){reads++;return {...metadata,turns:[]};}};
+ await record.scan(history,()=>thread);assert.equal(reads,0);
+ thread={...thread,ephemeral:false};await record.scan(history,()=>thread);assert.equal(reads,1,'native persistence transition can make temporary history eligible');
+ thread={...thread,originator:'lax-host-agent'};await record.scan(history,()=>thread);assert.equal(reads,1);
+ assert.equal(db.prepare('SELECT kind FROM pocket_internal_sessions WHERE thread_id=?').get(thread.id).kind,'retired-room-agent');
+ thread={id:'session',ephemeral:false};await record.scan(history,()=>thread);assert.equal(reads,1,'absence of cached producer text cannot clear an authoritative retirement');db.close();
 });
