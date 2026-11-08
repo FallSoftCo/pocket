@@ -101,7 +101,8 @@
           "Coordinate heavy emulator/build work with root; no production/model actions or new agents."
         ]
       },
-      "test_workflow_quality": "Three independent native request/execution/context workflows qualified on unchanged176 APK, original assertions and cross-feature transitions retained; future release policy updated atomically. Not a new phone release."
+      "test_workflow_quality": "Three independent native request/execution/context workflows qualified on unchanged176 APK, original assertions and cross-feature transitions retained; future release policy updated atomically. Not a new phone release.",
+      "qualification_source_integrity": "Future qualification fingerprints now include shared fixture dependencies, relevant runner/build helpers and locked inputs. Actual native-runner CLI regression rejects changed projection semantics before device admission, while source-backed generated Python caches remain admissible.14 focused tests passed;177 receipts/APKs unchanged. Per-family evidence reuse remains prospective, not implemented."
     },
     {
       "id": "archive-action-feedback-20261107",
