@@ -238,3 +238,24 @@ physical-phone proof.
 Monitoring remains active. The next bounded integration audit checks configuration
 changes and conflict refusal through the full web application, without changing
 real native settings or starting model work. Publication is not complete TUI parity.
+
+
+## Rendered configuration follow-up
+
+The full web application now has a composed configuration save/conflict journey
+through the real gateway and two production backends, with generated-schema
+synthetic0.167 native transport. It observes one acknowledged remote change,
+one409 conflict refusal before another native dispatch, original-source/draft
+preservation, and no write from a click whose settings response arrives after
+changing environments. The exact held response must finish and a subsequent
+remote catalog must render before assertions; no fixed sleep establishes success.
+Removing only the served post-read source guard produces the expected extra write
+and fails the same assertion. No product defect was found.
+
+`tests/configuration.browser.mjs` exports `qualifyConfiguration({context,
+outputDir,negativeControl})` for the existing registered browser context and a
+fresh disk output directory. It owns only its synthetic local tabs/backends. This
+rendered qualifier is explicit, not part of ordinary `npm test` or CI; do not
+claim real native configuration filesystem, Mac0.163 mutation or phone evidence.
+[Versioned results](qualification/rendered-native-configuration-20261107.json)
+include source hashes, failure sensitivity and retained command-setup failure.
