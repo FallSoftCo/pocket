@@ -11,7 +11,9 @@
     "pairingQueuesAndUnknownReceipts": "preserved",
     "ownerAnnouncements": 1,
     "fcm": "accepted attempt1",
-    "lastPhoneObservedVersion": 178
+    "lastPhoneObservedVersion": 179,
+    "phoneApkSha256": "ed7e3994ee2908b13d7996945f60cbbb71c6a409a6349e5b5768394cd17aee66",
+    "phoneObservation": "read-only package-manager version and exact published APK digest"
   },
   "behavior": [
     "Classify only the exact requested-thread native thread/turns/list refusal before a first message as typed THREAD_NOT_MATERIALIZED. Older missing-history errors remain unavailable, not assumed empty.",
@@ -46,7 +48,7 @@
     "liveUnavailableHistory": "Known missing source remains typed409 THREAD_HISTORY_UNAVAILABLE; no fabricated empty success."
   },
   "limits": [
-    "179 phone installation and physical UI/audio are not yet observed.",
+    "179 installation is verified; physical UI/audio interaction remains separately unverified.",
     "Exact not-materialized state was qualified through retained native error and composed fixtures; live latest read had subsequently changed to not-loaded, so no current live empty-state claim.",
     "Catalog navigation/action is verified by the optimized journey, but catalog-named screenshot was captured after reopening conversation; it is not stable catalog visual evidence. A separate test-method correction is being prepared.",
     "Original178 plugin-detail timeout cause remains unresolved; its later diagnostic-only pass is not a proven fix.",

@@ -3910,7 +3910,7 @@
   },
   "native_first_message_availability_20261108": {
     "request": "Investigate recurring history-read errors and retain recovery after native progress or reopening, without pretending unavailable history is an empty successful transcript.",
-    "state": "179 published both channels; backend/web live both hosts; last observed phone178",
+    "state": "179 published both channels; backend/web live both hosts; phone179 exact installed APK verified",
     "implementation": [
       "Classify only exact identity-bound native turns/list refusal before first message; preserve unknown missing-history cases.",
       "Keep cached content and original outgoing receipts; suppress unchanged refused reads without model calls.",
@@ -3919,7 +3919,7 @@
     "verification": [
       "14 focused Node checks; full backend756 total754pass2skip; Android479cases per variant with2existing skips and both lints passed.",
       "18 native cases passed, including actual shared-request join barrier and one bounded recovery; exact optimized APK chronology/reopen/question proof passed.",
-      "Rendered browser recovery/source-isolation journey passed; live current paginated history returned64entries/39rows. Physical179 install not yet observed."
+      "Rendered browser recovery/source-isolation journey passed; live current paginated history returned64entries/39rows. Phone179 installation independently verified by package version and exact APK hash; physical UI/audio remains separate."
     ],
     "limits": [
       "No real session resumed, created or replayed.",
