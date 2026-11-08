@@ -140,8 +140,8 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
         value.catalog=launch(value,CodexCatalogLane.CATALOG){
             val baseline=tasks.associateBy{it.id}
             val result=read(value,if(value.key.archived)"/api/threads?archived=true"else "/api/threads")
-            val fetched=result.getJSONArray("threads").objects().map{catalogTask(it)}
-            acceptCatalog(fetched,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
+            val rows=result.getJSONArray("threads").objects()
+            acceptCatalog(rows,baseline,result.optBoolean("refreshPending")||result.s("nextCursor").isNotBlank())
             complete=!result.optBoolean("refreshPending")
             if(!cursorInitialized&&complete){cursor=result.s("nextCursor").takeIf{it.isNotBlank()};cursorInitialized=true}
             load=CatalogLoadState.Ready;catalogAcceptedAt=android.os.SystemClock.elapsedRealtime()
@@ -151,16 +151,26 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
      * corresponding shared transcript. Search/page results are not a second
      * source of card-only freshness. Compare accepted merges, not stale HTTP rows.
      */
-    private fun acceptCatalog(fetched:List<Task>,baseline:Map<String,Task>,partial:Boolean){
+    private fun acceptCatalog(rows:List<JSONObject>,baseline:Map<String,Task>,partial:Boolean){
+        val fetched=rows.map{catalogTask(it)}
         val previous=tasks.associateBy{it.id}
         val merged=mergeLiveTaskSnapshot(tasks,fetched,baseline,partial)
+        val raw=rows.associateBy{it.s("id")};val received=fetched.associateBy{it.id}
+        CodexSessionRepository.catalogObserved(destination,merged.map{task->task.catalogJson().also{metadata->
+            // A newer live card wins over an older HTTP row, including its
+            // availability evidence. Missing fields remain unknown.
+            if(received[task.id]==task)raw[task.id]?.let{row->
+                if(row.has("ephemeral"))metadata.put("ephemeral",row.opt("ephemeral"))
+                if(row.has("path"))metadata.put("hasRollout",!row.isNull("path")&&row.s("path").isNotBlank())
+            }
+        }},complete=!partial,archived=archived)
         tasks=merged.map{CodexSessionRepository.nativeCatalogProjection(destination,it)}
         merged.forEach{next->
             val old=if(CodexSessionRepository.nativeEnabled(destination,next.id))transcriptHints[next.id] else previous[next.id]
             if(old==null||next.activityAt>=old.activityAt)transcriptHints[next.id]=next
             if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||
                 transcriptLiveActivityAdvanced(old.activityAt,next.activityAt)){
-                CodexSessionRepository.invalidate(next.id,destination,priorityAt=next.activityAt)
+                if(!archived&&!next.archived)CodexSessionRepository.invalidate(next.id,destination,priorityAt=next.activityAt)
                 if(selected()&&Pocket.selected==next.id)CodexConversations.invalidate()
             }
         }
@@ -204,7 +214,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
                     (next?.let{"&cursor="+android.net.Uri.encode(it)}?:"")+
                     (if(search.isNotBlank())"&search="+android.net.Uri.encode(search)else ""))
                 if(ticket!=pageSerial)return@launch
-                acceptCatalog(result.getJSONArray("threads").objects().map{catalogTask(it)},baseline,true)
+                acceptCatalog(result.getJSONArray("threads").objects(),baseline,true)
                 if(search.isBlank())cursor=result.s("nextCursor").takeIf{it.isNotBlank()}
             }finally{if(current(value)&&ticket==pageSerial)paging=false}
         }
@@ -277,6 +287,7 @@ internal object CodexCatalog {
         selected()?.let{it.markForeground(foreground);it.refresh(explicit)}
     }
     fun archiveChanged(destination:EnvironmentRequest,id:String,archived:Boolean){
+        CodexSessionRepository.archiveChanged(destination,id,archived)
         val owner=backendOwner(destination.endpoint,destination.token)
         stores.filterKeys{it.environment==destination.environment.id&&it.backend==owner}.values.toList()
             .forEach{it.archiveChanged(id,archived)}

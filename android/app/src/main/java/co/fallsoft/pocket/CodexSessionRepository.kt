@@ -31,6 +31,9 @@ internal object CodexSessionRepository {
         .callTimeout(5,java.util.concurrent.TimeUnit.SECONDS).build()}
     private val nativeCapabilities=ConcurrentHashMap<String,Boolean>()
     private val turnHistorySessions=ConcurrentHashMap.newKeySet<Pair<String,String>>()
+    // Archive fallback is temporary membership, not a native-protocol downgrade.
+    private val archivedHistorySessions=ConcurrentHashMap.newKeySet<Pair<String,String>>()
+    private val archivedHistoryCursors=ConcurrentHashMap<Pair<String,String>,Set<String>>()
     private val capabilityMutex=Mutex()
     private val capabilityRequests=mutableMapOf<String,Deferred<Unit>>()
     /** Negotiate once per paired source before choosing a history protocol.
@@ -57,7 +60,7 @@ internal object CodexSessionRepository {
     private val nativeUnpositioned=linkedMapOf<Pair<String,String>,MutableSet<String>>()
     private val nativeStore by lazy{NativeTranscriptStore(Pocket.context)}
     fun nativeEnabled(destination:EnvironmentRequest?=Pocket.captureEnvironment(),id:String?=Pocket.selected):Boolean =
-        destination!=null&&nativeCapabilities[source(destination).scope]!=false&&(id==null||(source(destination).scope to id) !in turnHistorySessions)
+        destination!=null&&nativeCapabilities[source(destination).scope]!=false&&(id==null||(source(destination).scope to id).let{it !in turnHistorySessions&&it !in archivedHistorySessions})
     private fun native(value:JSONObject)=value.optInt("windowSchema")==3||value.optJSONObject("timeline")?.optInt("native")==1
     private suspend fun nativeCommitted(source:Source,id:String,response:JSONObject,cursor:String?):JSONObject=withContext(lane){
         if(!current(source))throw CancellationException("Pairing changed")
@@ -128,6 +131,19 @@ internal object CodexSessionRepository {
     suspend fun readOlder(destination:EnvironmentRequest,id:String,cursor:String):JSONObject{
         val source=source(destination)
         ensureCapabilities(source)
+        val key=source.scope to id
+        if(key in archivedHistorySessions){
+            val membershipRevision=withContext(lane){backgroundRevisions[key]?:0L}
+            if(cursor !in archivedHistoryCursors[key].orEmpty())throw java.io.IOException("Conversation history changed. Reload before reading earlier messages.")
+            val value=CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline&before="+android.net.Uri.encode(cursor))
+            validateTranscriptSnapshot(value,id)
+            withContext(lane){
+                if(!current(source))throw CancellationException("Pairing changed")
+                if(key !in archivedHistorySessions||(backgroundRevisions[key]?:0L)!=membershipRevision)throw java.io.IOException("Conversation archive state changed during this read. Reload the conversation.")
+                value.optJSONObject("timeline")?.s("before")?.takeIf{it.isNotBlank()}?.let{next->archivedHistoryCursors.compute(key){_,old->(old.orEmpty()+next).toList().takeLast(128).toSet()}}
+            }
+            return value
+        }
         if(!nativeEnabled(destination,id))return CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"?view=timeline&before="+android.net.Uri.encode(cursor))
         if(cursor.startsWith("native-local:"))return withContext(lane){
             if(!current(source))throw CancellationException("Pairing changed")
@@ -164,6 +180,15 @@ internal object CodexSessionRepository {
     }
     private val known=ConcurrentHashMap<Pair<String,String>,Long>()
     private val dirty=ConcurrentHashMap.newKeySet<Pair<String,String>>()
+    private data class BackgroundMembership(val evidence:String,val admitted:Boolean)
+    private data class BackgroundRefusal(val evidence:String,val code:String,val notification:Long,val attempts:Int=0,val retryAt:Long=0)
+    // Dirty means retained content needs confirmation, never permission to read
+    // every historical cache entry. Membership is established anew this process.
+    private val backgroundMembership=mutableMapOf<Pair<String,String>,BackgroundMembership>()
+    private val backgroundRefusals=mutableMapOf<Pair<String,String>,BackgroundRefusal>()
+    private val backgroundRevisions=mutableMapOf<Pair<String,String>,Long>()
+    private var backgroundSerial=0L
+    private val restoredBackgroundScopes=mutableSetOf<String>()
     private val invalidations=ConcurrentHashMap<Pair<String,String>,Long>()
     private val invalidationSerial=java.util.concurrent.atomic.AtomicLong()
     private val livePending=ConcurrentHashMap<Triple<String,String,String>,Pair<Source,JSONObject>>()
@@ -175,11 +200,92 @@ internal object CodexSessionRepository {
     private val writes=linkedMapOf<Pair<String,String>,Triple<Source,JSONObject?,Boolean>>()
     private var writeJob:Job?=null
     private var started=false
-    private val db by lazy {object:SQLiteOpenHelper(Pocket.context,"codex-session-messages-v1.sqlite",null,1){
-        override fun onCreate(db:SQLiteDatabase){db.execSQL("CREATE TABLE recent(scope TEXT NOT NULL,thread TEXT NOT NULL,body TEXT,notification INTEGER NOT NULL DEFAULT 0,dirty INTEGER NOT NULL DEFAULT 0,updated INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(scope,thread))")}
-        override fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int){}
+    private val db by lazy {object:SQLiteOpenHelper(Pocket.context,"codex-session-messages-v1.sqlite",null,2){
+        private fun backgroundTable(db:SQLiteDatabase){db.execSQL("CREATE TABLE IF NOT EXISTS background_refusal(scope TEXT NOT NULL,thread TEXT NOT NULL,evidence TEXT NOT NULL,code TEXT NOT NULL,notification INTEGER NOT NULL,attempts INTEGER NOT NULL,retry_at INTEGER NOT NULL,PRIMARY KEY(scope,thread))")}
+        override fun onCreate(db:SQLiteDatabase){db.execSQL("CREATE TABLE recent(scope TEXT NOT NULL,thread TEXT NOT NULL,body TEXT,notification INTEGER NOT NULL DEFAULT 0,dirty INTEGER NOT NULL DEFAULT 0,updated INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(scope,thread))");backgroundTable(db)}
+        override fun onUpgrade(db:SQLiteDatabase,oldVersion:Int,newVersion:Int){if(oldVersion<2)backgroundTable(db)}
     }.apply{setWriteAheadLoggingEnabled(true)}.writableDatabase}
     private fun source(destination:EnvironmentRequest)=Source(destination,transcriptCacheOwner(destination.environment.id,destination.endpoint,destination.token))
+    private fun restoreBackground(source:Source){
+        if(!restoredBackgroundScopes.add(source.scope))return
+        db.rawQuery("SELECT thread,evidence,code,notification,attempts,retry_at FROM background_refusal WHERE scope=?",arrayOf(source.scope)).use{cursor->
+            while(cursor.moveToNext())backgroundRefusals[source.scope to cursor.getString(0)]=BackgroundRefusal(cursor.getString(1),cursor.getString(2),cursor.getLong(3),cursor.getInt(4),cursor.getLong(5))
+        }
+    }
+    private fun recoveryDue(key:Pair<String,String>)=backgroundRefusals[key]?.let{it.code=="THREAD_HISTORY_UNAVAILABLE"&&System.currentTimeMillis()>=it.retryAt}==true
+    private fun backgroundAllowed(key:Pair<String,String>)=backgroundMembership[key]?.admitted==true&&(key !in backgroundRefusals||recoveryDue(key))
+    private fun clearBackgroundRefusal(key:Pair<String,String>){
+        backgroundRefusals.remove(key)
+        db.delete("background_refusal","scope=? AND thread=?",arrayOf(key.first,key.second))
+    }
+    private fun retainBackgroundRefusal(key:Pair<String,String>,refusal:BackgroundRefusal){
+        backgroundRefusals[key]=refusal;pending.remove(key)
+        db.execSQL("INSERT OR REPLACE INTO background_refusal(scope,thread,evidence,code,notification,attempts,retry_at) VALUES(?,?,?,?,?,?,?)",arrayOf(key.first,key.second,refusal.evidence,refusal.code,refusal.notification,refusal.attempts,refusal.retryAt))
+    }
+    /** Accepted catalog membership, not absence from a partial head/search page. */
+    fun catalogObserved(destination:EnvironmentRequest,threads:List<JSONObject>,complete:Boolean,archived:Boolean){
+        val source=source(destination)
+        io.launch{
+            if(!current(source))return@launch
+            restoreBackground(source)
+            val present=threads.map{it.s("id")}.toSet()
+            if(complete&&!archived)backgroundMembership.keys.filter{it.first==source.scope&&it.second !in present}.toList().forEach{key->
+                if(backgroundMembership[key]?.admitted==true)backgroundRevisions[key]=++backgroundSerial
+                backgroundMembership[key]=requireNotNull(backgroundMembership[key]).copy(admitted=false);pending.remove(key)
+            }
+            threads.forEach{thread->
+                val id=thread.s("id");if(id.isBlank())return@forEach
+                val key=source.scope to id
+                val isArchived=archived||thread.optBoolean("archived")
+                val previousEvidence=backgroundMembership[key]?.evidence?:backgroundRefusals[key]?.evidence
+                val previous=runCatching{JSONObject(previousEvidence.orEmpty())}.getOrNull()
+                val evidence=JSONObject().put("archived",isArchived).put("status",thread.optJSONObject("status")?.s("type"))
+                    .put("updated",thread.optLong("updatedAt")).put("activity",thread.optLong("activityAt"))
+                    .put("ephemeral",if(thread.has("ephemeral"))thread.opt("ephemeral")else previous?.opt("ephemeral"))
+                    .put("hasRollout",if(thread.has("hasRollout"))thread.opt("hasRollout")else previous?.opt("hasRollout")).toString()
+                val old=backgroundMembership.put(key,BackgroundMembership(evidence,!isArchived))
+                if(old!=backgroundMembership[key])backgroundRevisions[key]=++backgroundSerial
+                if(!isArchived){
+                    // A repeated stale current-catalog row cannot override a
+                    // newer typed archive refusal or its explicit-read protocol.
+                    if(backgroundRefusals[key]?.code!="THREAD_ARCHIVED"||backgroundRefusals[key]?.evidence!=evidence||old?.admitted==false){
+                        archivedHistorySessions.remove(key);archivedHistoryCursors.remove(key)
+                    }
+                    backgroundRefusals[key]?.takeIf{it.evidence!=evidence||old?.admitted==false}?.let{clearBackgroundRefusal(key)}
+                }else retainBackgroundRefusal(key,BackgroundRefusal(evidence,"THREAD_ARCHIVED",known[key]?:0L))
+                if(!backgroundAllowed(key))pending.remove(key)
+                else if((old!=backgroundMembership[key]||recoveryDue(key))&&key in dirty&&key !in pending&&key !in inFlight){ensurePump();queue(Intent(source,id,known[key]?:0L,workTimeMillis(thread.optLong("activityAt"))))}
+            }
+        }
+    }
+    fun archiveChanged(destination:EnvironmentRequest,id:String,archived:Boolean){
+        val source=source(destination)
+        io.launch{
+            if(!current(source))return@launch
+            restoreBackground(source)
+            val key=source.scope to id
+            backgroundRevisions[key]=++backgroundSerial
+            backgroundMembership[key]=BackgroundMembership("archive:$archived",!archived)
+            if(archived)retainBackgroundRefusal(key,BackgroundRefusal("archive:true","THREAD_ARCHIVED",known[key]?:0L))else{
+                archivedHistorySessions.remove(key);archivedHistoryCursors.remove(key);clearBackgroundRefusal(key)
+                ensurePump();queue(Intent(source,id,known[key]?:0L))
+            }
+        }
+    }
+    private suspend fun refuseBackground(source:Source,id:String,error:PocketApiException,evidence:String,generation:Long,notification:Long){
+        if(error.status!=409||error.code !in setOf("THREAD_EPHEMERAL_UNAVAILABLE","THREAD_HISTORY_UNAVAILABLE","THREAD_ARCHIVED"))return
+        withContext(lane){
+            if(!current(source))return@withContext
+            restoreBackground(source)
+            val key=source.scope to id
+            if((backgroundRevisions[key]?:0L)!=generation||(known[key]?:0L)>notification)return@withContext
+            val attempts=(backgroundRefusals[key]?.attempts?:0)+1
+            // Existing catalog/reconnect observations may re-admit a repaired
+            // durable source. No timer is installed for this backoff.
+            val retryAt=if(error.code=="THREAD_HISTORY_UNAVAILABLE")System.currentTimeMillis()+(30_000L shl (attempts-1).coerceIn(0,4)).coerceAtMost(300_000L)else 0
+            retainBackgroundRefusal(key,BackgroundRefusal(evidence,requireNotNull(error.code),notification,attempts,retryAt))
+        }
+    }
     /** Shared current read, independent of viewport lifetime. Consumers own private JSON copies. */
     suspend fun readCurrent(destination:EnvironmentRequest,id:String,background:Boolean=false):JSONObject {
         val source=source(destination);val key=source.scope to id
@@ -190,12 +296,16 @@ internal object CodexSessionRepository {
                 val notificationAtStart=known[key]?:0L
                 val invalidationAtStart=invalidations[key]?:0L
                 val liveAtStart=liveGenerations[key]?:0L
+                val backgroundEvidence=withContext(lane){(backgroundMembership[key]?.evidence?:"") to (backgroundRevisions[key]?:0L)}
                 val base="/api/threads/"+android.net.Uri.encode(id)
                 ensureCapabilities(source)
-                var useNative=nativeEnabled(destination,id)
+                val protocol=withContext(lane){nativeEnabled(destination,id) to if(key in archivedHistorySessions)backgroundRevisions[key]?:0L else null}
+                val archiveAtStart=protocol.second
+                var useNative=protocol.first
                 val response=try{
-                    CodexReadTransport.read(destination,base+if(useNative)"/native-timeline"else if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                    CodexReadTransport.read(destination,base+if(useNative)"/native-timeline"else if(background||archiveAtStart!=null)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
                 }catch(error:PocketApiException){
+                    refuseBackground(source,id,error,backgroundEvidence.first,backgroundEvidence.second,notificationAtStart)
                     // Only a typed per-session capability refusal changes its
                     // history protocol. Network/auth failures never downgrade,
                     // and another session on this host keeps native chronology.
@@ -205,6 +315,10 @@ internal object CodexSessionRepository {
                     if(sessionUnsupported)turnHistorySessions.add(key)else nativeCapabilities[source.scope]=false
                     useNative=false
                     CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                }
+                if(archiveAtStart!=null)withContext(lane){
+                    if(!current(source))throw CancellationException("Pairing changed")
+                    if(key !in archivedHistorySessions||(backgroundRevisions[key]?:0L)!=archiveAtStart)throw java.io.IOException("Conversation archive state changed during this read. Reload the conversation.")
                 }
                 val currentEpoch=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 if(!baseline.isNullOrBlank()&&currentEpoch!=baseline&&response.optJSONObject("historyHead")?.s("epoch")==baseline)
@@ -222,7 +336,35 @@ internal object CodexSessionRepository {
                 created.invokeOnCompletion{network.launch{requestMutex.withLock{if(requests[key]===created)requests.remove(key)}}}
             }
         }
-        val response=request.await()
+        val response=try{request.await()}catch(error:PocketApiException){
+            if(background||key in archivedHistorySessions||error.status!=409||error.code!="THREAD_ARCHIVED")throw error
+            // Explicit inspection may read archived rollout history. Background
+            // repairs never take this fallback, resume or unarchive the session.
+            val notification=known[key]?:0L;val invalidation=invalidations[key]?:0L
+            val live=liveGenerations[key]?:0L
+            val membershipRevision=withContext(lane){
+                if(backgroundRefusals[key]?.code!="THREAD_ARCHIVED")throw error // Refusal was superseded while this shared read was pending.
+                backgroundRevisions[key]?:0L
+            }
+            val value=CodexReadTransport.read(destination,"/api/threads/"+android.net.Uri.encode(id)+"/head")
+            validateTranscriptSnapshot(value,id)
+            withContext(lane){
+                if(!current(source))throw CancellationException("Pairing changed")
+                if((backgroundRevisions[key]?:0L)!=membershipRevision)throw java.io.IOException("Conversation archive state changed during this read. Reload the conversation.")
+                archivedHistorySessions.add(key)
+                archivedHistoryCursors[key]=value.optJSONObject("timeline")?.s("before")?.takeIf{it.isNotBlank()}?.let{setOf(it)}?:emptySet()
+            }
+            value.put("_notificationObserved",notification).put("_catalogObserved",invalidation).put("_liveGenerationAtReadStart",live)
+        }
+        withContext(lane){
+            if(current(source)){
+                restoreBackground(source)
+                if(backgroundRefusals[key]?.code!="THREAD_ARCHIVED")clearBackgroundRefusal(key)
+                if(key in archivedHistorySessions)response.optJSONObject("timeline")?.s("before")?.takeIf{it.isNotBlank()}?.let{cursor->
+                    archivedHistoryCursors.compute(key){_,old->(old.orEmpty()+cursor).toList().takeLast(128).toSet()}
+                }
+            }
+        }
         return if(native(response))response else withContext(Dispatchers.Default){JSONObject(response.toString())}
     }
     internal fun currentSnapshot(destination:EnvironmentRequest,id:String,value:JSONObject):Boolean=
@@ -266,7 +408,8 @@ internal object CodexSessionRepository {
         io.launch{
             if(!current(source))return@launch
             ensurePump()
-            dirty.filter{it.first==source.scope}.forEach{key->
+            restoreBackground(source)
+            dirty.filter{it.first==source.scope&&backgroundAllowed(it)}.forEach{key->
                 if(key !in pending)pending[key]=Intent(source,key.second,known[key]?:0L,
                     workTimeMillis(latest[key]?.optJSONObject("thread")?.optLong("activityAt")?:0L))
             }
@@ -287,13 +430,17 @@ internal object CodexSessionRepository {
         io.launch{
             ensurePump()
             if(!current(source))return@launch
+            restoreBackground(source)
             db.rawQuery("SELECT thread,body,notification,dirty FROM recent WHERE scope=? ORDER BY updated DESC LIMIT 256",arrayOf(source.scope)).use{cursor->
                 while(cursor.moveToNext()){
                     val thread=cursor.getString(0);val key=source.scope to thread
                     val alreadyLoaded=latest.containsKey(key)
                     known[key]=maxOf(known[key]?:0L,cursor.getLong(2))
                     if(!nativeEnabled(source.destination,thread)&&!cursor.isNull(1))runCatching{JSONObject(cursor.getString(1))}.getOrNull()?.let{if(!latest.containsKey(key))putLatest(key,it)}
-                    if(cursor.getInt(3)!=0&&(!alreadyLoaded||key in dirty)){dirty.add(key);pending[key]=Intent(source,thread,cursor.getLong(2))}
+                    if(cursor.getInt(3)!=0&&(!alreadyLoaded||key in dirty)){
+                        dirty.add(key)
+                        if(backgroundAllowed(key))pending[key]=Intent(source,thread,cursor.getLong(2))
+                    }
                 }
             }
             trimPending()
@@ -530,12 +677,18 @@ internal object CodexSessionRepository {
     }
     private fun queue(intent:Intent){
         val key=intent.source.scope to intent.thread
+        restoreBackground(intent.source)
         known[key]=maxOf(known[key]?:0L,intent.notification)
+        // Fresh notifications may warrant one new inspection, but an archive or
+        // authoritative catalog removal is not reversed by a content hint.
+        backgroundMembership.putIfAbsent(key,BackgroundMembership("",true))
+        backgroundRefusals[key]?.takeIf{it.code!="THREAD_ARCHIVED"&&intent.notification>it.notification}?.let{clearBackgroundRefusal(key)}
+        dirty.add(key)
+        save(intent.source,intent.thread,null,true)
+        if(!backgroundAllowed(key))return
         val old=pending[key]
         pending[key]=intent.copy(priority=maxOf(intent.priority,old?.priority?:0L))
         trimPending()
-        dirty.add(key)
-        save(intent.source,intent.thread,null,true)
         wake.trySend(Unit)
     }
     private fun ensurePump(){
@@ -545,7 +698,7 @@ internal object CodexSessionRepository {
             for(signal in wake){
                 delay(120) // One burst, one canonical repair; token deltas do not trigger reads.
                 while(pending.isNotEmpty()){
-                    val key=pending.entries.filter{it.key !in inFlight&&readOnlyCapabilities[it.value.source.scope]==true}
+                    val key=pending.entries.filter{it.key !in inFlight&&backgroundAllowed(it.key)&&readOnlyCapabilities[it.value.source.scope]==true}
                         .maxByOrNull{it.value.priority}?.key?:break
                     val intent=pending.remove(key)?:continue
                     if(!current(intent.source))continue

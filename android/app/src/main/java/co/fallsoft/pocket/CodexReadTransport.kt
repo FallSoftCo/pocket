@@ -49,7 +49,17 @@ internal object CodexReadTransport {
                         val value=response.use{
                             val raw=it.body?.string().orEmpty()
                             val json=try{JSONObject(raw)}catch(_:Exception){throw PocketApiException(it.code,"Unexpected history response")}
-                            if(!it.isSuccessful)throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","History unavailable")),json.optString("code").takeIf{it.isNotBlank()})
+                            if(!it.isSuccessful){
+                                var code=json.optString("code").takeIf{it.isNotBlank()}
+                                val kind=mapOf("THREAD_EPHEMERAL_UNAVAILABLE" to "ephemeralUnavailable","THREAD_HISTORY_UNAVAILABLE" to "historyUnavailable","THREAD_ARCHIVED" to "archived")[code]
+                                if(kind!=null){
+                                    val availability=json.optJSONObject("readAvailability")
+                                    val requested=android.net.Uri.decode(resource.removePrefix("/api/threads/").substringBefore('/'))
+                                    if(it.code!=409||availability==null||availability.s("threadId")!=requested||availability.s("kind")!=kind||
+                                        availability.s("operation") !in setOf("thread/read","thread/timeline/list","history/read"))code=null
+                                }
+                                throw PocketApiException(it.code,ConnectionMessages.server(json.s("error","History unavailable")),code)
+                            }
                             json
                         }
                         if(continuation.isActive)continuation.resume(value)
