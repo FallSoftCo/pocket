@@ -167,13 +167,13 @@
       "ownerAnnouncements": 1,
       "notificationId": 2835,
       "macChannel": 176,
-      "phoneInstallation": "not yet verified",
-      "phoneInstalledVersionLastObserved": 175,
+      "phoneInstallation": "version176 confirmed by read-only package manager",
+      "phoneInstalledVersionLastObserved": 176,
       "macChannelRestartRequired": false,
       "macChannelState": "Published with exact compatible signed artifact; no second announcement",
       "pushState": "accepted_by_fcm",
       "pushAttempts": 1,
-      "phoneReadOnlyCheck": "SSH package-manager list confirmed175 after176 publication;176 installation not claimed."
+      "phoneReadOnlyCheck": "SSH Android package-manager list confirmed176; no phone input or physical-interaction claim."
     },
     "coldPageRecovery": {
       "state": "passed",
@@ -358,7 +358,7 @@
     }
   },
   "remaining": [
-    "Verify physical handset installation and interaction separately.",
+    "Verify physical handset interactions separately;176 installation is confirmed.",
     "Retain required Pocket review gate; no bypass.",
     "Continue useful integration monitoring; full TUI parity remains open."
   ],
