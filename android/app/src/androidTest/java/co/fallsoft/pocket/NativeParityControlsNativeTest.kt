@@ -135,6 +135,13 @@ class NativeParityControlsNativeTest {
         }catch(failure:Throwable){
             // Keep the original setup/assertion failure even if diagnostics fail.
             runCatching{capture("$name-failure")}.exceptionOrNull()?.let{failure.addSuppressed(it)}
+            runCatching{
+                val folder=context.cacheDir.resolve("native-parity-$runId").apply{mkdirs()}
+                folder.resolve("$name-failure-stacks.txt").writeText(Thread.getAllStackTraces().entries
+                    .sortedBy{it.key.name}.joinToString("\n\n"){(thread,stack)->
+                        "${thread.name} (${thread.state})\n"+stack.joinToString("\n"){"  at $it"}
+                    })
+            }.exceptionOrNull()?.let{failure.addSuppressed(it)}
             throw failure
         }
     }

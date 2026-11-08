@@ -1,6 +1,7 @@
 // Disposable Android UI authority. No provider, shell, model or host operations.
 // PORT and PORT+1 must be reversed to emulator loopback 18880 and 18881.
 import http from 'node:http';
+import fs from 'node:fs';
 import {PluginCatalogPages} from '../../server/native-plugin-catalog.mjs';
 import crypto from 'node:crypto';
 import {projectNativeTimeline} from '../../server/native-timeline.mjs';
@@ -58,6 +59,13 @@ for(const origin of origins){
   res.setHeader('Content-Type','application/json');
   if(!authorized(req)){res.writeHead(401).end('{"error":"Synthetic credential required"}');return;}
   const url=new URL(req.url,'http://localhost'),path=url.pathname;
+  // Retain transport completion separately from request admission. A received
+  // GET alone cannot explain a native dialog that remains in its loading state.
+  if(process.env.NEXTCOMP_QA_LOG&&path==='/api/native/plugins/detail'){
+   const requestId=crypto.randomUUID(),startedAt=Date.now();
+   const trace=phase=>fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished})+'\n',{mode:0o600});
+   trace('request');res.once('finish',()=>trace('finish'));res.once('close',()=>trace('close'));
+  }
   let raw='';for await(const chunk of req)raw+=chunk;
   const input=raw?JSON.parse(raw):{};
   calls.push({origin:origin.name,path,query:url.search,method:req.method,input});
