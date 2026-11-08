@@ -1,12 +1,21 @@
 import {createHash} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync,realpathSync,statSync,existsSync} from 'node:fs';
-import {resolve,relative,isAbsolute,join} from 'node:path';
+import {resolve,relative,isAbsolute,join,basename,dirname} from 'node:path';
 const hex=/^[a-f0-9]{64}$/;
 const fail=message=>{throw Error(message);};
 export const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
 export const fileSha=path=>sha256(readFileSync(path));
-function inputSha(root,inputs){
- const files=[];const walk=path=>{let s;try{s=lstatSync(path);}catch(e){if(e.code==='ENOENT')return;throw e;}if(s.isDirectory())for(const name of readdirSync(path).sort())walk(join(path,name));else if(s.isFile())files.push(path);else fail('Source fingerprint requires regular files, not symlinks.');};
+// Ignore only source-backed CPython bytecode and its numeric atomic-write temp files.
+// Source files, sourceless .pyc modules and unexpected cache contents stay bound.
+function sourceBackedPythonCache(path){
+ if(basename(dirname(path))!=='__pycache__')return false;
+ const match=/^(.+)\.cpython-\d+(?:\.opt-\d+)?\.pyc(?:\.\d+)?$/.exec(basename(path));
+ if(!match)return false;
+ try{return lstatSync(join(dirname(dirname(path)),match[1]+'.py')).isFile();}
+ catch(error){if(error.code==='ENOENT')return false;throw error;}
+}
+function inputSha(root,inputs,{ignorePythonCache=false}={}){
+ const files=[];const walk=path=>{let s;try{s=lstatSync(path);}catch(e){if(e.code==='ENOENT')return;throw e;}if(s.isDirectory())for(const name of readdirSync(path).sort())walk(join(path,name));else if(s.isFile()){if(!ignorePythonCache||!sourceBackedPythonCache(path))files.push(path);}else fail('Source fingerprint requires regular files, not symlinks.');};
  inputs.forEach(name=>walk(resolve(root,name)));if(!files.length)fail('No source inputs.');
  const hash=createHash('sha256');for(const path of files.sort()){hash.update(relative(root,path));hash.update('\0');hash.update(fileSha(path));hash.update('\0');}return hash.digest('hex');
 }
@@ -24,7 +33,7 @@ export const qualificationInputSha=root=>inputSha(root,[
  'scripts/release-policy.json','scripts/release-qualification.mjs','scripts/record-native-qualification.mjs',
  'scripts/owned-fixture.mjs','scripts/qualify-native-optimized.py',
  'scripts/prepare-app-update.mjs','scripts/publish-qualified-update.mjs'
-]);
+],{ignorePythonCache:true});
 export const productionSourceInputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
 export function productionSourceSha(root){return inputSha(root,productionSourceInputs);}
 export function nativeOutputPassed(output,expectedTests=1){
