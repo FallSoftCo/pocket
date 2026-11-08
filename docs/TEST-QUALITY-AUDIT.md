@@ -265,9 +265,11 @@ include source hashes, failure sensitivity and retained command-setup failure.
 The existing composed native controls journey now covers delayed approval callbacks
 after both environment and thread switches, replacement tokens, exact structured
 approval choices, output-page scroll reset, held source changes and unavailable
-output. All15 required cases passed. This composed case took170.055s under its
-unchanged180s cap; future test maintenance should split independent scenarios at
-actual workflow boundaries, rather than extend sleeps or weaken assertions.
+output. All15 required cases passed. The runner receipt took170.055s including setup; the instrumentation log reports
+158.44s. The180s cap applies to the instrumentation subprocess, whose exact wall
+time is not recorded separately. Future maintenance should split independent
+scenarios at actual workflow boundaries, rather than extend sleeps or weaken
+assertions.
 
 Optimized review exposed a harness flaw: failed hierarchy dumps could leave a
 previous device XML file available. The helper now captures current stdout only.

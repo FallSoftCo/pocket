@@ -341,7 +341,6 @@
         "Replaced request token rejects stale approval; offered structured rule retains exact selection",
         "Output paging resets scroll, retains revision/source and refuses unavailable source"
       ],
-      "extendedControlsDurationMs": 170055,
       "unchangedControlsTimeoutMs": 180000,
       "optimizedReview": "Exact signed APK: original canonical pair retained once across reopen and Skip once; first output page scrolled then next page opens at top, exactly two original-source revision-bound reads.",
       "qaPreferencesRestored": true,
@@ -352,7 +351,10 @@
         "sourceCommit": "b1e2a5f1",
         "originalAttempt": "Retained as held after null-root capture exposed persistent XML reuse risk.",
         "replacement": "Fresh stdout hierarchy only; failure cannot reuse old XML; focused regression and new review passed on same APK."
-      }
+      },
+      "extendedControlsRunnerElapsedMs": 170055,
+      "extendedControlsInstrumentationReportedMs": 158440,
+      "timingBoundary": "Runner elapsed includes setup.180s cap applies to instrumentation subprocess; exact subprocess wall time is not separately recorded."
     }
   },
   "remaining": [
