@@ -9,8 +9,8 @@ const scanCodes=new Set(['THREAD_EPHEMERAL_UNAVAILABLE','THREAD_HISTORY_UNAVAILA
 
 /** A local, derived record. Completion is a protocol state, never a success rating. */
 export class WorkRecord {
-  constructor(db,{version,clock=Date.now}={}) {
-    Object.assign(this,{db,version,clock});
+  constructor(db,{version,clock=Date.now,scanAllowed=()=>true}={}) {
+    Object.assign(this,{db,version,clock,scanAllowed});
     db.exec(`CREATE TABLE IF NOT EXISTS work_record_sessions (
       id TEXT PRIMARY KEY, name TEXT, cwd TEXT, first_seen INTEGER, version TEXT,
       cursor TEXT, hydrated INTEGER DEFAULT 0, last_scan INTEGER DEFAULT 0);
@@ -85,6 +85,10 @@ export class WorkRecord {
     try{
       known=metadata(session.id);
       if(known?.id!=null&&known.id!==session.id)throw Object.assign(Error('Work record metadata identity changed.'),{code:'WORK_RECORD_SOURCE_MISMATCH'});
+      // Historical enrollment is not current runtime admission. Reuse canonical
+      // ownership, not cwd/status guesses. Keep saved evidence and cursors, and
+      // recheck next cycle so an explicit reclassification can admit backfill.
+      if(!this.scanAllowed(session.id,known))return;
       operation='history/read';
       const thread=await history.read({...known,id:session.id},{before:session.cursor||null,preferPaging:true,maxTurns:4,maxItems:80,maxBytes:160000});
       if(thread?.id!==session.id)throw Object.assign(Error('Work record history identity changed.'),{code:'WORK_RECORD_SOURCE_MISMATCH'});
