@@ -1,4 +1,5 @@
 import {itemRow,displayTurnError} from './timeline.mjs';
+import {threadReadError} from './thread-read-availability.mjs';
 // Codex owns chronology. This adapter neither constructs turns nor infers order.
 // No attachment, thread resume, command journal or model activation occurs here.
 const ranks=new Map([['turnStarted',0],['item',1],['realtime',2],['turnCompleted',3]]);
@@ -32,7 +33,7 @@ export function validateNativeTimelinePage(page,{cursor=null,limit=64}={}){
  return page;
 }
 export class NativeTimelineReader {
- constructor(codex){this.codex=codex;this.reads=new Map();}
+ constructor(codex,{known=()=>null}={}){this.codex=codex;this.known=known;this.reads=new Map();}
  async read(threadId,{cursor=null,limit=64}={}){
   if(!validId(threadId)||!Number.isInteger(limit)||limit<1||limit>100||
     !(cursor===null||typeof cursor==='string'&&cursor.length>0&&cursor.length<=16384))
@@ -47,7 +48,7 @@ export class NativeTimelineReader {
     catch(error){
      if(error?.rpc?.code===-32601&&/thread\/timeline\/list.*not supported/i.test(error.message||''))
       throw Object.assign(new Error('This session uses turn history rather than native timeline history.'),{status:409,code:'NATIVE_TIMELINE_UNSUPPORTED',rpc:error.rpc});
-     throw error;
+     throw threadReadError(error,{threadId,metadata:this.known(threadId),operation:'thread/timeline/list'});
     }
     return validateNativeTimelinePage(page,{cursor,limit});
    })();

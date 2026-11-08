@@ -1,5 +1,6 @@
+import {cachedThreadMetadata,isThreadNotLoaded} from './thread-read-availability.mjs';
 /** Native negative metadata evidence is distinct from an outage or archiving.
- * Keep cached history/receipts; stop offering a missing runtime as a live session.
+ * Keep cached history/receipts; only a proven temporary session can be hidden.
  * A fresh native list/read/event can admit that identity again. */
 export class CatalogPresence {
  constructor(db){
@@ -12,14 +13,15 @@ export class CatalogPresence {
   const record=this.versions.get(id);if(record)record.revision++;
   this.db.prepare('DELETE FROM pocket_catalog_unavailable WHERE thread_id=?').run(id);
  }
- unavailable(id){return !!this.db.prepare('SELECT 1 FROM pocket_catalog_unavailable WHERE thread_id=?').get(id);}
+ unavailable(id){return cachedThreadMetadata(this.db,id)?.ephemeral===true&&!!this.db.prepare('SELECT 1 FROM pocket_catalog_unavailable WHERE thread_id=?').get(id);}
  rejectMissing(id,error,ticket){
   // Require the actual native RPC's exact identity-bearing response. Transport
   // timeouts, generic 404s, archived histories and partial lists are not proof.
-  if(error?.rpc?.code!==-32600||error.rpc.message!==`thread not loaded: ${id}`||this.versions.get(id)!==ticket.record||ticket.record.revision!==ticket.revision)return false;
+  // An unloaded durable session may have a temporarily unavailable source.
+  if(!isThreadNotLoaded(error,id)||cachedThreadMetadata(this.db,id)?.ephemeral!==true||this.versions.get(id)!==ticket.record||ticket.record.revision!==ticket.revision)return false;
   const hasOutgoing=this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='outgoing'").get();
   if(hasOutgoing&&this.db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('queued','sending','unknown') LIMIT 1").get(id))return false;
-  this.db.prepare('INSERT INTO pocket_catalog_unavailable VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET reason=excluded.reason,observed_at=excluded.observed_at').run(id,'Native runtime no longer has this session',Date.now());
+  this.db.prepare('INSERT INTO pocket_catalog_unavailable VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET reason=excluded.reason,observed_at=excluded.observed_at').run(id,'Temporary session is not currently loaded',Date.now());
   return true;
  }
 }
