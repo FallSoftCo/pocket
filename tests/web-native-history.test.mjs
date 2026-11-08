@@ -17,6 +17,25 @@ test('native and legacy session protocols coexist and authorization failures nev
  await reader.read('legacy',{before:'exact-legacy',background:true});assert.ok(calls.at(-1).path.endsWith('before=exact-legacy'));assert.equal(calls.at(-1).options.timeout,5000);
  await assert.rejects(reader.read('denied'),/Forbidden/);assert.equal(calls.filter(c=>c.path.includes('denied')).length,1);
 });
+test('only source-matching archived head refusal enables a read-only history fallback, without pinning the session to legacy history',async()=>{
+ const calls=[];let archived=true,kind='archived',source='session',code='THREAD_ARCHIVED';
+ const reader=new HistoryReader(async path=>{
+  calls.push(path);
+  if(path.includes('/native-timeline')){
+   if(archived)throw Object.assign(Error('Unavailable'),{status:409,code,readAvailability:{threadId:source,kind,operation:'thread/timeline/list'}});
+   return page('session',[row(3,'Current response')]);
+  }
+  return {thread:{id:'session'},timeline:{rows:[row(1,'Retained response').row],before:'stored-cursor',hasEarlier:true}};
+ });
+ for(const context of [{source:'other',kind:'archived',code:'THREAD_ARCHIVED'},{source:'session',kind:'historyUnavailable',code:'THREAD_HISTORY_UNAVAILABLE'},{source:'session',kind:'ephemeralUnavailable',code:'THREAD_EPHEMERAL_UNAVAILABLE'}]){
+  ({source,kind,code}=context);const before=calls.length;await assert.rejects(reader.read('session'),/Unavailable/);assert.equal(calls.length,before+1);assert.equal(reader.protocols.size,0);
+ }
+ source='session';kind='archived';code='THREAD_ARCHIVED';
+ await assert.rejects(reader.read('session',{background:true}),/Unavailable/);
+ const data=await reader.read('session');assert.equal(data.timeline.rows[0].text,'Retained response');assert.equal(reader.protocols.get('session'),'archived-turns');
+ await reader.read('session',{before:'stored-cursor'});assert.equal(calls.at(-1),'/api/threads/session?view=timeline&before=stored-cursor');
+ archived=false;await reader.read('session');assert.equal(calls.at(-1),'/api/threads/session/native-timeline');assert.equal(reader.protocols.get('session'),'native');
+});
 test('one session entity supplies canonical user/answer order, catalog invalidation and local latest navigation',()=>{
  const s=new SessionStore();s.catalog([{id:'s',previewRole:'codex',preview:'a'}],s.ticket());s.catalog([{id:'s',previewRole:'codex',preview:'b'}],s.ticket());assert.deepEqual(s.catalogChanges,['s']);
  s.head('s',page('s',[row(1,'old passage')],'old-before'),{ticket:s.ticket()});

@@ -14,6 +14,28 @@
   },
   "requests": [
     {
+      "id": "history-availability-background-admission-20261107",
+      "request": "Continue monitoring installed NextComp and fix observed history failures without restarting historical work or losing cached conversations.",
+      "status": "In progress after repeated unavailable/archived read bursts in installed176 monitoring; no new release yet.",
+      "findings": [
+        "Android requeues persisted dirty history on activation/reconnect without current catalog admission.",
+        "Archived stored history can load but optional catch-up capture rejects it, failing the whole read.",
+        "Native unloaded errors require exact source identity and metadata; they do not prove durable history permanently lost."
+      ],
+      "implementation": [
+        "Separate freshness from background eligibility; retain cached messages and foreground retry.",
+        "Return typed read availability; archived read-only fallback omits catch-up capture.",
+        "Web archived fallback preserves source identity and page format and rechecks native availability on a new head."
+      ],
+      "validation": "Web candidate14 targeted tests passed, including authenticated two-authority archived read without task writes. Backend/Android candidates and native lifecycle qualification pending.",
+      "owners": {
+        "backend": "parity_execution",
+        "android": "ui_standby",
+        "webIntegrationRelease": "root",
+        "independentTestReview": "integration_quality"
+      }
+    },
+    {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
       "status": "Android176/alpha158 published both channels; approval callbacks bound to original source and output-page scroll resets.15 native cases and exact optimized history/output review passed. One176 announcement accepted by FCM. Phone package-manager read confirms176 installed; physical interaction remains separately unverified. Web175 and backend174 retained; monitoring active.",
