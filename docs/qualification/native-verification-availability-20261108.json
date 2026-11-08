@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-08",
+  "sourceCommit": "6f9588401d4207300d55ce1a91dd60b6cce3b175",
+  "nativeSource": {
+    "tag": "rust-v0.167.0",
+    "commit": "086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a",
+    "provider": "https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/user-verification/src/lib.rs",
+    "transport": "https://github.com/openai/codex/blob/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a/codex-rs/app-server/src/user_verification.rs",
+    "limits": "Release source/version agreement is not reproducible binary-build attestation. Custom Mac 0.163 remains outside this qualification."
+  },
+  "observed": {
+    "runtimeVersion": "0.167.0",
+    "platform": "linux",
+    "transport": "existing-shared-websocket",
+    "method": "userVerification/status",
+    "attempts": 1,
+    "responseMs": 1,
+    "outcome": "unavailable",
+    "unavailableReason": "providerUnavailable",
+    "credentialPresent": false,
+    "ready": false,
+    "nativeProcessPreserved": true,
+    "modelCalls": 0
+  },
+  "nativeBoundary": "Status is allowed over WebSocket/RemoteControl. Enrollment, deletion and verification are rejected on those transports. Linux returns unavailable before provider invocation. No stdio workaround or remote-signing flow was added.",
+  "candidate": {
+    "change": "Android, web and server rejection guidance no longer imply that opening a terminal guarantees verification availability.",
+    "controls": "Decline/cancel only; supplied proof cannot create a native acceptance write.",
+    "focusedIntegrationCasesPassed": 4,
+    "existingDomRunnerJourneysPassed": 7,
+    "validation": "Existing RequestList/QuestionActions composition checks the offered controls, absence of proof fields and exact decline/cancel responses. Integration rejects accept without a native write and drops unsolicited proof content from decline/cancel.",
+    "rootReview": "Five changed files reviewed; exact tested commit fast-forwarded without edits.",
+    "androidBuildOrDeviceTest": false,
+    "deployed": false
+  },
+  "privacy": "No credential identifiers, signatures, challenges, account identifiers, auth tokens, native messages or raw error payloads retained in this public receipt."
+}
