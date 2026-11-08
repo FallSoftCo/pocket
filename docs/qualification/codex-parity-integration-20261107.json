@@ -468,6 +468,31 @@
       "generatedSourceBackedPythonCacheDoesNotInvalidate": true,
       "original177ArtifactsAndReceiptsChanged": false,
       "scopedReceiptReuseImplemented": false
+    },
+    "retiredWorkRecordAdmission": {
+      "candidate": "1229c683dfbe6a7230aa2d8f145aa7259cf3fa6e",
+      "integrated": "3c713aeb50acabc1f5b8e4a17b2f35cce17e9de8",
+      "status": "live on both backends; natural scan-cycle observation pending",
+      "cause": "Historically enrolled records already classified as retired-room-agent still entered native history backfill. Their missing lineage belongs to a retired runtime; the stock catalog already excludes them.",
+      "change": "Reuse canonical SessionDiscovery.hidden admission before native history reads. Preserve retained rows/cursors, scan fairness and ordinary archived/native-child recovery; no new timer, model work or deletion.",
+      "validation": {
+        "focusedTests": 13,
+        "failed": 0,
+        "independentReview": "No blocking finding; production wiring reviewed statically, real SQLite composition with synthetic native RPC seam."
+      },
+      "releaseDigest": "52bb528f1edcfce167e8d9ace5825909d269d8cd3755c899b54d3316ac0ace99",
+      "preserved": [
+        "Android177 artifacts and channel",
+        "web gateways",
+        "shared native Codex processes",
+        "pairing",
+        "queues and unknown receipts"
+      ],
+      "limits": [
+        "Does not restore missing retired native lineage",
+        "Does not cancel a read already admitted before retirement",
+        "Physical handset interaction remains unverified"
+      ]
     }
   },
   "remaining": [

@@ -3874,7 +3874,15 @@
     "request": "Mac archive reports active writer; three legacy room agents display no messages or status in stock clients.",
     "implementation": "Use native originator lax-host-agent to exclude retired room workers from normal, archived, search, cached and coordinator stock discovery; retain durable internal ownership across reconnect.",
     "recovery": "Three specifically reported idle legacy threads archived once through their owning runtime, with accepted receipts and archived-path readback. No model start or stock runtime restart.",
-    "verification": "Live on Mac and workstation; 19 focused registry/catalog checks passed. Three owner-acknowledged archives retained, no writer handles remain. Mac authenticated catalog contains four ordinary sessions, each returns history in 93\u2013316 ms. No physical phone UI inspection."
+    "verification": "Live on Mac and workstation; 19 focused registry/catalog checks passed. Three owner-acknowledged archives retained, no writer handles remain. Mac authenticated catalog contains four ordinary sessions, each returns history in 93\u2013316 ms. No physical phone UI inspection.",
+    "workRecordScanAdmission": {
+      "source": "3c713aeb",
+      "state": "live-both-backends-monitoring",
+      "implementation": "Historical enrollment no longer bypasses canonical retired/internal ownership for native history backfill; retained evidence remains readable.",
+      "tests": "13 focused cases; independent source/integration review; natural scan-cycle observation pending",
+      "modelCalls": 0,
+      "newTimers": 0
+    }
   },
   "workstation_catalog_membership_20261107": {
     "request": "Workstation still lists unusable sessions; fix catalog lifecycle, not individual titles.",
