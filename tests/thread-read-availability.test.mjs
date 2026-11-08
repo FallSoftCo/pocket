@@ -15,3 +15,20 @@ test('read availability requires exact native code and source identity; it never
  const codex={call:async()=>({thread:{id:'other'}})};
  await assert.rejects(readThreadMetadata(codex,threadId),{status:502,message:'History belongs to another session.'});
 });
+
+test('only the original turns-list refusal establishes initial message availability',()=>{
+ const message='thread one is not materialized yet; thread/turns/list is unavailable before first user message';
+ const error=()=>Object.assign(rpc(-32600,message),{rpcMethod:'thread/turns/list'});
+ const context={threadId:'one',operation:'history/read'};
+ const typed=threadReadError(error(),context);
+ assert.equal(typed.status,409);assert.equal(typed.code,'THREAD_NOT_MATERIALIZED');
+ assert.deepEqual(typed.readAvailability,{threadId:'one',kind:'notMaterialized',operation:'history/read'});
+ for(const [failure,options] of [
+  [error(),{...context,threadId:'other'}],[error(),{...context,operation:'thread/read'}],
+  [Object.assign(error(),{rpcMethod:'thread/read'}),context],
+  [rpc(-32600,message),context],
+  [Object.assign(error(),{rpc:{code:-32001,message}}),context],
+  [Object.assign(error(),{rpc:{code:-32600,message:message+' extra'}}),context],
+ ])assert.equal(threadReadError(failure,options),failure);
+ assert.equal(threadReadError(rpc(-32600,'thread not loaded: one'),context).code,'THREAD_HISTORY_UNAVAILABLE');
+});

@@ -156,7 +156,12 @@ internal object CodexSessionRepository {
     }
 
     private val requestMutex=Mutex()
-    private val requests=mutableMapOf<Pair<String,String>,Deferred<JSONObject>>()
+    internal data class CurrentReadJoin(val scope:String,val threadId:String,val requestInspection:Long,val requestedInspection:Long)
+    // Test observation only: installed by an isolated instrumentation case and
+    // cleared in finally. It cannot replace/cancel the actual shared request.
+    @Volatile internal var currentReadJoinObserverForTest:((CurrentReadJoin)->Unit)?=null
+    private data class CurrentRead(val value:Deferred<JSONObject>,val inspection:Long)
+    private val requests=mutableMapOf<Pair<String,String>,CurrentRead>()
     private val inFlight=hashSetOf<Pair<String,String>>()
     private val wake=Channel<Unit>(Channel.CONFLATED)
     private val pending=linkedMapOf<Pair<String,String>,Intent>()
@@ -181,7 +186,7 @@ internal object CodexSessionRepository {
     private val known=ConcurrentHashMap<Pair<String,String>,Long>()
     private val dirty=ConcurrentHashMap.newKeySet<Pair<String,String>>()
     private data class BackgroundMembership(val evidence:String,val admitted:Boolean)
-    private data class BackgroundRefusal(val evidence:String,val code:String,val notification:Long,val attempts:Int=0,val retryAt:Long=0)
+    private data class BackgroundRefusal(val evidence:String,val code:String,val notification:Long,val attempts:Int=0,val retryAt:Long=0,val inspection:Long=0)
     // Dirty means retained content needs confirmation, never permission to read
     // every historical cache entry. Membership is established anew this process.
     private val backgroundMembership=mutableMapOf<Pair<String,String>,BackgroundMembership>()
@@ -211,6 +216,15 @@ internal object CodexSessionRepository {
         db.rawQuery("SELECT thread,evidence,code,notification,attempts,retry_at FROM background_refusal WHERE scope=?",arrayOf(source.scope)).use{cursor->
             while(cursor.moveToNext())backgroundRefusals[source.scope to cursor.getString(0)]=BackgroundRefusal(cursor.getString(1),cursor.getString(2),cursor.getLong(3),cursor.getInt(4),cursor.getLong(5))
         }
+    }
+    private val emptyReadInspections=EmptyHistoryInspections<Pair<String,String>>()
+    fun inspectEmptyRead(id:String,destination:EnvironmentRequest?=Pocket.captureEnvironment()){
+        if(destination!=null)emptyReadInspections.observe(source(destination).scope to id)
+    }
+    // Run on the repository lane before admission as well as direct reads.
+    private fun applyEmptyInspection(key:Pair<String,String>){
+        val refusal=backgroundRefusals[key]?:return
+        if(emptyReadInspections.clears(key,refusal.code,refusal.inspection))clearBackgroundRefusal(key)
     }
     private fun recoveryDue(key:Pair<String,String>)=backgroundRefusals[key]?.let{it.code=="THREAD_HISTORY_UNAVAILABLE"&&System.currentTimeMillis()>=it.retryAt}==true
     private fun backgroundAllowed(key:Pair<String,String>)=backgroundMembership[key]?.admitted==true&&(key !in backgroundRefusals||recoveryDue(key))
@@ -272,25 +286,41 @@ internal object CodexSessionRepository {
             }
         }
     }
-    private suspend fun refuseBackground(source:Source,id:String,error:PocketApiException,evidence:String,generation:Long,notification:Long){
-        if(error.status!=409||error.code !in setOf("THREAD_EPHEMERAL_UNAVAILABLE","THREAD_HISTORY_UNAVAILABLE","THREAD_ARCHIVED"))return
+    private suspend fun refuseBackground(source:Source,id:String,error:PocketApiException,evidence:String,generation:Long,notification:Long,inspection:Long){
+        if(error.status!=409||error.code !in setOf("THREAD_EPHEMERAL_UNAVAILABLE","THREAD_HISTORY_UNAVAILABLE","THREAD_ARCHIVED","THREAD_NOT_MATERIALIZED"))return
         withContext(lane){
             if(!current(source))return@withContext
             restoreBackground(source)
             val key=source.scope to id
             if((backgroundRevisions[key]?:0L)!=generation||(known[key]?:0L)>notification)return@withContext
+            if(error.code=="THREAD_NOT_MATERIALIZED"&&!emptyReadInspections.current(key,inspection))return@withContext
             val attempts=(backgroundRefusals[key]?.attempts?:0)+1
             // Existing catalog/reconnect observations may re-admit a repaired
             // durable source. No timer is installed for this backoff.
             val retryAt=if(error.code=="THREAD_HISTORY_UNAVAILABLE")System.currentTimeMillis()+(30_000L shl (attempts-1).coerceIn(0,4)).coerceAtMost(300_000L)else 0
-            retainBackgroundRefusal(key,BackgroundRefusal(evidence,requireNotNull(error.code),notification,attempts,retryAt))
+            retainBackgroundRefusal(key,BackgroundRefusal(evidence,requireNotNull(error.code),notification,attempts,retryAt,inspection))
         }
     }
     /** Shared current read, independent of viewport lifetime. Consumers own private JSON copies. */
-    suspend fun readCurrent(destination:EnvironmentRequest,id:String,background:Boolean=false):JSONObject {
+    suspend fun readCurrent(destination:EnvironmentRequest,id:String,background:Boolean=false):JSONObject =
+        readCurrentBounded(destination,id,background,true)
+    private suspend fun readCurrentBounded(destination:EnvironmentRequest,id:String,background:Boolean,followupAllowed:Boolean):JSONObject {
         val source=source(destination);val key=source.scope to id
+        // An explicit native empty-session refusal is read availability, never a
+        // successful empty snapshot. Re-admit on new catalog/notification evidence.
+        withContext(lane){
+            restoreBackground(source)
+            applyEmptyInspection(key)
+            if(backgroundRefusals[key]?.code=="THREAD_NOT_MATERIALIZED")throw PocketApiException(409,
+                "Codex has not stored a first message for this session yet. Previously saved messages are retained.","THREAD_NOT_MATERIALIZED")
+        }
+        val requestedInspection=emptyReadInspections.generation(key)
         val request=requestMutex.withLock{
-            requests[key]?.takeIf{it.isActive}?:network.async{
+            requests[key]?.takeIf{it.value.isActive}?.also{shared->
+                currentReadJoinObserverForTest?.invoke(CurrentReadJoin(source.scope,id,shared.inspection,requestedInspection))
+            }?:run{
+            val inspection=emptyReadInspections.generation(key)
+            val value=network.async{
                 if(!current(source))throw CancellationException("Pairing changed")
                 val baseline=latest[key]?.optJSONObject("historyHead")?.s("epoch")
                 val notificationAtStart=known[key]?:0L
@@ -305,7 +335,7 @@ internal object CodexSessionRepository {
                 val response=try{
                     CodexReadTransport.read(destination,base+if(useNative)"/native-timeline"else if(background||archiveAtStart!=null)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
                 }catch(error:PocketApiException){
-                    refuseBackground(source,id,error,backgroundEvidence.first,backgroundEvidence.second,notificationAtStart)
+                    refuseBackground(source,id,error,backgroundEvidence.first,backgroundEvidence.second,notificationAtStart,inspection)
                     // Only a typed per-session capability refusal changes its
                     // history protocol. Network/auth failures never downgrade,
                     // and another session on this host keeps native chronology.
@@ -314,7 +344,11 @@ internal object CodexSessionRepository {
                     if(!useNative||!sessionUnsupported&&!routeMissing)throw error
                     if(sessionUnsupported)turnHistorySessions.add(key)else nativeCapabilities[source.scope]=false
                     useNative=false
-                    CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)
+                    try{CodexReadTransport.read(destination,base+if(background)"/head"else"?view=timeline",client=if(background)backgroundClient else CodexReadTransport.historyClient)}
+                    catch(fallback:PocketApiException){
+                        refuseBackground(source,id,fallback,backgroundEvidence.first,backgroundEvidence.second,notificationAtStart,inspection)
+                        throw fallback
+                    }
                 }
                 if(archiveAtStart!=null)withContext(lane){
                     if(!current(source))throw CancellationException("Pairing changed")
@@ -331,12 +365,16 @@ internal object CodexSessionRepository {
                     if(response.optJSONObject("timeline")?.optInt("native")!=1)throw java.io.IOException("Native timeline was not returned")
                     nativeCommitted(source,id,response,null)
                 }else response
-            }.also{created->
+            }
+            CurrentRead(value,inspection).also{created->
                 requests[key]=created
-                created.invokeOnCompletion{network.launch{requestMutex.withLock{if(requests[key]===created)requests.remove(key)}}}
+                value.invokeOnCompletion{network.launch{requestMutex.withLock{if(requests[key]===created)requests.remove(key)}}}
+            }
             }
         }
-        val response=try{request.await()}catch(error:PocketApiException){
+        val response=try{emptyReadInspections.await(key,request.inspection,requestedInspection,followupAllowed,
+            isEmpty={it is PocketApiException&&it.status==409&&it.code=="THREAD_NOT_MATERIALIZED"},
+            read={request.value.await()},reinspect={readCurrentBounded(destination,id,background,false)})}catch(error:PocketApiException){
             if(background||key in archivedHistorySessions||error.status!=409||error.code!="THREAD_ARCHIVED")throw error
             // Explicit inspection may read archived rollout history. Background
             // repairs never take this fallback, resume or unarchive the session.
@@ -458,6 +496,7 @@ internal object CodexSessionRepository {
     fun timeline(destination:EnvironmentRequest,update:JSONObject){
         val id=update.s("threadId");if(id.isBlank())return
         val source=source(destination)
+        inspectEmptyRead(id,destination)
         liveGenerations[source.scope to id]=liveSequence.incrementAndGet()
         val item=update.optJSONObject("row")?.s("id")?:update.s("turnId","head")
         livePending[Triple(source.scope,id,item)]=source to update
@@ -678,6 +717,7 @@ internal object CodexSessionRepository {
     private fun queue(intent:Intent){
         val key=intent.source.scope to intent.thread
         restoreBackground(intent.source)
+        applyEmptyInspection(key)
         known[key]=maxOf(known[key]?:0L,intent.notification)
         // Fresh notifications may warrant one new inspection, but an archive or
         // authoritative catalog removal is not reversed by a content hint.

@@ -253,6 +253,7 @@ object PocketTranscript {
     }
     fun reset(id:String)=CodexConversations.select(id,force=true)
     internal fun resetState(id:String,scope:CoroutineScope,openLatest:Boolean=false){
+        CodexSessionRepository.inspectEmptyRead(id)
         operationScope=scope
         latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L
         cacheRestoreJob?.cancel();cacheRestoreJob=null;cacheRestoring=false;positionRestorePending=false

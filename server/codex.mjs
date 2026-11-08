@@ -49,6 +49,7 @@ export class Codex extends EventEmitter {
           if(m.error){
             const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(isHistoryLineageError(m.error)?historyLineageError(m.error):new Error(m.error.message),{rpc:m.error});
             if(error.code==='CODEX_DRAINING'&&this.transport===transport){this.problem=error;this.emit('status',this.status());}
+            error.rpcMethod=p.method; // Bind read-availability evidence to the actual pending request.
             p.reject(error);
           }else {rememberRuntimeSettings(this,p.method,m.result);p.resolve(m.result);}
         }

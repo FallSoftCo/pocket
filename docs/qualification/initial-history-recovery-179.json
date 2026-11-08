@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "release": {
+    "versionCode": 179,
+    "versionName": "0.5.0-alpha.161",
+    "sourceCommit": "f5612f76215d6b5f833920ca837dc2fd8cb2bdff",
+    "backendDigest": "6ca980340f05413e66ffe139e919c49fceecaa39ae1a42fb2f359252bbcd6259",
+    "androidChannels": "both published",
+    "backendAndWeb": "live on both paired hosts; two workstation browser routes updated",
+    "nativeProcessesRestarted": false,
+    "pairingQueuesAndUnknownReceipts": "preserved",
+    "ownerAnnouncements": 1,
+    "fcm": "accepted attempt1",
+    "lastPhoneObservedVersion": 178
+  },
+  "behavior": [
+    "Classify only the exact requested-thread native thread/turns/list refusal before a first message as typed THREAD_NOT_MATERIALIZED. Older missing-history errors remain unavailable, not assumed empty.",
+    "Retain cached content and suppress unchanged refused reads. Explicit reopen or new native/catalog evidence admits another inspection.",
+    "Source-scoped monotonic inspection generations prevent a late refusal from swallowing a newer inspection; an actual caller joining an older request receives one bounded follow-up.",
+    "No thread/turn creation, model resumption or uncertain submission replay is part of history recovery."
+  ],
+  "verification": {
+    "backend": {
+      "total": 756,
+      "passed": 754,
+      "skipped": 2,
+      "failed": 0
+    },
+    "androidUnitEachVariant": {
+      "total": 479,
+      "skipped": 2,
+      "failed": 0
+    },
+    "lints": "both passed",
+    "requiredNativeCases": 18,
+    "historyRecovery": "Actual repository/SQLite/HTTP shared-request join barrier; original typed refusal and exactly one successful follow-up; cached data/draft retained and zero work submissions.",
+    "renderedBrowser": "Real browser against bounded synthetic sources: refusal retention, unchanged-read suppression, reopen/native-progress recovery and isolation across two separately paired origins. No aggregated-gateway proof inferred.",
+    "optimizedApk": {
+      "sha256": "ed7e3994ee2908b13d7996945f60cbbb71c6a409a6349e5b5768394cd17aee66",
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "workSubmissions": 0
+    },
+    "liveCurrentHistory": "Read-only current conversation returned64 entries/39 rows with an earlier-page cursor; measured reads29ms and245ms, not handset optical latency.",
+    "liveUnavailableHistory": "Known missing source remains typed409 THREAD_HISTORY_UNAVAILABLE; no fabricated empty success."
+  },
+  "limits": [
+    "179 phone installation and physical UI/audio are not yet observed.",
+    "Exact not-materialized state was qualified through retained native error and composed fixtures; live latest read had subsequently changed to not-loaded, so no current live empty-state claim.",
+    "Catalog navigation/action is verified by the optimized journey, but catalog-named screenshot was captured after reopening conversation; it is not stable catalog visual evidence. A separate test-method correction is being prepared.",
+    "Original178 plugin-detail timeout cause remains unresolved; its later diagnostic-only pass is not a proven fix.",
+    "No real provider plugin install, authentication, configuration mutation or arbitrary task execution was performed."
+  ]
+}

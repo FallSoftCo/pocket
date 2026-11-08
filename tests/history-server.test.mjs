@@ -131,6 +131,29 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
  readFaults.set('thread/turns/list:durable-thread',{code:-32600,message:'thread not loaded: durable-thread'});
  const legacyUnavailable=await api('/api/threads/durable-thread/head');assert.equal(legacyUnavailable.status,409);assert.equal(legacyUnavailable.data.code,'THREAD_HISTORY_UNAVAILABLE');assert.equal(legacyUnavailable.data.readAvailability.operation,'history/read');assert.equal(legacyUnavailable.data.timeline,undefined);
  readFaults.delete('thread/turns/list:durable-thread');
+ // Explicit initial-message refusal is availability, never a fabricated empty
+ // transcript. Existing saved notes and uncertain outgoing receipts survive.
+ const beforeEmpty=calls.length;
+ evidenceDb.prepare("INSERT INTO outgoing(id,thread_id,text,state,created_at,updated_at) VALUES(?,?,?,?,?,?)").run('retained-unknown','durable-thread','Saved uncertain input','unknown',1,1);
+ evidenceDb.prepare("INSERT INTO conversation_notes(thread_id,item_id,text,manual,at) VALUES(?,?,?,?,?)").run('durable-thread','saved-message','Saved message',1,1);
+ const retainedOutgoing=evidenceDb.prepare("SELECT * FROM outgoing WHERE id='retained-unknown'").get();
+ const savedMessage=evidenceDb.prepare("SELECT * FROM conversation_notes WHERE thread_id='durable-thread' AND item_id='saved-message'").get();
+ const initialMessage='thread durable-thread is not materialized yet; thread/turns/list is unavailable before first user message';
+ readFaults.set('thread/turns/list:durable-thread',{code:-32600,message:initialMessage});
+ for(const suffix of ['/head','?view=timeline']){
+  const empty=await api('/api/threads/durable-thread'+suffix);
+  assert.equal(empty.status,409);assert.equal(empty.data.code,'THREAD_NOT_MATERIALIZED');
+  assert.deepEqual(empty.data.readAvailability,{threadId:'durable-thread',kind:'notMaterialized',operation:'history/read'});
+  assert.equal(empty.data.timeline,undefined);assert.equal(empty.data.catchup,undefined);
+ }
+ assert.deepEqual(evidenceDb.prepare("SELECT * FROM outgoing WHERE id='retained-unknown'").get(),retainedOutgoing);
+ assert.deepEqual(evidenceDb.prepare("SELECT * FROM conversation_notes WHERE thread_id='durable-thread' AND item_id='saved-message'").get(),savedMessage);
+ readFaults.delete('thread/turns/list:durable-thread');
+ readFaults.set('thread/read:durable-thread',{code:-32600,message:initialMessage});
+ const wrongMethod=await api('/api/threads/durable-thread/head');assert.equal(wrongMethod.status,400);assert.equal(wrongMethod.data.code,undefined);
+ readFaults.delete('thread/read:durable-thread');
+ const firstMessage=await api('/api/threads/durable-thread/head');assert.equal(firstMessage.status,200);assert.ok(firstMessage.data.timeline.rows.length);
+ assert.ok(calls.slice(beforeEmpty).every(c=>!['thread/resume','turn/start','turn/steer'].includes(c.method)));
  // Native chronology refuses an archive, but the ordinary read-only history
  // path still returns its rows without a forbidden catch-up capture.
  readFaults.set('thread/timeline/list:archived-readable',{code:-32600,message:'thread archived-readable is archived'});

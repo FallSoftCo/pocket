@@ -51,8 +51,20 @@ const unsupported=e=>e?.status===409&&e?.code==='NATIVE_TIMELINE_UNSUPPORTED'||e
 /** Protocol belongs to a session key, including its encoded environment identity.
  * Neither a failed network call nor another session can switch its protocol. */
 export class HistoryReader {
- constructor(api){this.api=api;this.protocols=new Map();}
- async read(id,{before=null,background=false}={}){
+ constructor(api){this.api=api;this.protocols=new Map();this.unmaterialized=new Map();this.inspections=new Map();}
+ invalidate(id){this.unmaterialized.delete(id);this.inspections.set(id,(this.inspections.get(id)||0)+1);}
+ async read(id,options={}){
+  const {before=null}=options;
+  if(before===null&&this.unmaterialized.has(id))throw this.unmaterialized.get(id);
+  const inspection=this.inspections.get(id)||0;
+  try{return await this.readPage(id,options);}
+  catch(error){
+   if(inspection===(this.inspections.get(id)||0)&&before===null&&error?.status===409&&error.code==='THREAD_NOT_MATERIALIZED'&&
+      error.readAvailability?.threadId===id&&error.readAvailability.kind==='notMaterialized'&&error.readAvailability.operation==='history/read')this.unmaterialized.set(id,error);
+   throw error;
+  }
+ }
+ async readPage(id,{before=null,background=false}={}){
   const options={priority:background?'low':'high',timeout:background?5000:20000};
   const base='/api/threads/'+encodeURIComponent(id),query=before?'?before='+encodeURIComponent(before):'';
   let archived=this.protocols.get(id)==='archived-turns'&&before!==null;
@@ -69,5 +81,5 @@ export class HistoryReader {
   // cursors in their original format, but re-probe native history on a new head.
   if(before===null)this.protocols.set(id,archived?'archived-turns':'turns');return data;
  }
- clear(){this.protocols.clear();}
+ clear(){this.protocols.clear();this.unmaterialized.clear();}
 }
