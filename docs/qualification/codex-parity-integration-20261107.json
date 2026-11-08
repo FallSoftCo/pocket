@@ -167,13 +167,13 @@
       "ownerAnnouncements": 1,
       "notificationId": 2836,
       "macChannel": 177,
-      "phoneInstallation": "Latest read-only check still176;177 offered through both paired channels",
-      "phoneInstalledVersionLastObserved": 176,
+      "phoneInstallation": "Version177 confirmed by read-only package manager",
+      "phoneInstalledVersionLastObserved": 177,
       "macChannelRestartRequired": false,
       "macChannelState": "Published with exact compatible signed artifact; no second announcement",
       "pushState": "accepted_by_fcm",
       "pushAttempts": 1,
-      "phoneReadOnlyCheck": "SSH Android package-manager list confirmed176; no phone input or physical-interaction claim."
+      "phoneReadOnlyCheck": "SSH package-manager check confirmed177; no phone input or physical-interaction claim."
     },
     "coldPageRecovery": {
       "state": "passed",
@@ -404,7 +404,7 @@
         "pairingAndOutgoingPreserved": true
       },
       "native": "All required cases passed on corrected test identity; exact signed APK canonical/reopen/Skip review passed.",
-      "phoneInstalledVersionLastObserved": 176,
+      "phoneInstalledVersionLastObserved": 177,
       "limits": [
         "Seeded SQLite restoration is not an OS process recreation.",
         "Synthetic native UI and isolated account audio do not establish physical handset behavior.",
@@ -433,11 +433,46 @@
         "taskAdmissions": 0,
         "scope": "Isolated media-only account journey on emulator, not whole-coordinator or physical handset latency."
       }
+    },
+    "workRecordDiagnostics": {
+      "state": "live-both-backends",
+      "sourceCommit": "3074f16a5e7590810b0f63c7d60133989967b335",
+      "releaseDigest": "ab1a3c465f8187282b7040476bbf65774a79b1c7c2f3ecf7ba2ce3ff088012d5",
+      "focusedTests": 8,
+      "backendCiPassed": true,
+      "nativeModelWorkStarted": false,
+      "scanCadenceUnchanged": true,
+      "storedHistoryAndOriginalCursorsPreserved": true,
+      "queuePairingAndUnknownReceiptsPreserved": true,
+      "browserGatewayAndNativeProcessesRetained": true,
+      "postActivationReadMs": {
+        "workstation": 63,
+        "mac": 65
+      },
+      "limits": [
+        "Optional bounded derived-history reads, not model polling or thread resumption.",
+        "Exact historical errors were not retained by old logging; current read independently confirmed one temporary-session refusal.",
+        "Server response durations do not establish client rendering latency."
+      ]
+    },
+    "qualificationInputClosure": {
+      "state": "integrated-for-future-qualification",
+      "sourceCommits": [
+        "77a47bb4",
+        "4651a03e"
+      ],
+      "focusedTests": 14,
+      "actualCliNegativeControl": true,
+      "unchangedSourceReachesOwnerBoundary": true,
+      "changedSharedDependencyRejectedBeforeNativeAdmission": true,
+      "generatedSourceBackedPythonCacheDoesNotInvalidate": true,
+      "original177ArtifactsAndReceiptsChanged": false,
+      "scopedReceiptReuseImplemented": false
     }
   },
   "remaining": [
-    "Verify owner installation and physical handset interactions separately; latest read-only package check is176.",
-    "Diagnose and repair optional work-record scan reads of unavailable temporary sessions without suppressing durable recovery.",
+    "Monitor installed177 behavior; verify physical handset interactions separately.",
+    "Monitor optional work-record diagnostics and installed-client history behavior without worker/model polling.",
     "Retain required Pocket review gate; no bypass.",
     "Continue useful integration monitoring; full TUI parity remains open."
   ],
