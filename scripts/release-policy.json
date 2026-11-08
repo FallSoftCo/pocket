@@ -16,7 +16,9 @@
     "co.fallsoft.pocket.EnvironmentRetirementNativeTest#retirementDeletesOriginalUnknownCopiesAndAudioButKeepsOtherHost",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#archiveFromListKeepsDraftAndRestoresWithoutOpeningOrSending",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#foreignArchiveProgressAndRefusalStayVisibleWithoutRetargeting",
-    "co.fallsoft.pocket.NativeParityControlsNativeTest#nativeControlsPreserveRequestSourceReceiptsAndDrafts"
+    "co.fallsoft.pocket.NativeParityControlsNativeTest#requestsKeepOriginalIdentityAndReturnToCommandOutput",
+    "co.fallsoft.pocket.NativeParityControlsNativeTest#executionInspectionAndTerminationStaySourceBound",
+    "co.fallsoft.pocket.NativeParityControlsNativeTest#contextRecoveryRevertAndSettingsPreserveDrafts"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
