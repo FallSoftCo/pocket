@@ -12,7 +12,7 @@ const methodFor={settings:'config/read',skills:'skills/list',mcp:'mcpServerStatu
 
 // User-opened native catalogs. Catalog RPCs may refresh native caches; never use writes as probes.
 export class NativeConfiguration {
- constructor({codex,db,admissions,savedSettings=()=>null,requestedPermissions=()=>null,host=''}={}){Object.assign(this,{codex,savedSettings,requestedPermissions,host});if(db)this.plugins=new NativePlugins({db,codex,admissions,context:id=>this.context(id)});}
+ constructor({codex,db,admissions,savedSettings=()=>null,requestedPermissions=()=>null,accountEvidence=()=>null,host=''}={}){Object.assign(this,{codex,savedSettings,requestedPermissions,host});if(db)this.plugins=new NativePlugins({db,codex,admissions,accountEvidence,context:id=>this.context(id)});}
  async context(threadId){
   await this.codex.connect();
   if(!threadId)return null;
@@ -97,7 +97,7 @@ export function registerNativeConfigurationRoutes(app,{codex,route,requireId,...
  app.get('/api/native/capabilities',route(async(req,res)=>{await codex.connect();res.json(native.descriptor(threadId(req)));}));
  app.get('/api/native/configuration',route(async(req,res)=>res.json(await native.inspect({threadId:threadId(req),section:req.query.section||'settings',cursor:req.query.cursor}))));
  app.get('/api/native/plugins/receipts',route(async(req,res)=>res.json({receipts:native.plugins?.recent(typeof req.query.key==='string'?req.query.key:undefined)||[]})));
- app.get('/api/native/plugins/detail',route(async(req,res)=>{if(!native.plugins)throw fail('Plugin management is unavailable.',409);const {_origin,...view}=await native.plugins.detail({threadId:threadId(req),key:req.query.key});res.json(view);}));
+ app.get('/api/native/plugins/detail',route(async(req,res)=>{if(!native.plugins)throw fail('Plugin management is unavailable.',409);const {_origin,_snapshot,...view}=await native.plugins.detail({threadId:threadId(req),key:req.query.key});res.json(view);}));
  app.post('/api/native/configuration',route(async(req,res)=>{const body={...req.body,threadId:req.body.threadId?requireId(req.body.threadId):undefined};if(body.section==='plugins'){if(!native.plugins)throw fail('Plugin management is unavailable.',409);return res.json(await native.plugins.mutate(body,req.humanPrincipal));}res.json(await native.configure(body));}));
  return native;
 }

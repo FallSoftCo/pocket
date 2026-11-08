@@ -1,4 +1,4 @@
-import {pluginReply} from './native-plugin-fixture.mjs';
+import {pluginReply,pluginAccountReply} from './native-plugin-fixture.mjs';
 // Real server/index composition; the only substituted authority is native RPC.
 // All data and credentials are disposable. No inherited provider/runtime config.
 import assert from 'node:assert/strict';
@@ -53,6 +53,7 @@ export async function productionFixture(t,{name='Source A'}={}){
   calls.push(m);
   try{
    const paramsSchema={initialize:'InitializeParams','thread/list':'ThreadListParams','thread/read':'ThreadReadParams','thread/timeline/list':'ThreadTimelineListParams','thread/turns/list':'ThreadTurnsListParams','thread/resume':'ThreadResumeParams','thread/items/list':'ThreadItemsListParams'}[m.method];if(paramsSchema)wireCheck(paramsSchema,m.params);
+   if(m.method==='account/rateLimits/read')return send(ws,m.id,pluginAccountReply(m.params));
    if(m.method==='initialize')return send(ws,m.id,{userAgent:'codex/0.167.0',codexHome:join(dir,'home'),platformFamily:'unix',platformOs:'linux'},'InitializeResponse');
    if(m.method==='thread/list')return send(ws,m.id,{data:[f.thread],nextCursor:null},'ThreadListResponse');
    if(m.method==='thread/read')return send(ws,m.id,{thread:f.thread},'ThreadReadResponse');

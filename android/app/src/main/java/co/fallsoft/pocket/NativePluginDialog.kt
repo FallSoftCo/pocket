@@ -87,7 +87,7 @@ import java.util.UUID
                     HorizontalDivider();WorkflowText("${receipt.s("action")} · ${receipt.s("state")}"+(if(receipt.optLong("acknowledgedAt")>0)" · reviewed" else ""),fontSize=12.sp)
                     WorkflowText(receipt.s("notice"),fontSize=12.sp,color=Muted)
                     receipt.optJSONArray("appsNeedingAuth")?.objects()?.takeIf{it.isNotEmpty()}?.let{apps->WorkflowText("Apps requiring authentication: "+apps.joinToString(", "){it.s("name").ifBlank{it.s("id")}},fontSize=12.sp)}
-                    if(receipt.s("state")=="unknown"&&receipt.optLong("acknowledgedAt")==0L)TextButton({confirm("acknowledge",receipt.s("attemptId"))},enabled=current()&&!loading){BilingualLabel("Review uncertain outcome")}
+                    if(receipt.optBoolean("canAcknowledge"))TextButton({confirm("acknowledge",receipt.s("attemptId"))},enabled=current()&&!loading){BilingualLabel("Review uncertain outcome")}
                 }
                 if(snapshot.optBoolean("canInstall"))OutlinedButton({confirm("install")},enabled=current()&&!loading){BilingualLabel("Review installation")}
                 if(snapshot.optBoolean("canUninstall"))OutlinedButton({confirm("uninstall")},enabled=current()&&!loading){BilingualLabel("Review removal")}

@@ -36,6 +36,11 @@ test('draining RPC exposes restart state, lets existing events finish, and recov
   draining=false;await c.connect();assert.deepEqual(c.status(),{connected:true,problem:null});assert.equal(writes,1,'reconnect must not replay the rejected request');
   await assert.rejects(c.call('invalid'),e=>e.message==='Invalid thread id'&&e.rpc.code===-32600&&!e.code);
   await c.call('turn/start');assert.equal(writes,2,'only an explicit retry submits work');
+  const diagnostics=[];t.mock.method(console,'error',value=>diagnostics.push(value));
+  await c.callOperation('plugin/install',{pluginName:'synthetic'},()=>{throw Error('PRIVATE receipt observer failure');});
+  assert.deepEqual(diagnostics,['CODEX_OPERATION_RECEIPT_UPDATE_FAILED']);
+  assert.equal(c.operationCapacityAvailable(),true);
+  assert.deepEqual(await c.call('ordinary-read-after-observer-failure'),{},'observer exceptions cannot escape receive or break unrelated requests');
 });
 
 test('oversized frames keep their real cause, reconnect cleanly, and never replay writes',async t=>{

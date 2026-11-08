@@ -16,17 +16,25 @@ export async function pluginReply(state,method,params){
  let result;
  if(method==='plugin/list'||method==='plugin/installed')result={marketplaces:[{name:'market',path:state.local?'/synthetic/marketplace.json':null,interface:null,plugins:state.missing||method==='plugin/list'&&state.installedOnly?[]:[summary()]}],marketplaceLoadErrors:[],...(method==='plugin/list'?{featuredPluginIds:[]}:{})};
  if(method==='plugin/read'){
-  if(state.holdRead){const hold=state.holdRead;state.holdRead=null;hold.started();await hold.wait;}
   assert.equal(params.pluginName,state.local?'fixture':state.remoteId);if(state.local){assert.equal(params.marketplacePath,'/synthetic/marketplace.json');assert.equal(params.remoteMarketplaceName,undefined);}else assert.equal(params.remoteMarketplaceName,'market');
-  result={plugin:{marketplaceName:'market',marketplacePath:state.local?'/synthetic/marketplace.json':null,summary:summary(),shareUrl:null,description:'Synthetic capability details',skills:[],onboardingSkill:null,hooks:[],apps:[],appTemplates:[],mcpServers:['fixture-mcp'],scheduledTasks:null}};
+  result={plugin:{marketplaceName:'market',marketplacePath:state.local?'/synthetic/marketplace.json':null,summary:summary(),shareUrl:null,description:'Synthetic capability details '+state.version,skills:[],onboardingSkill:null,hooks:[],apps:[],appTemplates:[],mcpServers:['fixture-mcp'],scheduledTasks:null}};
   if(state.wrongIdentity)result.plugin.marketplaceName='other';
+  // Capture before the barrier: releasing after another install must still
+  // deliver the old snapshot, not a reconstruction from mutated fixture state.
+  if(state.holdRead){const hold=state.holdRead;state.holdRead=null;hold.started();await hold.wait;}
  }
  if(method==='plugin/install'){
   assert.equal(params.pluginName,state.local?'fixture':state.remoteId);if(state.local){assert.equal(params.marketplacePath,'/synthetic/marketplace.json');assert.equal(params.remoteMarketplaceName,undefined);}else assert.equal(params.remoteMarketplaceName,'market');assert.ok(params.installAttemptId);state.installed=true;
   if(state.dropInstall){state.dropInstall=false;return {drop:true};}
+  if(state.holdInstall){const hold=state.holdInstall;state.holdInstall=null;hold.started();await hold.wait;}
   if(state.failInstall){state.failInstall=false;return {error:{code:-32603,message:'PRIVATE provider failure after installation'}};}
   result={authPolicy:state.authPolicy,appsNeedingAuth:[{id:'app-fixture',name:'Fixture app',description:'Fixture',logoUrl:null,logoUrlDark:null,distributionChannel:null,installUrl:'https://fixture.invalid/install',branding:null,appMetadata:null,labels:null,isAccessible:false,isEnabled:true}]};
  }
  if(method==='plugin/uninstall'){assert.equal(params.pluginId,state.local?'fixture@market':state.remoteId);state.installed=false;result={};}
  return {result:check(name+'Response',result)};
+}
+
+export function pluginAccountReply(params,accountId='synthetic-account'){
+ check('GetAccountRateLimitsParams',params);
+ return check('GetAccountRateLimitsResponse',{accountId,ordinaryUsageAllowed:true,rateLimitUpsell:null,rateLimitResetCredits:null,rateLimitsByLimitId:null,rateLimits:{limitId:'codex',limitName:null,normalModelSlug:null,primary:{usedPercent:20,windowDurationMins:10080,resetsAt:2000000000},secondary:null,credits:null,individualLimit:null,spendControlReached:false,planType:'pro',rateLimitReachedType:null}});
 }
