@@ -59,6 +59,26 @@ test('reader and retained store switch native to archived history without mixing
  archived=false;store.head('session',await reader.read('session'),{ticket:store.ticket()});
  assert.equal(store.get('session').protocol,'native');assert.equal(store.get('session').before,'native-cursor');
 });
+test('a delayed archived older page cannot override a newer native head protocol',async()=>{
+ const calls=[],store=new SessionStore();let archived=true,releaseOlder,markStarted;
+ const started=new Promise(resolve=>{markStarted=resolve;});
+ const held=new Promise(resolve=>{releaseOlder=resolve;});
+ const reader=new HistoryReader(async path=>{
+  calls.push(path);
+  if(path.includes('/native-timeline')){
+   if(archived)throw Object.assign(Error('Archived'),{status:409,code:'THREAD_ARCHIVED',readAvailability:{threadId:'session',kind:'archived',operation:'thread/timeline/list'}});
+   return page('session',[row(9,'Current native')],'native-cursor');
+  }
+  if(path.includes('before=')){markStarted();await held;}
+  return {thread:{id:'session'},timeline:{rows:[row(1,'Stored').row],before:'stored-cursor',hasEarlier:true}};
+ });
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ const older=reader.read('session',{before:store.get('session').before});await started;
+ archived=false;store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ releaseOlder();const awaitedOlder=await older;assert.throws(()=>store.head('session',awaitedOlder,{older:true}),/History protocol changed/);
+ await reader.read('session',{before:store.get('session').before});
+ assert.equal(calls.at(-1),'/api/threads/session/native-timeline?before=native-cursor');
+});
 test('one session entity supplies canonical user/answer order, catalog invalidation and local latest navigation',()=>{
  const s=new SessionStore();s.catalog([{id:'s',previewRole:'codex',preview:'a'}],s.ticket());s.catalog([{id:'s',previewRole:'codex',preview:'b'}],s.ticket());assert.deepEqual(s.catalogChanges,['s']);
  s.head('s',page('s',[row(1,'old passage')],'old-before'),{ticket:s.ticket()});

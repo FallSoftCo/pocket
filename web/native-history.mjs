@@ -57,7 +57,7 @@ export class HistoryReader {
   const base='/api/threads/'+encodeURIComponent(id),query=before?'?before='+encodeURIComponent(before):'';
   let archived=this.protocols.get(id)==='archived-turns'&&before!==null;
   if(this.protocols.get(id)!=='turns'&&!archived){
-   try{const data=await this.api(base+'/native-timeline'+query,undefined,options);validateNativePage(data,id);this.protocols.set(id,'native');return data;}
+   try{const data=await this.api(base+'/native-timeline'+query,undefined,options);validateNativePage(data,id);if(before===null)this.protocols.set(id,'native');return data;}
    catch(error){
     archived=before===null&&!background&&error?.status===409&&error?.code==='THREAD_ARCHIVED'&&error?.readAvailability?.kind==='archived'&&error.readAvailability.threadId===id;
     if(!archived&&(!unsupported(error)||before!==null))throw error;
@@ -67,7 +67,7 @@ export class HistoryReader {
   if(data?.thread?.id!==id||!Array.isArray(data.timeline?.rows))throw Error('Conversation response does not match the selected session.');
   // Archive is a source state, not a permanent protocol capability. Keep older
   // cursors in their original format, but re-probe native history on a new head.
-  this.protocols.set(id,archived?'archived-turns':'turns');return data;
+  if(before===null)this.protocols.set(id,archived?'archived-turns':'turns');return data;
  }
  clear(){this.protocols.clear();}
 }
