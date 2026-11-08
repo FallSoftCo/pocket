@@ -36,6 +36,29 @@ test('only source-matching archived head refusal enables a read-only history fal
  await reader.read('session',{before:'stored-cursor'});assert.equal(calls.at(-1),'/api/threads/session?view=timeline&before=stored-cursor');
  archived=false;await reader.read('session');assert.equal(calls.at(-1),'/api/threads/session/native-timeline');assert.equal(reader.protocols.get('session'),'native');
 });
+test('reader and retained store switch native to archived history without mixing source cursors',async()=>{
+ let archived=false;const calls=[],store=new SessionStore();
+ const reader=new HistoryReader(async path=>{
+  calls.push(path);
+  if(path.includes('/native-timeline')){
+   if(archived)throw Object.assign(Error('Archived'),{status:409,code:'THREAD_ARCHIVED',readAvailability:{threadId:'session',kind:'archived',operation:'thread/timeline/list'}});
+   return page('session',[row(9,'Latest native')],'native-cursor');
+  }
+  const older=path.includes('before=stored-cursor');
+  return {thread:{id:'session'},timeline:{rows:[row(older?1:8,older?'Earlier stored':'Latest stored').row],before:older?null:'stored-cursor',hasEarlier:!older}};
+ });
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ assert.equal(store.get('session').before,'native-cursor');archived=true;
+ store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ assert.equal(store.get('session').before,'stored-cursor');assert.equal(store.get('session').protocol,'turns');
+ assert.deepEqual(store.get('session').rows.map(row=>row.text),['Latest stored']);
+ const cursor=store.get('session').before;
+ store.head('session',await reader.read('session',{before:cursor}),{older:true,cursor,ticket:store.ticket()});
+ assert.equal(calls.at(-1),'/api/threads/session?view=timeline&before=stored-cursor');
+ assert.deepEqual(store.get('session').rows.map(row=>row.text),['Earlier stored','Latest stored']);
+ archived=false;store.head('session',await reader.read('session'),{ticket:store.ticket()});
+ assert.equal(store.get('session').protocol,'native');assert.equal(store.get('session').before,'native-cursor');
+});
 test('one session entity supplies canonical user/answer order, catalog invalidation and local latest navigation',()=>{
  const s=new SessionStore();s.catalog([{id:'s',previewRole:'codex',preview:'a'}],s.ticket());s.catalog([{id:'s',previewRole:'codex',preview:'b'}],s.ticket());assert.deepEqual(s.catalogChanges,['s']);
  s.head('s',page('s',[row(1,'old passage')],'old-before'),{ticket:s.ticket()});

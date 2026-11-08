@@ -71,7 +71,7 @@ export class SessionStore {
   if(older&&old.protocol==='native')throw Error('History protocol changed while reading an older page.');
   const snapshot=older?old.snapshot||{...data,thread}:{...data,thread};
   const page={...data.timeline,protocol:'turns',rows:canonicalPage(old.protocol==='native'?[]:old.rows||[],data.timeline.rows,{older}),snapshot,catchup:data.catchup,
-   ...(!older&&old.hasEarlier?{hasEarlier:true,before:old.before}:{})};
+   ...(!older&&old.protocol==='turns'&&old.hasEarlier?{hasEarlier:true,before:old.before}:{})};
   this.set(id,page);return page;
  }
  timeline(id,row){
