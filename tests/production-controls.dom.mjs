@@ -56,18 +56,31 @@ test('real conversation pane recovers an unknown operation after backend restart
 
 test('settings plugin journey binds review to source and retains uncertain native effects across restart',{timeout:25000},async t=>{
  const ui=documentFixture(t),f=await productionFixture(t),{pluginState}=await import('./helpers/native-plugin-fixture.mjs'),{NativeSettingsPanel}=await import('../web/native-settings.mjs');
- f.plugins=pluginState();f.configuration={id:'fixture-app',name:'Fixture app',enabled:true,version:1};const origin=scopedId('remote',f.thread.id);let selected=origin,loseHttpAck=false,holdDetail=null;const calls=[];
+ f.plugins={...pluginState(),catalogSize:10074};f.configuration={id:'fixture-app',name:'Fixture app',enabled:true,version:1};const origin=scopedId('remote',f.thread.id);let selected=origin,loseHttpAck=false,holdDetail=null,holdPage=null;const calls=[];
  const panel=new NativeSettingsPanel({getScope:()=>selected,openThread:()=>assert.fail('Plugin controls never navigate or submit work'),api:async(path,body,options)=>{
   calls.push({path,body,scope:options.scope});assert.equal(options.scope,origin,'every read/write remains on the captured source');
   const routed=environmentRoute(environmentPath(path,options.scope));assert.equal(routed.environmentId,'remote');
-  const hold=path.startsWith('/api/native/plugins/detail')?holdDetail:null;if(hold)holdDetail=null;
+  const isPage=path.startsWith('/api/native/configuration?section=plugins')&&path.includes('&cursor=');const hold=isPage?holdPage:path.startsWith('/api/native/plugins/detail')?holdDetail:null;if(hold){if(isPage)holdPage=null;else holdDetail=null;}
   const result=qualifyPayload(await f.api(routed.path,body?unqualifyPayload(body,'remote'):undefined),'remote');if(hold){hold.started();await hold.wait;if(hold.fail)throw Error('Older reload failed');}if(body&&loseHttpAck){loseHttpAck=false;throw Error('Synthetic HTTP acknowledgement loss');}return result;
  }});
  const waitText=text=>until(()=>panel.dialog.textContent,s=>s.includes(text),text);
- const plugins=async()=>{await panel.open();await panel.load('plugins');};
- await plugins();assert.equal(f.calls.some(c=>c.method==='plugin/install'),false);ui.click('Review plugin');await waitText('Review installation');
+ const plugins=async()=>{await panel.open();await panel.load('plugins');await panel.load('plugins',undefined,{view:'browse',query:'fixture'});};
+ await panel.open();await panel.load('plugins');assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,0);assert.equal(f.calls.some(c=>c.method==='plugin/list'),false,'opening installed view does not discover 10k entries');
+ await [...panel.body.querySelectorAll('button')].find(b=>b.textContent==='Browse catalog').onclick();assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,30);assert.ok(panel.body.textContent.includes('1–30 of 10074'));
+ const oldReview=panel.body.querySelector('[data-plugin-row] button').onclick;
+ let next=[...panel.dialog.querySelectorAll('button')].find(b=>b.textContent==='Next plugin page').onclick;
+ selected=f.thread.id;const beforeSwitch=calls.length;await next();assert.equal(calls.length,beforeSwitch,'stale source page callback performs no request');selected=origin;
+ let pageStarted,pageRelease;const pageReading=new Promise(r=>pageStarted=r);holdPage={started:pageStarted,wait:new Promise(r=>pageRelease=r)};
+ const latePage=next();await pageReading;selected=f.thread.id;pageRelease();await latePage;assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,0,'late page from original source is not rendered after switching');selected=origin;
+ await panel.load('plugins');next=[...panel.dialog.querySelectorAll('button')].find(b=>b.textContent==='Next plugin page').onclick;
+ panel.body.scrollTop=300;await next();assert.equal(panel.body.scrollTop,0,'new page starts at its first row');assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,30);assert.ok(panel.body.textContent.includes('31–60 of 10074'));assert.ok(!panel.body.textContent.includes('Catalog plugin 00000'));
+ await oldReview();assert.ok(panel.body.textContent.includes('31–60 of 10074'),'old page selection cannot open replacement rows');
+ await panel.body.querySelector('[data-plugin-row] button').onclick();assert.ok(panel.body.textContent.includes('Catalog plugin 00030'));assert.equal(f.calls.filter(c=>c.method==='plugin/read').at(-1).params.pluginName,'plugins_bulk_00030');ui.click('Back to plugins');await waitText('1–30 of 10074');
+ const search=panel.body.querySelector('input[aria-label="Search plugins"]');search.value='fixture';search.form.dispatchEvent(new Event('submit',{cancelable:true}));await waitText('1–1 of 1');assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,1);
+ f.plugins.catalogSize=1;
+ assert.equal(f.calls.some(c=>c.method==='plugin/install'),false);ui.click('Review plugin');await waitText('Review installation');
  const other=await productionFixture(t,{name:'Other source with the same native IDs'});other.plugins=pluginState();
- const originalView=await f.api('/api/native/plugins/detail?threadId='+f.thread.id+'&key='+((await f.api('/api/native/configuration?section=plugins')).items[0].key));
+ const originalView=await f.api('/api/native/plugins/detail?threadId='+f.thread.id+'&key='+((await f.api('/api/native/configuration?section=plugins&pluginView=browse&query=fixture')).items[0].key));
  const otherView=await other.api('/api/native/plugins/detail?threadId='+other.thread.id+'&key='+originalView.detail.key);
  assert.notEqual(originalView.reviewToken,otherView.reviewToken,'review snapshots are sealed to the original backend');
  assert.equal((await other.request('/api/native/configuration',{section:'plugins',threadId:other.thread.id,key:originalView.detail.key,reviewToken:originalView.reviewToken,action:'install',attemptId:'wrong-backend-attempt',confirmEffects:true,confirmInterstitial:true})).status,409);

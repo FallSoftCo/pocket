@@ -1,3 +1,4 @@
+import {PluginCatalogPages} from './native-plugin-catalog.mjs';
 import {createHash,createHmac,randomUUID} from 'node:crypto';
 import {supportsNativeMethod} from './native-capabilities.mjs';
 import {admissionTransaction} from './human-ingress.mjs';
@@ -26,7 +27,7 @@ const unresolved="(state='dispatching' OR state='unknown' AND (native_terminal=0
 export class NativePlugins {
  constructor({db,codex,context,admissions=null,accountEvidence=()=>null}){
   Object.assign(this,{db,codex,context,admissions,accountEvidence});this.busy=new Set();this.generation=0;
-  const boundary=()=>{this.epoch=randomUUID();this.boundaryAt=Date.now();this.generation++;};
+  const boundary=()=>{this.epoch=randomUUID();this.boundaryAt=Date.now();this.generation++;this.pages?.invalidate();};
   boundary();codex.on('connected',boundary);codex.on('disconnected',boundary);
   codex.on('event',event=>{if(event.method==='account/updated'||event.method==='account/login/completed')boundary();});
   db.exec(`CREATE TABLE IF NOT EXISTS native_plugin_identity(id INTEGER PRIMARY KEY CHECK(id=1),secret TEXT NOT NULL);
@@ -36,6 +37,7 @@ export class NativePlugins {
   for(const [name,type]of [['native_terminal','INTEGER NOT NULL DEFAULT 0'],['binding','TEXT'],['native_epoch','TEXT']])if(!columns.has(name))db.exec(`ALTER TABLE native_plugin_operations ADD COLUMN ${name} ${type}`);
   db.prepare('INSERT OR IGNORE INTO native_plugin_identity(id,secret) VALUES(1,?)').run(randomUUID());
   this.sourceSecret=db.prepare('SELECT secret FROM native_plugin_identity WHERE id=1').get().secret;
+  this.pages=new PluginCatalogPages({secret:this.sourceSecret,capture:()=>this.capture(),check:s=>this.check(s),load:(view,cwd,checkpoint)=>view==='browse'?this.catalog(null,cwd,checkpoint):this.installed(cwd,checkpoint)});
  }
  allowed(method){if(!supportsNativeMethod(this.codex,method))throw fail('Plugin management is unavailable on this runtime. Qualified installed catalogs remain read-only.');}
  // Account evidence comes only from the existing quota cache. Never start an
@@ -46,17 +48,22 @@ export class NativePlugins {
  receipt(row,binding=null){return {attemptId:row.id,threadId:row.thread||null,key:row.plugin_key,name:row.name,action:row.action,state:row.state,createdAt:row.at,acknowledgedAt:row.acknowledged_at,nativeTerminal:row.native_terminal===1,canAcknowledge:row.state==='unknown'&&!row.acknowledged_at&&row.native_terminal===1&&!!binding&&row.binding===binding&&row.native_epoch===this.epoch,...(row.result?JSON.parse(row.result):{notice:row.state==='dispatching'?'Native operation is awaiting acknowledgement. Do not resubmit.':unknown+(row.native_terminal===1?' Native returned a terminal error or invalid acknowledgement. Review partial effects before acknowledging this receipt.':outstanding)})};}
  recent(key){return this.db.prepare('SELECT * FROM native_plugin_operations'+(key?' WHERE plugin_key=?':'')+` ORDER BY ${unresolved} DESC,at DESC,rowid DESC LIMIT 50`).all(...(key?[key]:[])).map(r=>this.receipt(r));}
  receipts(resource,binding){return this.db.prepare(`SELECT * FROM native_plugin_operations WHERE resource=? ORDER BY ${unresolved} DESC,at DESC,rowid DESC LIMIT 50`).all(resource).map(r=>this.receipt(r,binding));}
+ project(m,p){const origin=identity(m,p);return {origin,item:{...summary(m,p),...(origin?{key:digest(origin),inspectable:true}:{inspectable:false})}};}
+ async installed(cwd,checkpoint=()=>{}){
+  this.allowed('plugin/installed');const response=await this.codex.call('plugin/installed',cwd?{cwds:[cwd]}:{});checkpoint();
+  return {entries:(response.marketplaces||[]).flatMap(m=>(m.plugins||[]).filter(p=>p.installed===true).map(p=>this.project(m,p))),errorCount:response.marketplaceLoadErrors?.length||0};
+ }
+ async catalogPage(input){if(input.view==='browse')this.allowed('plugin/list');return this.pages.page(input);}
  async catalog(threadId,cwd,checkpoint=()=>{}){
   this.allowed('plugin/list');
   const scope=cwd?{cwds:[cwd]}:{};
   const response=await this.codex.call('plugin/list',{...scope,forceRefetch:false});checkpoint();
   this.allowed('plugin/installed');
   const installed=await this.codex.call('plugin/installed',scope);checkpoint();
-  const project=(m,p)=>{const origin=identity(m,p);return {origin,item:{...summary(m,p),...(origin?{key:digest(origin),inspectable:true}:{inspectable:false})}};};
-  const entries=(response.marketplaces||[]).flatMap(m=>(m.plugins||[]).map(p=>project(m,p)));
+  const entries=(response.marketplaces||[]).flatMap(m=>(m.plugins||[]).map(p=>this.project(m,p))),keys=new Set(entries.map(e=>e.item.key).filter(Boolean));
   // Default discovery need not include every already-installed marketplace.
   // Keep existing inventory without treating its absence as an uninstall receipt.
-  for(const m of installed.marketplaces||[])for(const p of m.plugins||[])if(p.installed){const entry=project(m,p);if(!entry.item.key||!entries.some(e=>e.item.key===entry.item.key))entries.push(entry);}
+  for(const m of installed.marketplaces||[])for(const p of m.plugins||[])if(p.installed){const entry=this.project(m,p);if(!entry.item.key||!keys.has(entry.item.key)){entries.push(entry);keys.add(entry.item.key);}}
   return {entries,errorCount:(response.marketplaceLoadErrors?.length||0)+(installed.marketplaceLoadErrors?.length||0)};
  }
  async detail(input){try{return await this.readDetail(input);}catch(error){if(error.status)throw error;throw fail('Native plugin details are unavailable. No installation or removal was submitted by this request.',503);}}

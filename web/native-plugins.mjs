@@ -10,6 +10,7 @@ export function pluginDetailsButton(panel,item,label='Review plugin'){
  const origin=panel.origin,serial=panel.serial;
  return button(label,()=>{
   if(!panel.current(origin)||panel.serial!==serial)return;
+  panel.pluginFooter?.replaceChildren();panel.dialog.classList.remove('plugin-catalog');
   const pane=new PluginDetails(panel,item.key,origin,++panel.serial);return pane.load();
  });
 }

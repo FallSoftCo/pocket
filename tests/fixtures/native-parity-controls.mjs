@@ -1,6 +1,7 @@
 // Disposable Android UI authority. No provider, shell, model or host operations.
 // PORT and PORT+1 must be reversed to emulator loopback 18880 and 18881.
 import http from 'node:http';
+import {PluginCatalogPages} from '../../server/native-plugin-catalog.mjs';
 import crypto from 'node:crypto';
 import {projectNativeTimeline} from '../../server/native-timeline.mjs';
 import {NativeExecution} from '../../server/native-execution.mjs';
@@ -11,6 +12,13 @@ const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
 const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[]}));
 const calls=[],nativeAnswers=[],nativeReads=[];
+const pluginCount=10074,pluginKey=crypto.createHash('sha256').update('synthetic-plugin').digest('hex');
+for(const origin of origins)origin.pluginCatalog=new PluginCatalogPages({secret:'synthetic-catalog-'+origin.name,capture:()=>({origin:origin.name,installed:origin.pluginInstalled}),check:source=>{if(source.origin!==origin.name||source.installed!==origin.pluginInstalled)throw Object.assign(Error('Synthetic plugin catalog changed'),{status:409});},load:async view=>{
+ nativeReads.push({origin:origin.name,method:view==='browse'?'plugin/list':'plugin/installed'});
+ const rows=Array.from({length:pluginCount},(_,index)=>index===pluginCount-1?{id:'synthetic-plugin',key:pluginKey,name:origin.name+' synthetic plugin',inspectable:true,installed:origin.pluginInstalled}:{id:'synthetic-catalog-'+index,key:crypto.createHash('sha256').update('synthetic-catalog-'+index).digest('hex'),name:origin.name+' catalog plugin '+String(index).padStart(5,'0'),inspectable:false,installed:false});
+ return {entries:rows.filter(item=>view==='browse'||item.installed).map(item=>({item})),errorCount:0};
+}});
+
 function executionFeatures(origin){
  if(origin.terminalMode==='missing')return undefined;
  const readOnly=origin.terminalMode==='read-only'||origin.outputMode==='unavailable';
@@ -110,7 +118,8 @@ for(const origin of origins){
   }
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';
-   body={state:'available',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?[{id:'synthetic-plugin',key:crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),name:origin.name+' synthetic plugin',inspectable:true}]:[],features:{}};
+   let page=null;if(section==='plugins'){try{page=await origin.pluginCatalog.page({threadId,cwd:metadata(origin).cwd,view:url.searchParams.get('pluginView')||undefined,query:url.searchParams.get('query')||'',cursor:url.searchParams.get('cursor')||undefined,refresh:url.searchParams.get('refresh')||undefined});}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
+   body={state:'available',section,host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?page.items:[],features:{},...(page?{...page,browseAvailable:true,readOnly:false,receipts:origin.pluginReceipts}:{})};
   }
   else if(path==='/api/notifications'||path==='/api/attention'||path==='/api/activity')body={notifications:[],items:[]};
   else if(path==='/api/app/update')body={available:false};

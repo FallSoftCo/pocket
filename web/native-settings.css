@@ -4,3 +4,14 @@
 .native-settings p{white-space:pre-wrap;overflow-wrap:anywhere}
 .native-settings button{min-height:44px;margin:4px}
 .native-settings details{padding:8px 0}
+
+/* Keep plugin paging and Close reachable while the finite page scrolls. */
+.native-settings.plugin-catalog[open]{display:flex;flex-direction:column;overflow:hidden}
+.native-settings.plugin-catalog>section{overflow:auto;min-height:0;flex:1 1 auto}
+.native-settings>footer:empty{display:none}
+.native-settings.plugin-catalog>footer{display:flex;flex:none;gap:4px}
+.native-settings.plugin-catalog>footer:empty{display:none}
+.native-settings.plugin-catalog>footer button{flex:1 1 0;min-width:0;white-space:normal}
+.native-settings.plugin-catalog>button{align-self:flex-end;flex-shrink:0}
+.native-settings [data-plugin-browser] form{display:flex;flex-wrap:wrap;gap:4px}
+.native-settings [data-plugin-browser] input{min-width:0;max-width:100%;flex:1 1 10rem;min-height:44px}
