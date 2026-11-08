@@ -65,8 +65,8 @@ const server=http.createServer(async(req,res)=>{
   entry.settled=true;
   const code=origin==='B'?null:state.code;
   if(code&&(code!=='THREAD_ARCHIVED'||native)){
-   const kind={THREAD_HISTORY_UNAVAILABLE:'historyUnavailable',THREAD_EPHEMERAL_UNAVAILABLE:'ephemeralUnavailable',THREAD_ARCHIVED:'archived'}[code];
-   entry.code=code;res.writeHead(409).end(JSON.stringify({code,error:'Synthetic history unavailable',readAvailability:{threadId:state.wrongIdentity?'another-thread':id,kind,operation:'thread/read'}}));return;
+   const kind={THREAD_HISTORY_UNAVAILABLE:'historyUnavailable',THREAD_EPHEMERAL_UNAVAILABLE:'ephemeralUnavailable',THREAD_ARCHIVED:'archived',THREAD_NOT_MATERIALIZED:'notMaterialized'}[code];
+   entry.code=code;res.writeHead(409).end(JSON.stringify({code,error:'Synthetic history unavailable',readAvailability:{threadId:state.wrongIdentity?'another-thread':id,kind,operation:code==='THREAD_NOT_MATERIALIZED'?'history/read':'thread/read'}}));return;
   }
   if(!native){
    if(entry.cursor&&entry.cursor!=='archive-earlier'){res.writeHead(400).end('{"error":"Foreign archive cursor"}');return;}
