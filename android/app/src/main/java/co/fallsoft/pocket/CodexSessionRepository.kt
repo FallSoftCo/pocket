@@ -156,6 +156,10 @@ internal object CodexSessionRepository {
     }
 
     private val requestMutex=Mutex()
+    internal data class CurrentReadJoin(val scope:String,val threadId:String,val requestInspection:Long,val requestedInspection:Long)
+    // Test observation only: installed by an isolated instrumentation case and
+    // cleared in finally. It cannot replace/cancel the actual shared request.
+    @Volatile internal var currentReadJoinObserverForTest:((CurrentReadJoin)->Unit)?=null
     private data class CurrentRead(val value:Deferred<JSONObject>,val inspection:Long)
     private val requests=mutableMapOf<Pair<String,String>,CurrentRead>()
     private val inFlight=hashSetOf<Pair<String,String>>()
@@ -312,7 +316,9 @@ internal object CodexSessionRepository {
         }
         val requestedInspection=emptyReadInspections.generation(key)
         val request=requestMutex.withLock{
-            requests[key]?.takeIf{it.value.isActive}?:run{
+            requests[key]?.takeIf{it.value.isActive}?.also{shared->
+                currentReadJoinObserverForTest?.invoke(CurrentReadJoin(source.scope,id,shared.inspection,requestedInspection))
+            }?:run{
             val inspection=emptyReadInspections.generation(key)
             val value=network.async{
                 if(!current(source))throw CancellationException("Pairing changed")

@@ -342,10 +342,25 @@ class NativeCanonicalTranscriptNativeTest{
             control("empty-reopen","THREAD_NOT_MATERIALIZED",JSONObject().put("catalog",false).put("holdNative",true))
             val old=inspectionScope.async{runCatching{foreground("empty-reopen")}}
             await("Initial empty-session read was not held"){reads("empty-reopen").size==1}
+            val joinedOldRead=kotlinx.coroutines.CompletableDeferred<CodexSessionRepository.CurrentReadJoin>()
+            CodexSessionRepository.currentReadJoinObserverForTest={join->
+                if(join.scope==owner&&join.threadId=="empty-reopen"&&join.requestedInspection>join.requestInspection)joinedOldRead.complete(join)
+            }
             main{CodexSessionRepository.inspectEmptyRead("empty-reopen",destination)}
-            val reopened=inspectionScope.async(start=kotlinx.coroutines.CoroutineStart.UNDISPATCHED){CodexSessionRepository.readCurrent(destination,"empty-reopen")}
+            val reopened=inspectionScope.async{CodexSessionRepository.readCurrent(destination,"empty-reopen")}
+            // This barrier is emitted only by the actual requestMutex reuse
+            // branch, after the new inspection has selected the old deferred.
+            val join=runBlocking{kotlinx.coroutines.withTimeout(5000){joinedOldRead.await()}}
+            assertEquals(owner,join.scope);assertEquals("empty-reopen",join.threadId)
+            assertTrue(join.requestedInspection>join.requestInspection)
+            assertFalse("Held original finished before join barrier",old.isCompleted)
+            assertEquals("Reopen bypassed the shared pending request",1,reads("empty-reopen").size)
             control("empty-reopen",extra=JSONObject().put("holdNative",false))
-            runBlocking{kotlinx.coroutines.withTimeout(5000){old.await();reopened.await()}}
+            val original=runBlocking{kotlinx.coroutines.withTimeout(5000){old.await()}}.exceptionOrNull()
+            assertTrue("Original held read did not return typed initial-empty refusal",original is PocketApiException&&original.status==409&&original.code=="THREAD_NOT_MATERIALIZED")
+            val recovered=runBlocking{kotlinx.coroutines.withTimeout(5000){reopened.await()}}
+            assertEquals("empty-reopen",recovered.getJSONObject("thread").getString("id"))
+            assertEquals(1,recovered.getJSONObject("timeline").getInt("native"))
             assertEquals("Reopen did not make exactly one new inspection",2,reads("empty-reopen").size)
             assertNull("Late empty-session refusal survived reinspection",refusal("empty-reopen"))
 
@@ -365,7 +380,7 @@ class NativeCanonicalTranscriptNativeTest{
                 db.rawQuery("SELECT body FROM recent WHERE scope=? AND thread=?",arrayOf(owner,"dormant-history")).use{cursor->assertTrue(cursor.moveToFirst());assertEquals(retained,cursor.getString(0))}
             }
             assertEquals(0,control().getInt("workSubmissions"))
-        }finally{inspectionScope.cancel()}
+        }finally{CodexSessionRepository.currentReadJoinObserverForTest=null;inspectionScope.cancel()}
 
         // Hold one background archive refusal; an explicit reader joins that
         // exact single flight, then alone receives the archived /head fallback.
