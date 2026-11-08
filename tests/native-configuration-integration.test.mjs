@@ -81,7 +81,6 @@ for(const runtime of ['0.167.0','mac-0.163.0'])test(`paired HTTP native settings
  const eviction=await api(browsePath.replace('fixture-thread','eviction-original'));
  for(let index=0;index<4;index++)assert.equal((await api(browsePath.replace('fixture-thread','eviction-'+index))).status,200);
  assert.equal((await api(browsePath.replace('fixture-thread','eviction-original')+'&cursor='+encodeURIComponent(eviction.data.nextCursor))).status,409,'bounded snapshot count evicts oldest instead of retaining every search source');
- const connectionCursor=(await api(browsePath+'&refresh=1')).data.nextCursor;
  plugins.catalogSize=1;
  const catalog=await api('/api/native/configuration?section=plugins&pluginView=browse&query=fixture&refresh=1&threadId=fixture-thread');assert.equal(catalog.status,200);const key=catalog.data.items[0].key;assert.equal(typeof key,'string');
  const detail=()=>api('/api/native/plugins/detail?threadId=fixture-thread&key='+key);
@@ -96,7 +95,11 @@ for(const runtime of ['0.167.0','mac-0.163.0'])test(`paired HTTP native settings
  assert.equal(calls.filter(c=>c.method==='plugin/install').length,0);
  // Reconnection invalidates confirmations even with the same native version,
  // account and byte-identical plugin details.
- const oldTransport=await detail();for(const ws of wss.clients)ws.terminate();
+ plugins.catalogSize=31;const connectionCursor=(await api(browsePath+'&refresh=1')).data.nextCursor;plugins.catalogSize=1;
+ assert.equal(typeof connectionCursor,'string');
+ const oldTransport=await detail();
+ assert.equal((await api(browsePath+'&cursor='+encodeURIComponent(connectionCursor))).status,200,'exact cursor is still live immediately before disconnect');
+ for(const ws of wss.clients)ws.terminate();
  await waitFor(async()=>{reviewed=await detail();return reviewed.status===200&&reviewed.data.canInstall;});
  assert.notEqual(reviewed.data.reviewToken,oldTransport.data.reviewToken);assert.equal((await api(browsePath+'&cursor='+encodeURIComponent(connectionCursor))).status,409,'connection changes invalidate local snapshot cursors');
  assert.equal((await api('/api/native/configuration',operation('install','old-transport-attempt',oldTransport.data))).status,409);

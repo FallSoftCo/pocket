@@ -29,7 +29,7 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
   gateway.server.prependListener('request',(req,res)=>{const record={phase,method:req.method,path:req.url};requests.push(record);let body='';req.on('data',c=>body+=c);req.on('end',()=>{if(body)record.body=JSON.parse(body);});res.on('finish',()=>record.status=res.statusCode);});
   await new Promise(r=>gateway.server.listen(port,'127.0.0.1',r));cleanup.push(async()=>{for(const ws of gateway.sockets.clients)ws.terminate();gateway.server.closeAllConnections();await new Promise(r=>gateway.server.close(r));});
   receipt.inputSha256={};for(const file of ['web/app.mjs','web/native-settings.mjs','web/native-settings.css','web/native-plugin-browser.mjs','web/native-plugins.mjs','server/native-configuration.mjs','server/native-plugin-catalog.mjs','server/native-plugins.mjs','server/web-client.mjs','server/web-environments.mjs','tests/configuration.browser.mjs','tests/helpers/production-native-fixture.mjs','tests/helpers/native-plugin-fixture.mjs','tests/fixtures/native-contract-0167/schemas.json','tests/fixtures/native-contract-0167/plugins.json'])receipt.inputSha256[file]=hash(await readFile(new URL('../'+file,import.meta.url)));
-  page=await context.newPage();page.setDefaultTimeout(8000);await page.emulateMedia({reducedMotion:'reduce'});page.on('pageerror',e=>pageErrors.push(e.message));
+  page=await context.newPage();page.setDefaultTimeout(8000);await page.setViewportSize({width:1280,height:360});await page.emulateMedia({reducedMotion:'reduce'});page.on('pageerror',e=>pageErrors.push(e.message));
   if(negativeControl)await page.route(origin+'/native-settings.mjs',async route=>{
    const response=await route.fetch(),source=await response.text(),needle='   if(!this.current(origin))return;\n   const result=';
    assert.equal(hash(source),receipt.inputSha256['web/native-settings.mjs']);assert.equal(source.split(needle).length,2);
@@ -106,15 +106,16 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
   await dialog.getByRole('button',{name:'Browse catalog',exact:true}).click();
   await dialog.getByText('Catalog · 1–30 of 10074',{exact:true}).waitFor();
   assert.equal(await rows.count(),30);assert.equal(nativePlugins(b,'list').length,1);
+  await page.screenshot({path:join(output,'plugins-catalog-short.png')});
   await page.setViewportSize({width:390,height:844});
   const pagerGeometry=await dialog.getByRole('button',{name:'Next plugin page',exact:true}).evaluate(n=>{const r=n.getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,height:innerHeight,width:innerWidth};});
   assert.ok(pagerGeometry.top>=0&&pagerGeometry.bottom<=pagerGeometry.height&&pagerGeometry.left>=0&&pagerGeometry.right<=pagerGeometry.width,'Plugin paging must be reachable without scrolling to the top');
   await page.screenshot({path:join(output,'plugins-catalog-narrow.png')});
-  await page.setViewportSize({width:1440,height:900});
   await dialog.getByRole('button',{name:'Next plugin page',exact:true}).click();
   await dialog.getByText('Catalog · 31–60 of 10074',{exact:true}).waitFor();
   assert.equal(await rows.count(),30);assert.equal(nativePlugins(b,'list').length,1,'Paging must reuse the original browsing snapshot');
   assert.equal(await dialog.getByRole('heading',{name:'Catalog plugin 00000',exact:true}).count(),0,'Paging replaces earlier rows');
+  await page.setViewportSize({width:1440,height:900});
   await rows.filter({has:page.getByRole('heading',{name:'Catalog plugin 00030',exact:true})}).getByRole('button',{name:'Review plugin',exact:true}).click();
   await dialog.getByRole('button',{name:'Review installation',exact:true}).waitFor();
   assert.equal(await dialog.getByRole('heading',{name:'Catalog plugin 00030',exact:true}).count(),1);
@@ -153,7 +154,16 @@ export async function qualifyConfiguration({context,outputDir,negativeControl=fa
   for(const f of [a,b]){f.assertClean();assert.equal(f.calls.some(c=>/^(?:turn\/|review\/|thread\/(?:start|resume|fork|compact)|.*terminate)/.test(c.method)),false);}
   assert.ok(requests.filter(r=>r.method==='POST').every(r=>['/web/pair','/web/tailnet-login',configurationPath].includes(r.path)||r.path.endsWith('/catchup/read')),'No unrelated mutations');
   assert.deepEqual(pageErrors,[]);receipt.state='passed';receipt.draftsPreserved=true;receipt.workSubmissions=0;return receipt;
- }catch(error){receipt.state='failed';receipt.error=error.message;receipt.stack=error.stack;throw error;}
+ }catch(error){
+  receipt.state='failed';receipt.error=error.message;receipt.stack=error.stack;
+  if(page&&!page.isClosed()){
+   try{
+    await page.screenshot({path:join(output,'failure.png')});
+    receipt.failureGeometry=await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},nodes:[...document.querySelectorAll('.native-settings,.native-settings>* , .native-settings [data-plugin-browser]>*')].map(n=>{const r=n.getBoundingClientRect(),s=getComputedStyle(n);return {tag:n.tagName,text:n.innerText?.slice(0,180),rect:{x:r.x,y:r.y,width:r.width,height:r.height},scrollHeight:n.scrollHeight,clientHeight:n.clientHeight,display:s.display,overflow:s.overflow,flex:s.flex};})}));
+   }catch(capture){receipt.failureCaptureError=capture.message;}
+  }
+  throw error;
+ }
  finally{
   releaseSettings?.();receipt.pageErrors=pageErrors;
   await writeFile(join(output,'http.json'),JSON.stringify(requests,null,2)+'\n');
