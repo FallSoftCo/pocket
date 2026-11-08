@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "date": "2026-11-07",
-  "status": "android175-published-both-channels-monitoring-and-followup-active",
+  "status": "android176-published-both-channels-monitoring-and-followup-active",
   "base": "fa30781d",
   "implementationCommits": [
     "ef5bfe03",
@@ -163,17 +163,17 @@
       "terminalTerminationAvailable": false
     },
     "delivery": {
-      "workstationChannel": 175,
+      "workstationChannel": 176,
       "ownerAnnouncements": 1,
-      "notificationId": 2834,
-      "macChannel": 175,
+      "notificationId": 2835,
+      "macChannel": 176,
       "phoneInstallation": "not yet verified",
-      "phoneInstalledVersionLastObserved": 174,
+      "phoneInstalledVersionLastObserved": 175,
       "macChannelRestartRequired": false,
       "macChannelState": "Published with exact compatible signed artifact; no second announcement",
       "pushState": "accepted_by_fcm",
       "pushAttempts": 1,
-      "phoneReadOnlyCheck": "SSH package-manager list confirmed174 after175 publication;175 installation not claimed."
+      "phoneReadOnlyCheck": "SSH package-manager list confirmed175 after176 publication;176 installation not claimed."
     },
     "coldPageRecovery": {
       "state": "passed",
@@ -321,6 +321,38 @@
       "skipped": 0,
       "actualEmulatorReadOnlyCapture": "passed",
       "appliedTo175Batch": false
+    },
+    "native176": {
+      "state": "published-both-channels",
+      "versionCode": 176,
+      "versionName": "0.5.0-alpha.158",
+      "productCommit": "97b433b8",
+      "productionSourceSha": "a6bef1d10d80adcbd29f24cc9ffa51f5f1c6e625f3893173b7cbd103c9572c11",
+      "phoneCompatibleSha256": "20b5ec2100f3d5c4c020fc86bf51a7a843ec6efcbc402a352355e8e06e9341ac",
+      "unitPerVariant": {
+        "passed": 475,
+        "skipped": 2,
+        "failed": 0
+      },
+      "nativePassed": 15,
+      "caseScope": "Required native cases include storage/component checks; not15 complete user journeys.",
+      "composedControls": [
+        "Delayed approval callback cannot submit after environment or thread changes",
+        "Replaced request token rejects stale approval; offered structured rule retains exact selection",
+        "Output paging resets scroll, retains revision/source and refuses unavailable source"
+      ],
+      "extendedControlsDurationMs": 170055,
+      "unchangedControlsTimeoutMs": 180000,
+      "optimizedReview": "Exact signed APK: original canonical pair retained once across reopen and Skip once; first output page scrolled then next page opens at top, exactly two original-source revision-bound reads.",
+      "qaPreferencesRestored": true,
+      "workSubmissions": 0,
+      "phoneTested": false,
+      "liveAccountEmulatorAudioPassed": true,
+      "captureCorrection": {
+        "sourceCommit": "b1e2a5f1",
+        "originalAttempt": "Retained as held after null-root capture exposed persistent XML reuse risk.",
+        "replacement": "Fresh stdout hierarchy only; failure cannot reuse old XML; focused regression and new review passed on same APK."
+      }
     }
   },
   "remaining": [

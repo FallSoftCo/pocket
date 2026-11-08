@@ -235,9 +235,9 @@ a product failure during a test. The actual read-only capture was separately
 verified after the successful batch; the CLI admission test does not constitute
 physical-phone proof.
 
-Monitoring remains active. The next bounded integration audit checks configuration
-changes and conflict refusal through the full web application, without changing
-real native settings or starting model work. Publication is not complete TUI parity.
+Monitoring remains active. The configuration audit below is complete without
+changing real native settings or starting model work. Publication is not complete
+TUI parity.
 
 
 ## Rendered configuration follow-up
@@ -259,3 +259,19 @@ rendered qualifier is explicit, not part of ordinary `npm test` or CI; do not
 claim real native configuration filesystem, Mac0.163 mutation or phone evidence.
 [Versioned results](qualification/rendered-native-configuration-20261107.json)
 include source hashes, failure sensitivity and retained command-setup failure.
+
+## Android176 follow-up
+
+The existing composed native controls journey now covers delayed approval callbacks
+after both environment and thread switches, replacement tokens, exact structured
+approval choices, output-page scroll reset, held source changes and unavailable
+output. All15 required cases passed. This composed case took170.055s under its
+unchanged180s cap; future test maintenance should split independent scenarios at
+actual workflow boundaries, rather than extend sleeps or weaken assertions.
+
+Optimized review exposed a harness flaw: failed hierarchy dumps could leave a
+previous device XML file available. The helper now captures current stdout only.
+Its focused regression rejects stale evidence; the first review remains held and
+a fresh review passed on the same APK. Exact optimized output paging was also
+visually inspected after scrolling, with two original-source revision-bound reads.
+These are emulator/fixture observations, not physical-phone proof.
