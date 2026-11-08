@@ -335,6 +335,38 @@ class NativeCanonicalTranscriptNativeTest{
         assertEquals(1,foreground("healthy-history").getJSONObject("timeline").getInt("native"))
         control("healthy-history",extra=JSONObject().put("catalog",true).put("revision",3));catalog()
 
+        // A deliberate reinspection joins an old held read. Its late refusal
+        // must not consume the newer observation or poison the follow-up read.
+        val inspectionScope=kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob()+kotlinx.coroutines.Dispatchers.IO)
+        try{
+            control("empty-reopen","THREAD_NOT_MATERIALIZED",JSONObject().put("catalog",false).put("holdNative",true))
+            val old=inspectionScope.async{runCatching{foreground("empty-reopen")}}
+            await("Initial empty-session read was not held"){reads("empty-reopen").size==1}
+            main{CodexSessionRepository.inspectEmptyRead("empty-reopen",destination)}
+            val reopened=inspectionScope.async(start=kotlinx.coroutines.CoroutineStart.UNDISPATCHED){CodexSessionRepository.readCurrent(destination,"empty-reopen")}
+            control("empty-reopen",extra=JSONObject().put("holdNative",false))
+            runBlocking{kotlinx.coroutines.withTimeout(5000){old.await();reopened.await()}}
+            assertEquals("Reopen did not make exactly one new inspection",2,reads("empty-reopen").size)
+            assertNull("Late empty-session refusal survived reinspection",refusal("empty-reopen"))
+
+            // Native progress alone, with unchanged catalog and notification,
+            // must clear initial-empty availability before queue admission.
+            control("empty-progress","THREAD_NOT_MATERIALIZED")
+            catalog();await("Initial empty refusal was not persisted"){refusal("empty-progress")!=null}
+            val emptyReads=reads("empty-progress").size
+            control("empty-progress")
+            main{CodexSessionRepository.timeline(destination,JSONObject().put("threadId","empty-progress")
+                .put("nativeMethod","item/completed").put("turnId","new-turn").put("nativeItemId","new-item").put("version",1))}
+            await("Native progress did not admit a repair"){reads("empty-progress").size==emptyReads+1&&refusal("empty-progress")==null}
+            catalog()
+            assertEquals("Unchanged state repeated initial-empty repair",emptyReads+1,reads("empty-progress").size)
+            assertEquals("Retained archive draft",prefs.getString("draft:archive-history",null))
+            context.openOrCreateDatabase("codex-session-messages-v1.sqlite",Context.MODE_PRIVATE,null).use{db->
+                db.rawQuery("SELECT body FROM recent WHERE scope=? AND thread=?",arrayOf(owner,"dormant-history")).use{cursor->assertTrue(cursor.moveToFirst());assertEquals(retained,cursor.getString(0))}
+            }
+            assertEquals(0,control().getInt("workSubmissions"))
+        }finally{inspectionScope.cancel()}
+
         // Hold one background archive refusal; an explicit reader joins that
         // exact single flight, then alone receives the archived /head fallback.
         control("archive-history","THREAD_ARCHIVED",JSONObject().put("holdNative",true))
