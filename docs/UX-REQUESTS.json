@@ -16,7 +16,7 @@
     {
       "id": "history-availability-background-admission-20261107",
       "request": "Continue monitoring installed NextComp and fix observed history failures without restarting historical work or losing cached conversations.",
-      "status": "In progress after repeated unavailable/archived read bursts in installed176 monitoring; no new release yet.",
+      "status": "Android177/alpha159 published on both channels; backend/web177 live on workstation and Mac. One announcement accepted by FCM. Latest phone package check still176; monitoring and separate optional work-record scan follow-up remain active.",
       "findings": [
         "Android requeues persisted dirty history on activation/reconnect without current catalog admission.",
         "Archived stored history can load but optional catch-up capture rejects it, failing the whole read.",
@@ -27,7 +27,7 @@
         "Return typed read availability; archived read-only fallback omits catch-up capture.",
         "Web archived fallback preserves source identity and page format and rechecks native availability on a new head."
       ],
-      "validation": "Web candidate14 targeted tests passed, including authenticated two-authority archived read without task writes. Backend/Android candidates and native lifecycle qualification pending.",
+      "validation": "Full backend746 passed/2 existing skips; five DOM lanes; Android477 tests per variant/2 existing skips and both lints;18 required native cases plus exact signed APK order/reopen/question review passed. Original stale-accessibility-cache test failure retained; fresh-observation correction preserves assertions. Phone interaction remains separate.",
       "owners": {
         "backend": "parity_execution",
         "android": "ui_standby",
@@ -38,7 +38,7 @@
     {
       "id": "codex-native-parity-20261107",
       "request": "Bring Android and web to usable Codex TUI parity through native capabilities; user explicitly requests Astra high subagent implementation while continuing to give root tasks.",
-      "status": "Android176/alpha158 published both channels; approval callbacks bound to original source and output-page scroll resets.15 native cases and exact optimized history/output review passed. One176 announcement accepted by FCM. Phone package-manager read confirms176 installed; physical interaction remains separately unverified. Web175 and backend174 retained; monitoring active.",
+      "status": "Android177 published on both channels with history availability repair;18 required native cases and exact signed APK review passed. Backend/web177 live. Latest phone check176; one177 announcement accepted by FCM. Full parity and monitoring remain active.",
       "architecture": [
         "Codex owns execution and native thread/turn/item/request identity.",
         "Shared version-aware capabilities and state for Android/web; unsupported operations remain explicit.",

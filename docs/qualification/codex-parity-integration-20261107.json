@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "date": "2026-11-07",
-  "status": "android176-published-both-channels-monitoring-and-followup-active",
+  "status": "android177-published-both-channels-monitoring-and-followup-active",
   "base": "fa30781d",
   "implementationCommits": [
     "ef5bfe03",
@@ -41,8 +41,8 @@
     "production": {
       "changed": true,
       "scope": "Workstation backend, both web gateways and Mac backend",
-      "releaseDigest": "477b9eb0e6e8336c1f058d67e7109998128ef0835aaf6aa75543aadc64f18cce",
-      "sourceCommit": "b12de8ea037d85027ea625f309438f4d3c716563",
+      "releaseDigest": "eebf0819732193e9ef75aa62299af5d264684b05eb0600a2e88b63780b055647",
+      "sourceCommit": "e572630319eb83e274fce0b712d683fef595659e",
       "phoneInstalled": false,
       "nativeDaemonRestarted": false,
       "nativeModelOrTerminalActionsIssued": false,
@@ -163,11 +163,11 @@
       "terminalTerminationAvailable": false
     },
     "delivery": {
-      "workstationChannel": 176,
+      "workstationChannel": 177,
       "ownerAnnouncements": 1,
-      "notificationId": 2835,
-      "macChannel": 176,
-      "phoneInstallation": "version176 confirmed by read-only package manager",
+      "notificationId": 2836,
+      "macChannel": 177,
+      "phoneInstallation": "Latest read-only check still176;177 offered through both paired channels",
       "phoneInstalledVersionLastObserved": 176,
       "macChannelRestartRequired": false,
       "macChannelState": "Published with exact compatible signed artifact; no second announcement",
@@ -355,10 +355,89 @@
       "extendedControlsRunnerElapsedMs": 170055,
       "extendedControlsInstrumentationReportedMs": 158440,
       "timingBoundary": "Runner elapsed includes setup.180s cap applies to instrumentation subprocess; exact subprocess wall time is not separately recorded."
+    },
+    "historyAvailability177": {
+      "state": "published-both-channels",
+      "sourceCommit": "68f0f806",
+      "runtimeSourceCommit": "e5726303",
+      "releaseDigest": "eebf0819732193e9ef75aa62299af5d264684b05eb0600a2e88b63780b055647",
+      "observedFailure": "Installed176 repeatedly requested unavailable/archived histories after reconnect; archived stored history was rejected by optional catch-up capture.",
+      "changes": [
+        "Separate retained freshness from background read eligibility; preserve bodies and explicit reads.",
+        "Typed identity-bound ephemeral/durable/archive availability; durable history stays discoverable.",
+        "Archived read-only fallback with source/generation-bound cursors; stale metadata cannot undo archive.",
+        "Persist bounded durable-read backoff using existing refresh lane; no worker/model polling."
+      ],
+      "fullBackend": {
+        "tests": 748,
+        "passed": 746,
+        "skipped": 2,
+        "failed": 0
+      },
+      "webDomLanesPassed": 5,
+      "githubCi": {
+        "run": 42437756885,
+        "state": "success",
+        "commit": "cc7feb37"
+      },
+      "unitPerVariant": {
+        "tests": 477,
+        "passed": 475,
+        "skipped": 2,
+        "failed": 0
+      },
+      "lintsPassed": [
+        "debug",
+        "release"
+      ],
+      "readOnlyLive": {
+        "workstationCurrentMs": 99,
+        "workstationArchivedMs": 74,
+        "unavailableHttpStatus": 409,
+        "macHeadsMs": [
+          32,
+          16,
+          17
+        ],
+        "nativeWorkersRestarted": false,
+        "workSubmissions": 0,
+        "pairingAndOutgoingPreserved": true
+      },
+      "native": "All required cases passed on corrected test identity; exact signed APK canonical/reopen/Skip review passed.",
+      "phoneInstalledVersionLastObserved": 176,
+      "limits": [
+        "Seeded SQLite restoration is not an OS process recreation.",
+        "Synthetic native UI and isolated account audio do not establish physical handset behavior.",
+        "Original build failures and emulator System UI admission refusal are retained separately."
+      ],
+      "nativeObservationCorrection": {
+        "originalResult": "17 passed; foreign archive feedback query failed",
+        "renderedEvidence": "Failure PNG visibly contains full refusal and Dismiss; original XML combines stale Archiving text with new Dismiss.",
+        "correction": "Scoped public UiAutomation cache clearing before read-only archive node queries; assertions/deadlines and single dispatch preserved.",
+        "independentReview": "Agrees with correction; accessibility-event delivery and TalkBack remain unproven.",
+        "productionApksByteIdentical": true,
+        "newQualification": "All18 required cases passed; fresh tree and PNG show full refusal. Original failure retained."
+      },
+      "nativePassed": 18,
+      "nativeCaseScope": "Includes storage/component cases, not18 full user journeys.",
+      "phoneCompatibleSha256": "f5967e714ad4f748a00fa182d0a923ec136d6334a00ea60f10f6f2e1e5ecbd8b",
+      "qaPreferencesRestored": true,
+      "ownedEmulatorAndFixturesStopped": true,
+      "physicalPhoneTested": false,
+      "laterTestCommit": "68f0f806",
+      "liveAccountAudio": {
+        "stopToFinalTranscriptMs": 1748,
+        "speechFirstAudioMs": 1556,
+        "speechCompleteMs": 8884,
+        "playbackBeforeFullBuffer": true,
+        "taskAdmissions": 0,
+        "scope": "Isolated media-only account journey on emulator, not whole-coordinator or physical handset latency."
+      }
     }
   },
   "remaining": [
-    "Verify physical handset interactions separately;176 installation is confirmed.",
+    "Verify owner installation and physical handset interactions separately; latest read-only package check is176.",
+    "Diagnose and repair optional work-record scan reads of unavailable temporary sessions without suppressing durable recovery.",
     "Retain required Pocket review gate; no bypass.",
     "Continue useful integration monitoring; full TUI parity remains open."
   ],
