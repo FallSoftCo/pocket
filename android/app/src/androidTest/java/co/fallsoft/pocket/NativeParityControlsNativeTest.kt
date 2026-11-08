@@ -3,6 +3,7 @@ package co.fallsoft.pocket
 import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -79,10 +80,10 @@ class NativeParityControlsNativeTest {
         compose.waitForIdle()
         visible("Conversation & workspace")
     }
-    private fun qa(action:String,body:JSONObject?=null):JSONObject{
-        val connection=URL("http://127.0.0.1:18880/_qa/$action").openConnection() as HttpURLConnection
+    private fun qa(action:String,body:JSONObject?=null,origin:Int=0):JSONObject{
+        val connection=URL("http://127.0.0.1:${18880+origin}/_qa/$action").openConnection() as HttpURLConnection
         connection.connectTimeout=5000;connection.readTimeout=5000
-        connection.setRequestProperty("Authorization","Bearer ${tokens[0]}")
+        connection.setRequestProperty("Authorization","Bearer ${tokens[origin]}")
         if(body!=null){connection.requestMethod="POST";connection.doOutput=true;connection.setRequestProperty("Content-Type","application/json");connection.outputStream.use{it.write(body.toString().toByteArray())}}
         return try{check(connection.responseCode==200){"Fixture control failed: ${connection.responseCode}"};JSONObject(connection.inputStream.bufferedReader().use{it.readText()})}finally{connection.disconnect()}
     }
@@ -100,6 +101,15 @@ class NativeParityControlsNativeTest {
             .putExtra("environment",environment).putExtra("thread",id))}
         await{Pocket.environmentId==environment&&Pocket.selected==id&&PocketTranscript.currentHistoryVerified}
         compose.onNodeWithTag("conversation-history").assertIsDisplayed()
+    }
+    private fun nativeAnswers()=qa("state").getJSONArray("nativeAnswers").objects()
+    private fun outputNode()=compose.onNodeWithTag("native-command-output",useUnmergedTree=true)
+    private fun outputText()=outputNode().fetchSemanticsNode().config[SemanticsProperties.Text].joinToString(""){it.text}
+    private fun outputStarts(prefix:String)=compose.onAllNodesWithTag("native-command-output",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()&&outputText().startsWith(prefix)
+    private fun outputScroll()=outputNode().fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+    private fun openOutput(){
+        if(compose.onAllNodesWithText("Read command output").fetchSemanticsNodes().isEmpty())tap("Runs")
+        tap("Read command output");visible("Command output")
     }
     private fun prepare(){
         check(InstrumentationRegistry.getArguments().getString("nativeParityFixture")=="loopback"){"Explicit disposable fixture opt-in required"}
@@ -144,12 +154,87 @@ class NativeParityControlsNativeTest {
             assertEquals("request-token-3",form.s("requestToken"));assertEquals("accept",form.s("actionId"))
             assertEquals("Selected synthetic files",form.getJSONObject("content").s("scope"))
             await{compose.onAllNodesWithText("Synthetic native form",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            // The action comes from an actual composed approval card. Retain its
+            // callback to model a UI event queued before navigation/replacement;
+            // never manufacture a decision or invoke a delivery helper directly.
+            qa("question",JSONObject().put("version",4));visible("Alpha synthetic command approval 4")
+            absent("Allow once")
+            val approvalControl=compose.onNode(hasText("Allow with command rule") and hasClickAction())
+            approvalControl.performScrollTo().assertIsDisplayed()
+            val delayedApproval=requireNotNull(approvalControl.fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+            await{prefs.all.filterKeys{it.startsWith("decision:")}.values.none{it=="sending"}}
+            val decisionsBefore=prefs.all.filterKeys{it.startsWith("decision:")}
+            val approvalPostsBefore=calls("/api/requests/same-native-request/answer").size
+            qa("question",JSONObject().put("version",4),origin=1)
+            navigate("parity_beta");visible("Beta synthetic command approval 4");absent("Alpha synthetic command approval 4")
+            val betaProblem=Pocket.error
+            main{delayedApproval()};compose.waitForIdle()
+            assertEquals("Stale card changed delivery state in another environment",decisionsBefore,prefs.all.filterKeys{it.startsWith("decision:")})
+            assertEquals("Stale card raised an error in the new environment",betaProblem,Pocket.error)
+            assertEquals(approvalPostsBefore,calls("/api/requests/same-native-request/answer").size)
+            tap("Allow with command rule")
+            await{nativeAnswers().size==3&&prefs.all.filterKeys{it.startsWith("decision:")}.values.none{it=="sending"}}
+            val betaApproval=nativeAnswers().last()
+            assertEquals("Beta",betaApproval.s("origin"));assertEquals(thread,betaApproval.s("threadId"));assertEquals("beta-turn",betaApproval.s("turnId"));assertEquals("shared-command",betaApproval.s("itemId"))
+            assertEquals("request-token-4",betaApproval.s("requestToken"))
+            assertEquals("original",betaApproval.getJSONObject("result").getJSONObject("decision").getJSONObject("acceptWithExecpolicyAmendment").getJSONArray("execpolicy_amendment").getString(1))
+            navigate("workstation",id="parity-other")
+            val otherReceipts=prefs.all.filterKeys{it.startsWith("decision:")};val otherProblem=Pocket.error
+            main{delayedApproval()};compose.waitForIdle()
+            assertEquals("Stale card changed delivery state in another thread",otherReceipts,prefs.all.filterKeys{it.startsWith("decision:")})
+            assertEquals(otherProblem,Pocket.error);assertEquals(approvalPostsBefore+1,calls("/api/requests/same-native-request/answer").size)
+            navigate("workstation");visible("Alpha synthetic command approval 4")
+            qa("question",JSONObject().put("version",5));visible("Alpha synthetic command approval 5");absent("Alpha synthetic command approval 4")
+            main{delayedApproval()}
+            await{calls("/api/requests/same-native-request/answer").size==approvalPostsBefore+2}
+            assertEquals("A stale request was approved",3,nativeAnswers().size)
+            val rejected=calls("/api/requests/same-native-request/answer").last().getJSONObject("input")
+            assertEquals("request-token-4",rejected.s("requestToken"));assertEquals("0",rejected.s("actionId"))
+            // The same label now denotes a different offered index and rule.
+            tap("Allow with command rule");await{nativeAnswers().size==4}
+            val replacementApproval=nativeAnswers().last()
+            assertEquals("Alpha",replacementApproval.s("origin"));assertEquals("alpha-turn",replacementApproval.s("turnId"));assertEquals("request-token-5",replacementApproval.s("requestToken"))
+            assertEquals("replacement",replacementApproval.getJSONObject("result").getJSONObject("decision").getJSONObject("acceptWithExecpolicyAmendment").getJSONArray("execpolicy_amendment").getString(1))
+            assertEquals("1",calls("/api/requests/same-native-request/answer").last().getJSONObject("input").s("actionId"))
+            capture("01b-structured-approval-origin-and-replacement")
             // Resolving the request keeps the review drawer open for inspection.
             // Close its actual visible control before interacting with the footer.
             visible("No unanswered questions")
             compose.onNodeWithContentDescription("Close questions").assertIsDisplayed().performClick()
             compose.waitForIdle()
             compose.onNodeWithContentDescription("Close questions").assertIsNotDisplayed()
+
+            // Expand the actual canonical command row and read real adapter
+            // pages. Page replacement must reset scrolling without appending text.
+            qa("command",JSONObject().put("enabled",true));qa("command",JSONObject().put("enabled",true),origin=1)
+            await{compose.onAllNodesWithText("Runs").fetchSemanticsNodes().isNotEmpty()}
+            openOutput();await{compose.onAllNodesWithTag("native-command-output",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+            assertTrue(outputText().startsWith("Alpha retained output page one"))
+            outputNode().performTouchInput{swipeUp()};await{outputScroll()>0f}
+            tap("Next page");await{outputStarts("Alpha retained output page two")}
+            assertEquals("A replaced output page retained the previous scroll offset",0f,outputScroll(),0.5f)
+            assertFalse(outputText().contains("page one"));assertTrue(outputText().length<=24000)
+            val pages=calls("/api/threads/$thread/command-output","GET")
+            assertEquals(2,pages.size);assertTrue(pages.all{it.s("origin")=="Alpha"&&it.s("query").contains("turnId=alpha-turn")&&it.s("query").contains("itemId=shared-command")})
+            assertTrue(pages[0].s("query").contains("offset=0"));assertTrue(pages[1].s("query").contains("offset=24000")&&pages[1].s("query").contains("revision="))
+            tap("Previous page");await{outputStarts("Alpha retained output page one")};assertEquals(0f,outputScroll(),0.5f)
+            capture("01c-retained-output-pagination");tap("Close",inDialog=true)
+            qa("output-mode",JSONObject().put("mode","hold"));openOutput()
+            await{calls("/api/threads/$thread/command-output","GET").size==4}
+            navigate("parity_beta");absent("Command output")
+            qa("output-release",JSONObject());openOutput();await{outputStarts("Beta retained output page one")}
+            assertFalse(outputText().contains("Alpha"));assertEquals("Beta",calls("/api/threads/$thread/command-output","GET").last().s("origin"))
+            tap("Close",inDialog=true)
+            qa("output-mode",JSONObject().put("mode","unavailable"),origin=1)
+            val readsBeforeUnavailable=calls("/api/threads/$thread/command-output","GET").size
+            openOutput();visible("Synthetic runtime has no retained-output support.")
+            absent("Next page");absent("Previous page");compose.onAllNodesWithTag("native-command-output",useUnmergedTree=true).assertCountEquals(0)
+            assertEquals("Unavailable runtime received an output request",readsBeforeUnavailable,calls("/api/threads/$thread/command-output","GET").size)
+            assertTrue(calls("/api/native/capabilities","GET").last().let{it.s("origin")=="Beta"&&it.s("query").contains("threadId=$thread")})
+            capture("01d-output-source-and-unavailable");tap("Close",inDialog=true)
+            qa("command",JSONObject().put("enabled",false));qa("command",JSONObject().put("enabled",false),origin=1)
+            qa("output-mode",JSONObject().put("mode","qualified"));qa("output-mode",JSONObject().put("mode","qualified"),origin=1)
+            navigate("workstation")
 
             // Inspection remains useful when mutation is explicitly unavailable,
             // and an absent descriptor must not silently grant termination.
