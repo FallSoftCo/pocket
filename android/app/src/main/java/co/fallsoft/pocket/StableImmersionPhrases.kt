@@ -3,6 +3,9 @@ package co.fallsoft.pocket
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
@@ -14,6 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +37,7 @@ import androidx.compose.ui.unit.*
     val runs=remember(forms){requireNotNull(immersionSharedRuns(forms))}
     val style=LocalTextStyle.current.merge(TextStyle(color=color,fontSize=fontSize,lineHeight=lineHeight,fontWeight=fontWeight,textAlign=textAlign))
     val measurer=rememberTextMeasurer(cacheSize=128);val density=LocalDensity.current
+    val inputMode=LocalInputModeManager.current
     val overrides=remember(forms){mutableStateMapOf<String,Int>()}
     LaunchedEffect(phase){overrides.clear()}
     BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,forms,style,maxLines,overflow))){
@@ -59,9 +65,19 @@ import androidx.compose.ui.unit.*
                 inline[id]=InlineTextContent(Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextBottom)){
                     val linked=shown.getLinkAnnotations(0,shown.length).isNotEmpty()
                     val interact=phraseTaps&&!linked&&run.forms.map{it.text}.distinct().size>1
-                    val action=if(interact)Modifier.clickable{overrides[id]=(1..forms.size).map{(chosen+it)%forms.size}.first{run.forms[it].text!=shown.text}} else Modifier
+                    val interactions=remember{MutableInteractionSource()}
+                    val focused by interactions.collectIsFocusedAsState()
+                    val keyboardFocus=interact&&focused&&inputMode.inputMode==InputMode.Keyboard
+                    val shape=RoundedCornerShape(3.dp)
+                    val action=if(interact)Modifier.clickable(interactionSource=interactions,indication=LocalIndication.current){overrides[id]=(1..forms.size).map{(chosen+it)%forms.size}.first{run.forms[it].text!=shown.text}} else Modifier
+                    // A quiet inline highlight keeps grammatical groups legible
+                    // without outlining every phrase. Only keyboard focus has a
+                    // ring; native indication supplies touch feedback. Neither
+                    // interaction nor language phase changes reserved geometry.
+                    val wash=if(phraseTaps)color.copy(alpha=if(keyboardFocus).14f else .06f)else Color.Transparent
+                    val focusRing=if(keyboardFocus)Modifier.border(1.dp,color.copy(alpha=.7f),shape)else Modifier
                     DisableSelection{
-                        Box(Modifier.fillMaxSize().padding(vertical=gutter).background(color.copy(alpha=.06f),RoundedCornerShape(3.dp)).border(1.dp,color.copy(alpha=.55f),RoundedCornerShape(3.dp)).then(action).padding(horizontal=4.dp,vertical=1.dp).semantics{
+                        Box(Modifier.fillMaxSize().padding(vertical=gutter).background(wash,shape).then(focusRing).then(action).padding(horizontal=4.dp,vertical=1.dp).semantics{
                             if(interact){role=Role.Button;contentDescription=shown.text}else if(!linked)hideFromAccessibility()
                         }){Text(shown,style=style,modifier=Modifier.fillMaxSize(),overflow=TextOverflow.Clip)}
                     }
