@@ -308,6 +308,7 @@ async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pe
 }
 let runtimeConnected=null;const unavailableEnvironments=new Set();
 function handleEvent(m){
+ nativeSettingsPanel.event(m);
  conversationToolsPane.event(m);
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
  if(m.type==='environmentStatus'){
@@ -367,7 +368,7 @@ function connectEvents(){
  ws=new WebSocket(clientURL(base,'events').replace(/^http/,'ws'));const own=ws;
  ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await Promise.all([refreshList(),refreshConversation(),refreshAttention()]);await reconcilePending();})()};
  ws.onmessage=e=>{if(ws!==own||!authenticated)return;let m;try{m=JSON.parse(e.data);}catch{return;}handleEvent(m);};
- ws.onclose=()=>{if(ws!==own||!authenticated)return;$('connection').textContent='Reconnecting…';reconnectTimer=setTimeout(connectEvents,3000);};ws.onerror=()=>own.close();
+ ws.onclose=()=>{if(ws!==own||!authenticated)return;nativeSettingsPanel.closeForNavigation();$('connection').textContent='Reconnecting…';reconnectTimer=setTimeout(connectEvents,3000);};ws.onerror=()=>own.close();
 }
 let refreshTimer,lastHeadRefresh=0;const requestedHeads=new Set();let requestedCatalog=false,requestedAttention=false;
 function scheduleRefresh({head=true,catalog=false,attention=false}={}){
