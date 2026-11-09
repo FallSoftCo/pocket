@@ -40,7 +40,12 @@ internal object CodexConversations {
     )
     var selected by mutableStateOf<String?>(null);private set
     private var selectionKey by mutableStateOf<CodexConversationKey?>(null)
-    internal val displayKey get()=selectionKey
+    // Explicit navigation owns transient panels. A close/reopen (or A→B→A)
+    // can finish before Compose observes the intermediate selection, so source
+    // identity alone cannot retire the old screen. Runtime reattachment after
+    // backgrounding must not reset the reader's UI or draft.
+    private var navigationGeneration by mutableLongStateOf(0L)
+    internal val displayKey get()=selectionKey to navigationGeneration
     private val outgoing=CodexOutgoing()
     private var detailValue by mutableStateOf<JSONObject?>(null)
     var detail:JSONObject?
@@ -74,6 +79,7 @@ internal object CodexConversations {
     /** Selection is owned here even through legacy/test adapters; no read is implied. */
     fun select(id:String?,force:Boolean=false,openLatest:Boolean=false){
         if(!force&&selected==id&&session?.let{current(it)}==true)return
+        navigationGeneration++
         retire();selected=id;detail=null;viewport=id!=null
         if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
         attach(id,openLatest,measureOpen=true)

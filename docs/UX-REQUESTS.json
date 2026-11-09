@@ -3986,5 +3986,12 @@
       "No new timers or polling model turns."
     ],
     "evidence": "docs/qualification/initial-history-recovery-179.json"
+  },
+  "explicit_conversation_navigation_20261109": {
+    "requirement": "Closing and reopening the same session must show current messages, not a retained transient questions/settings panel. Background reconnect must preserve reading and drafts.",
+    "cause": "Compose may coalesce close/reopen or A-to-B-to-A into the same final source key, preserving a previous screen despite explicit navigation.",
+    "implementation": "Separate explicit navigation generation from runtime incarnation; composition owner changes only on accepted selection navigation.",
+    "evidence": "182 native transcript journey retained failure screenshot: canonical messages present, empty questions drawer covering them. Existing failing journey retained for qualification.",
+    "state": "candidate; native qualification pending"
   }
 }
