@@ -16,7 +16,7 @@
     {
       "id": "local-ux-measurement-visual-native-parity-20261109",
       "request": "Instrument UX locally, visually check borders/clipping and continue meaningful Codex TUI parity with Astra medium team.",
-      "status": "181 published both Androidchannels and backend/web live;182 followup candidate in preparation, not delivered.",
+      "status": "181 published both Android channels. Backend/web182 live on workstation and Mac; Android182 candidate remains in native qualification.",
       "delivered": [
         "Bounded foreground cached/fresh/history/send latency and original failed/unknown outcomes without content telemetry",
         "Release-bound native footer screenshot matrix and exact optimized visual review",
@@ -3993,5 +3993,11 @@
     "implementation": "Separate explicit navigation generation from runtime incarnation and same-source history replacement. Questions panel has CLOSED/MANUAL/ATTENTION ownership: cached pending metadata cannot interrupt reading; verified resolution closes automatic attention while manual result browsing stays open.",
     "evidence": "Retained native failures exposed independent coalesced navigation, same-source forced reset, and cached answered-question attention; original canonical/context/manual reading assertions retained.",
     "state": "candidate; native qualification pending"
+  },
+  "native_review_request_ownership_20261109": {
+    "requirement": "Native settings, plugin and MCP reviews must complete visibly without cross-environment result application or duplicate actions. Diagnose real integration failures before release.",
+    "implementation": "Explicit Main.immediate ownership for review-state effects/actions, with IO-only transport; captured environment/account guards remain on responses and mutations. Request completion releases local loading independently of source validity. Reload reserves loading synchronously so stale enabled UI cannot overlap revisions.",
+    "evidence": "Original real-HTTP native journey retained: request responses completed in1–3ms while a dialog stayed loading. Temporary traces on a later passing run showed off-main effect continuations with all validity predicates true, so the original failure cause is not claimed proven. Test-only StandardTestDispatcher experiment reverted: installed Compose1.9.3 lacks full1.10 scheduler support. Original assertions/timeouts unchanged.",
+    "state": "candidate; native and optimized qualification pending; no182 Android publication"
   }
 }

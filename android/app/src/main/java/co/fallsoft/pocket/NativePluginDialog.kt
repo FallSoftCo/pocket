@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.UUID
 
@@ -48,8 +50,10 @@ internal fun pluginOperationLabel(value:String):String=when(value){
     var revision by remember{mutableIntStateOf(0)}
     var confirmation by remember{mutableStateOf<Pair<String,String?>?>(null)}
     var interstitial by remember{mutableStateOf(false)}
-    LaunchedEffect(revision){
-        if(!current())return@LaunchedEffect
+    // Review state belongs to Android's UI thread even when a caller supplies
+    // a non-main effect dispatcher. Transport still executes on Dispatchers.IO.
+    LaunchedEffect(revision){withContext(Dispatchers.Main.immediate){
+        if(!current()){loading=false;return@withContext}
         loading=true;view=null;confirmation=null;message=""
         try{
             val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/plugins/detail?key=${Uri.encode(pluginKey)}"+(threadId?.let{"&threadId=${Uri.encode(it)}"}?:""))
@@ -57,21 +61,21 @@ internal fun pluginOperationLabel(value:String):String=when(value){
         }catch(e:CancellationException){throw e}catch(e:Exception){if(current()){
             message=e.message?:"Plugin details unavailable"
             try{val saved=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/plugins/receipts?key=${Uri.encode(pluginKey)}");if(current())message+="\n"+saved.optJSONArray("receipts")?.objects().orEmpty().joinToString("\n"){"${it.s("name")} · ${it.s("action")} · ${pluginOperationLabel(it.s("state"))}: ${it.s("notice")}"}}catch(c:CancellationException){throw c}catch(_:Exception){}
-        }}finally{if(current())loading=false}
-    }
+        }}finally{loading=false}
+    }}
     fun confirm(action:String,id:String?=null){if(current()){confirmation=action to id;interstitial=false}}
     fun submit(snapshot:JSONObject,action:String,id:String?,acceptedInterstitial:Boolean){
         if(!current()||loading)return
         // Create once for this explicit action; no retry uses a fresh attempt.
         val attempt=id?:UUID.randomUUID().toString()
         loading=true;confirmation=null;view=null;message="Awaiting native acknowledgement…"
-        scope.launch{
+        scope.launch(Dispatchers.Main.immediate){
             try{
                 if(!current())return@launch
                 val body=JSONObject().put("section","plugins").put("threadId",threadId).put("key",pluginKey).put("reviewToken",snapshot.s("reviewToken")).put("action",action).put("attemptId",attempt).put("confirmEffects",true).put("confirmInterstitial",acceptedInterstitial)
                 val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/configuration",body)
                 if(current())message=result.s("notice")
-            }catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Delivery unconfirmed. Reload details to inspect the original attempt. Do not repeat the operation."}finally{if(current())loading=false}
+            }catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Delivery unconfirmed. Reload details to inspect the original attempt. Do not repeat the operation."}finally{loading=false}
         }
     }
     AlertDialog(onDismissRequest=onDismiss,title={BilingualLabel("Plugin details")},text={Column(Modifier.fillMaxWidth().heightIn(max=560.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
@@ -112,5 +116,5 @@ internal fun pluginOperationLabel(value:String):String=when(value){
                 if(snapshot.optBoolean("canUninstall"))OutlinedButton({confirm("uninstall")},enabled=current()&&!loading){BilingualLabel("Review removal")}
             }
         }
-    }},confirmButton={TextButton(onDismiss){BilingualLabel("Back to plugins")}},dismissButton={TextButton({if(current())revision++},enabled=current()&&!loading){BilingualLabel("Reload plugin details")}})
+    }},confirmButton={TextButton(onDismiss){BilingualLabel("Back to plugins")}},dismissButton={TextButton({if(current()&&!loading){loading=true;revision++}},enabled=current()&&!loading){BilingualLabel("Reload plugin details")}})
 }
