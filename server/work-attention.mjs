@@ -9,7 +9,7 @@ export function workAttention({db,pending,codex,threads,refreshPending=false}) {
   const ids=[...new Set(threads.map(t=>t.id))],result=new Map();
   if(!ids.length)return result;
   const selected=JSON.stringify(ids),healthy=codex.ready===true;
-  for(const t of threads)result.set(t.id,{version:1,items:[],verified:healthy&&!refreshPending&&!t.discoveryPending&&!['notLoaded','pending',undefined].includes(t.status?.type)});
+  for(const t of threads)result.set(t.id,{version:1,items:[],verified:healthy&&!refreshPending&&!t.discoveryPending&&['idle','active','systemError'].includes(t.status?.type)});
   const add=(thread,kind,id,label)=>{const entry=result.get(thread);if(entry&&!entry.items.some(item=>item.kind===kind))entry.items.push({kind,id,label});};
   if(healthy)for(const request of pending.values()){
     const kind=/requestUserInput$/.test(request.method)?'question':/requestApproval$/.test(request.method)?'approval':null;

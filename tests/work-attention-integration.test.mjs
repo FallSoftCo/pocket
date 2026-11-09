@@ -14,7 +14,7 @@ test('catalog Needs you follows original request and delivery identities without
  const dir=await mkdtemp(join(tmpdir(),'pocket-work-attention-')),socket=join(dir,'native.sock');
  const native=http.createServer(),wss=new WebSocketServer({server:native});await new Promise(r=>native.listen(socket,r));
  const calls=[];let peer,holdList=false;const held=[];
- const threads=[{id:'first',status:{type:'idle'}},{id:'child',parentThreadId:'first',source:{subAgent:{thread_spawn:{parent_thread_id:'first'}}},status:{type:'idle'}},{id:'runtime',status:{type:'systemError'}},{id:'stopped',status:{type:'idle'}}].map(t=>({...t,name:t.id,createdAt:1,recencyAt:1,cwd:dir}));
+ const threads=[{id:'first',status:{type:'idle'}},{id:'child',parentThreadId:'first',source:{subAgent:{thread_spawn:{parent_thread_id:'first'}}},status:{type:'idle'}},{id:'runtime',status:{type:'systemError'}},{id:'stopped',status:{type:'idle'}},{id:'unknown',status:{type:'unknown'}},{id:'future',status:{type:'futureNativeStatus'}}].map(t=>({...t,name:t.id,createdAt:1,recencyAt:1,cwd:dir}));
  wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{
   const m=JSON.parse(raw);if(m.id===undefined||!m.method)return;calls.push(m);let result={};
   if(m.method==='initialize')result={userAgent:'codex/0.167.0'};
@@ -31,6 +31,7 @@ test('catalog Needs you follows original request and delivery identities without
  db=new DatabaseSync(join(dir,'pocket.sqlite'));
  const catalog=async()=>{const response=await api('/api/threads');assert.equal(response.status,200);return new Map(response.data.threads.map(t=>[t.id,t]));};
  let rows=await catalog();assert.equal(rows.get('first').attention.verified,true);assert.deepEqual(rows.get('stopped').attention.items,[]);
+ for(const id of ['unknown','future']){assert.equal(rows.get(id).attention.verified,false);assert.deepEqual(rows.get(id).attention.items,[]);}
  assert.deepEqual(rows.get('runtime').attention.items.map(i=>i.kind),['runtimeError']);
  const seed=(id,thread,state)=>db.prepare('INSERT INTO outgoing(id,thread_id,text,state,result,created_at,updated_at,mode) VALUES(?,?,?,?,?,?,?,?)').run(id,thread,'PRIVATE MESSAGE',state,'PRIVATE RESULT',Date.now(),Date.now(),'steer');
  seed('failed-original','child','failed');seed('unknown-original','first','unknown');seed('accepted-original','first','accepted');seed('foreign','not-returned','unknown');
