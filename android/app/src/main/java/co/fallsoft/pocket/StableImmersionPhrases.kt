@@ -62,7 +62,13 @@ import androidx.compose.ui.unit.*
                 }
                 val (width,height)=requireNotNull(dimensions[id]);val start=length
                 appendInlineContent(id,shown.text.ifEmpty{" "});addStringAnnotation("immersion-reserve",id,start,length)
-                inline[id]=InlineTextContent(Placeholder(with(density){width.toSp()},with(density){height.toSp()},PlaceholderVerticalAlign.TextBottom)){
+                // Compose Android 1.9.3 PlaceholderSpan scales SP linearly by
+                // density * fontScale, unlike the nonlinear conversion used for
+                // glyphs. These dimensions are already measured in pixels with
+                // accessible glyph scaling applied; invert the placeholder's
+                // conversion, not Density.toSp(), to preserve that exact reserve.
+                val placeholderScale=density.density*density.fontScale
+                inline[id]=InlineTextContent(Placeholder((width/placeholderScale).sp,(height/placeholderScale).sp,PlaceholderVerticalAlign.TextBottom)){
                     val linked=shown.getLinkAnnotations(0,shown.length).isNotEmpty()
                     val interact=phraseTaps&&!linked&&run.forms.map{it.text}.distinct().size>1
                     val interactions=remember{MutableInteractionSource()}
