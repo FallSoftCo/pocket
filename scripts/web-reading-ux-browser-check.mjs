@@ -73,6 +73,16 @@ export async function runReadingVisualCheck({context,dir,visualOnly=false,decisi
 }catch(error){report.state='failed';report.failure=error.message;report.fixtureWrites=f.writes;report.fixtureReads=f.reads;report.failureDom=await page?.evaluate(()=>({statuses:[...document.querySelectorAll('.request-status')].map(n=>n.textContent),requests:document.querySelector('#requests')?.textContent,error:document.querySelector('#error')?.textContent})).catch(()=>null);throw error;}finally{await page?.close();await f.close();report.ownedFixturesStopped=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
  return report;
 }
+async function clearVisualFontScale(page){await page.evaluate(()=>{if(window.__qaFontRules){const {sheet,index}=window.__qaFontRules;while(sheet.cssRules.length>index)sheet.deleteRule(index);delete window.__qaFontRules;}for(const n of document.querySelectorAll('[data-qa-font-size]'))delete n.dataset.qaFontSize;});}
+async function applyVisualFontScale(page,fontScale){
+  if(fontScale===2)await page.evaluate(()=>{
+   const all=[...document.querySelectorAll('body *')], sizes=new Set();
+   const values=all.map(n=>({n,size:parseFloat(getComputedStyle(n).fontSize)}));
+   for(const {n,size}of values){n.dataset.qaFontSize=String(size);sizes.add(size);}
+   const sheet=document.styleSheets[0],index=sheet.cssRules.length;window.__qaFontRules={sheet,index};
+   for(const size of sizes)sheet.insertRule(`[data-qa-font-size="${size}"]{font-size:${size*2}px!important}`,sheet.cssRules.length);
+  });
+}
 async function viewportPng(page,cdp){
  const {data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});const bytes=Buffer.from(data,'base64');
  assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(bytes.toString('ascii',12,16),'IHDR');
@@ -93,16 +103,10 @@ async function captureLayoutMatrix(page,dir,report,widths,fontScales){
 
   try{
    for(const state of ['conversation','drawer','focused-short']){
-    await page.evaluate(()=>{if(window.__qaFontRules){const {sheet,index}=window.__qaFontRules;while(sheet.cssRules.length>index)sheet.deleteRule(index);delete window.__qaFontRules;}for(const n of document.querySelectorAll('[data-qa-font-size]'))delete n.dataset.qaFontSize;});
+    await clearVisualFontScale(page);
     if(state==='drawer')await page.locator('#review-toggle').click();
     if(state==='focused-short'){await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();await page.setViewportSize({width,height:width===1440?650:520});await page.locator('#draft').focus();}
-  if(fontScale===2)await page.evaluate(()=>{
-   const all=[...document.querySelectorAll('body *')], sizes=new Set();
-   const values=all.map(n=>({n,size:parseFloat(getComputedStyle(n).fontSize)}));
-   for(const {n,size}of values){n.dataset.qaFontSize=String(size);sizes.add(size);}
-   const sheet=document.styleSheets[0],index=sheet.cssRules.length;window.__qaFontRules={sheet,index};
-   for(const size of sizes)sheet.insertRule(`[data-qa-font-size="${size}"]{font-size:${size*2}px!important}`,sheet.cssRules.length);
-  });
+  await applyVisualFontScale(page,fontScale);
     await page.evaluate(()=>document.fonts.ready);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const path=`layout-${width}-${fontScale}x-${state}.png`;const capture=await viewportPng(page,cdp);await writeFile(dir+'/'+path,capture);
     const geometry=await page.evaluate(()=>{
@@ -120,10 +124,47 @@ async function captureLayoutMatrix(page,dir,report,widths,fontScales){
     const toolbar=geometry.controls.find(v=>v.selector==='.transcript-toolbar');assert.ok(toolbar.height<=geometry.viewport.height*.6,`Toolbar consumes reading viewport at ${path}`);
    }
   }finally{
-   if(fontScale===2)await page.evaluate(()=>{if(window.__qaFontRules){const {sheet,index}=window.__qaFontRules;while(sheet.cssRules.length>index)sheet.deleteRule(index);delete window.__qaFontRules;}for(const n of document.querySelectorAll('[data-qa-font-size]'))delete n.dataset.qaFontSize;});
+   if(fontScale===2)await clearVisualFontScale(page);
   }
  }
  }finally{await cdp.detach();}
+}
+export async function runCatalogTitleCheck({context,dir,cases=null}){
+ await mkdir(dir,{recursive:true});const f=await fixture();let page;const report={state:'running',syntheticOnly:true,frames:[],actions:{}};
+ const pending=[{id:'question-123',method:'item/tool/requestUserInput',params:{threadId:'parent-123',questions:[{id:'material',question:'Which material?',options:[{label:'Wood',description:'Warm surface'},{label:'Metal',description:'Cool surface'}]}]}}];
+ try{
+  page=await context.newPage();await page.bringToFront();page.setDefaultTimeout(10000);await page.setViewportSize({width:1440,height:1000});
+  await page.goto(f.url);await page.locator('#pair-form input[name=code]').fill('synthetic');await page.locator('#pair-form button[type=submit]').click();
+  const card=page.locator('.work-card[data-id="parent-123"]');await card.locator('.preview').click();await page.locator('#requests input').waitFor();await page.locator('#draft').fill('Unsent catalog routing draft');await page.locator('#settings').click();await page.locator('#immersion-enabled').check();await page.locator('#settings-dialog .close').click();
+  for(const {width,fontScale,drawer}of cases??[1440,390,320].flatMap(width=>[1,2].flatMap(fontScale=>(width===1440?[false,true]:[false]).map(drawer=>({width,fontScale,drawer}))))){
+   assert.ok([1440,390,320].includes(width)&&[1,2].includes(fontScale)&&typeof drawer==='boolean');
+   await clearVisualFontScale(page);await page.setViewportSize({width,height:width===1440?1000:844});
+   if(await page.locator('#review-pane').isVisible())await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();
+   if(width===1440&&drawer)await page.locator('#review-toggle').click();
+   if(width<760&&await page.locator('#back').isVisible())await page.locator('#back').click();
+   await applyVisualFontScale(page,fontScale);await card.scrollIntoViewIfNeeded();
+   const geometry=await card.evaluate(n=>{const rect=x=>{const r=x.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};const title=n.querySelector('.card-title');return {card:rect(n),heading:rect(n.querySelector('.card-heading')),sidebar:rect(document.querySelector('#sidebar')),title:{...rect(title),text:title.textContent,font:parseFloat(getComputedStyle(title).fontSize)},actions:[...n.querySelectorAll('.card-heading>button:not(.card-title)')].map(x=>{const box=rect(x),walker=document.createTreeWalker(x,NodeFilter.SHOW_TEXT),glyphs=[];while(walker.nextNode()){const text=walker.currentNode;if(!text.textContent.trim()||getComputedStyle(text.parentElement).visibility==='hidden')continue;const range=document.createRange();range.selectNodeContents(text);for(const r of range.getClientRects())glyphs.push({x:r.x,y:r.y,right:r.right,bottom:r.bottom});}return {class:x.className,text:x.textContent,...box,glyphs};})};});
+   const frame=await saveViewportFrame(page,dir+`/catalog-${width}-${fontScale}x-${drawer?'open':'closed'}.png`);report.frames.push({...frame,width,fontScale,drawer,geometry});
+   assert.equal(Math.round(geometry.sidebar.width),width===1440?(drawer?285:325):width);
+   assert.ok(geometry.title.width>=geometry.heading.width-1,'Title must retain the full reserved heading width');assert.ok(geometry.title.x>=geometry.card.x&&geometry.title.right<=geometry.card.right,'Reserved heading must fit the card');assert.equal(geometry.title.font,14*fontScale);assert.match(geometry.title.text,/Prepare the field guide/);
+   assert.equal(geometry.actions.length,3);for(const a of geometry.actions){assert.ok(a.width>=44&&a.height>=28);assert.ok(a.y>=geometry.title.bottom-1&&a.bottom<=geometry.card.bottom+1&&a.x>=geometry.card.x&&a.right<=geometry.card.right);for(const glyph of a.glyphs)assert.ok(glyph.x>=a.x-1&&glyph.right<=a.right+1&&glyph.y>=a.y-1&&glyph.bottom<=a.bottom+1,'Action text must fit its actual button');}
+   const initialHeight=geometry.card.height;
+   f.setSummary('parent-123',{preview:'Updated live preview. '.repeat(30),status:{type:'idle'}});f.setRequests([]);f.broadcast({type:'conversationChanged',threadId:'parent-123'});f.broadcast({type:'request',threadId:'parent-123'});
+   await page.waitForFunction(()=>document.querySelector('.work-card[data-id="parent-123"] .preview')?.textContent.startsWith('Updated live preview')&&!document.querySelector('.work-card[data-id="parent-123"] .question-badge'));
+   assert.equal((await card.boundingBox()).height,initialHeight,'Live preview/status/badge changes must not resize the card');
+   f.setSummary('parent-123',{preview:'Open conversation',status:{type:'active'}});f.setRequests(pending);f.broadcast({type:'conversationChanged',threadId:'parent-123'});f.broadcast({type:'request',threadId:'parent-123'});await card.locator('.question-badge').waitFor();
+   assert.equal((await card.boundingBox()).height,initialHeight,'Restoring attention must not resize the card');report.frames.at(-1).liveHeightStable=true;
+   await writeFile(dir+'/progress.json',JSON.stringify(report,null,2)+'\n');
+  }
+  await clearVisualFontScale(page);
+  await card.locator('.card-title').click();assert.equal(await card.getByRole('textbox',{name:'Session name'}).inputValue(),'Prepare the field guide');await card.getByRole('textbox',{name:'Session name'}).press('Escape');assert.equal(f.writes.filter(w=>w.path.endsWith('/rename')).length,0);report.actions.renameCancelOriginal=true;
+  await card.locator('.child-badge').click();await page.locator('.work-card[data-id="child-123"]').waitFor();report.actions.originalChildExpanded=true;
+  await card.locator('.question-badge').click();await page.locator('#requests input').waitFor();assert.equal(await page.locator('#draft').inputValue(),'Unsent catalog routing draft');assert.match(await page.locator('#requests').innerText(),/Which material/);report.actions.originalAttentionAndDraft=true;
+  await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();if(await page.locator('#back').isVisible())await page.locator('#back').click();
+  page.once('dialog',dialog=>dialog.accept());await card.locator('.card-archive').click();await page.waitForFunction(()=>!document.querySelector('.work-card[data-id="parent-123"]'));
+  assert.equal(f.writes.filter(w=>w.path==='/api/threads/parent-123/archive').length,1);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')||w.path.startsWith('/api/requests/')).length,0);report.actions.originalArchiveOnce=true;report.actions.noWorkSubmitted=true;
+  report.state='checks-passed-awaiting-visual-review';return report;
+ }catch(e){report.state='failed';report.failure=e.message;throw e;}finally{await page?.close();await f.close();report.ownedResourcesClosed=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE||'playwright');const browser=await chromium.launch({headless:true});
