@@ -1,3 +1,4 @@
+import {mcpAuthenticationButton} from './native-mcp-auth.mjs';
 import {pluginBrowserControls} from './native-plugin-browser.mjs';
 import {pluginDetailsButton,operationLabel} from './native-plugins.mjs';
 const node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
@@ -17,7 +18,8 @@ export class NativeSettingsPanel {
   const close=node('button','Close');close.onclick=()=>this.dialog.close();this.dialog.append(this.scroll,this.pluginFooter,close);document.body.append(this.dialog);
   for(const section of sections){const b=node('button',titles[section]);b.onclick=()=>this.load(section);this.tabs.append(b);}
  }
- async open(){this.pluginView='installed';this.pluginQuery='';this.scope=this.getScope();this.threadId=this.scope==='coordinator'?null:this.scope;this.origin=Object.freeze({scope:this.scope,threadId:this.threadId});this.dialog.showModal();await this.load('settings');}
+ closeForNavigation(){this.serial++;this.origin=null;if(this.dialog.open)this.dialog.close();}
+ async open(){if(this.dialog.open)this.closeForNavigation();this.pluginView='installed';this.pluginQuery='';this.scope=this.getScope();this.threadId=this.scope==='coordinator'?null:this.scope;this.origin=Object.freeze({scope:this.scope,threadId:this.threadId});this.dialog.showModal();await this.load('settings');}
  // Object identity distinguishes close/reopen even in the same environment.
  // Captured operations never acquire the destination of a later panel opening.
  current(origin=this.origin){return !!origin&&origin===this.origin&&this.getScope()===origin.scope&&this.dialog.open;}
@@ -67,6 +69,7 @@ export class NativeSettingsPanel {
    }
    if(item.tools?.length){const details=node('details');details.append(node('summary',`${item.toolCount} tools`));for(const tool of item.tools)details.append(node('p',tool.name+(tool.description?' · '+tool.description:'')));row.append(details);}
    if(view.section==='plugins'&&item.inspectable===true)row.append(pluginDetailsButton(this,item));
+   if(view.section==='mcp'&&item.canReviewAuthentication)row.append(mcpAuthenticationButton(this,item));
    if(item.configurable){const toggle=node('button',`${item.enabled?'Disable':'Enable'} for this environment`);toggle.onclick=()=>this.change(view,item,toggle);row.append(toggle);}
    this.body.append(row);
   }

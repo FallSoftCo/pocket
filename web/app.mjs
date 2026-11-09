@@ -153,6 +153,7 @@ function currentReadAnchor(id){if(id!==scope||follow)return null;const list=$('t
 function saveView(){if(!openedScope)return;const list=$('transcript'),first=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top);readerViews.set(readerKey(openedScope),{follow,anchor:first?.dataset.id,offset:first?first.getBoundingClientRect().top-list.getBoundingClientRect().top:0,top:list.scrollTop});}
 function restoreView(view){if(!view||view.follow)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.dataset.id===view.anchor);if(anchor)list.scrollTop+=anchor.getBoundingClientRect().top-list.getBoundingClientRect().top-view.offset;else list.scrollTop=view.top;}
 async function open(id){
+ nativeSettingsPanel.closeForNavigation();
  historyReader.invalidate(id);
  if(isRoom(id))throw Error('Rooms are retired from NextComp. Original drafts and receipts are retained.');
  saveDraft();saveView();for(const panel of document.querySelectorAll(':popover-open'))panel.hidePopover();scope=id;if(isRoom(id)){const saved=read('roomView.'+deviceId+'.'+id,'all'),valid=roomLead(rooms.entry(id).room)?['all','conversation','activity','coordination','archive']:['all','conversation','activity'];roomView=valid.includes(saved)?saved:'all';}cache.protect(scope);readFeedback.select(scope);write('scope',scope);const view=readerViews.get(readerKey(id));follow=view?.follow??true;
