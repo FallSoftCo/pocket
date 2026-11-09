@@ -187,11 +187,20 @@ class NativeCanonicalTranscriptNativeTest{
             val skip=skipBounds()
             device.click(skip.centerX(),skip.centerY())
             await("Question answer was not routed"){qa("state").optInt("answers")==1}
+            val completedBefore=((UxMeasurements.snapshot()["counts"] as Map<*,*>)["open_complete"] as? Number)?.toLong()?:0L
             qa("disconnect")
             main{Pocket.closeTask()}
             qa("recover")
             open()
             await("Reopen did not restore canonical native history"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&PocketTranscript.rows.any{it.s("text")=="Native answer two"}}
+            assertTrue("Fresh canonical content was not visible",device.wait(Until.hasObject(By.text("Native answer two")),4000))
+            await("Visible canonical reopen did not emit first/fresh UX milestones"){
+                val report=UxMeasurements.snapshot();val metrics=report["metrics"] as Map<*,*>;val counts=report["counts"] as Map<*,*>
+                (counts["open_complete"] as? Number)?.toLong()?.let{it>completedBefore}==true&&
+                    metrics.containsKey("open_first_content_layout")&&metrics.containsKey("open_fresh_content_layout")
+            }
+            assertFalse("Fresh open left its measurement observer active",CodexConversations.hasOpenMeasurement(CodexConversations.currentKey,CodexConversations.incarnation))
+            context.filesDir.resolve("ux-native-history.json").writeText(JSONObject(UxMeasurements.snapshot()).toString(2))
             assertEquals(1,PocketTranscript.rows.count{it.s("text")=="Native request two"})
             // The fixture captures the baseline atomically with the stimulus.
             // A reconnect/reopen read before this boundary is not a token read.
