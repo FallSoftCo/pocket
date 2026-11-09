@@ -1,3 +1,4 @@
+import {NativeMcpAuth} from './native-mcp-auth.mjs';
 import {NativePlugins} from './native-plugins.mjs';
 import {describeNativeCapabilities,nativeVersion,supportsNativeMethod,observedRuntimeSettings} from './native-capabilities.mjs';
 import {catalogName,sessionIdentity} from './session-catalog.mjs';
@@ -12,7 +13,7 @@ const methodFor={settings:'config/read',skills:'skills/list',mcp:'mcpServerStatu
 
 // User-opened native catalogs. Catalog RPCs may refresh native caches; never use writes as probes.
 export class NativeConfiguration {
- constructor({codex,db,admissions,savedSettings=()=>null,requestedPermissions=()=>null,accountEvidence=()=>null,host=''}={}){Object.assign(this,{codex,savedSettings,requestedPermissions,host});if(db)this.plugins=new NativePlugins({db,codex,admissions,accountEvidence,context:id=>this.context(id)});}
+ constructor({codex,db,admissions,savedSettings=()=>null,requestedPermissions=()=>null,accountEvidence=()=>null,host=''}={}){Object.assign(this,{codex,savedSettings,requestedPermissions,host});if(db)this.mcpAuth=new NativeMcpAuth({db,codex,admissions,accountEvidence,context:id=>this.context(id)});if(db)this.plugins=new NativePlugins({db,codex,admissions,accountEvidence,context:id=>this.context(id)});}
  async context(threadId){
   await this.codex.connect();
   if(!threadId)return null;
@@ -43,6 +44,7 @@ export class NativeConfiguration {
     result=await this.codex.call('mcpServerStatus/list',{...(threadId?{threadId}:{}),detail:'toolsAndAuthOnly',limit:100,...(cursor?{cursor}:{})});
     items=(result.data||[]).map(s=>({id:s.name,name:s.name,enabled:configuration.config?.mcp_servers?.[s.name]?.enabled!==false,configurable:canConfigure&&safeId(s.name)&&Object.hasOwn(configuration.config?.mcp_servers||{},s.name),...pick(s,['authStatus','runtimeStatus','pluginId']),tools:Object.values(s.tools||{}).map(t=>pick(t,['name','description'])),toolCount:Object.keys(s.tools||{}).length,toolsUnavailable:!!s.toolsError}));
     if(!cursor)for(const [name,value]of Object.entries(configuration.config?.mcp_servers||{}))if(!items.some(i=>i.id===name))items.push({id:name,name,enabled:value.enabled!==false,configurable:canConfigure&&safeId(name),authStatus:'unknown',runtimeStatus:null,tools:[],toolCount:0});
+    for(const item of items)item.canReviewAuthentication=!!this.mcpAuth&&supportsNativeMethod(this.codex,'mcpServer/oauth/login')&&item.enabled&&typeof configuration.config?.mcp_servers?.[item.id]?.url==='string'&&!configuration.config.mcp_servers[item.id].bearer_token_env_var;
     extra={nextCursor:result.nextCursor||null,notice:'Native connection and authorization status. Tool availability does not authorize execution. Enablement changes apply to subsequent native configuration loads; existing connections can retain their state.'};
    }else if(section==='apps'){
     result=await this.codex.call('app/installed',{...(threadId?{threadId}:{}),forceRefresh:false});
@@ -96,8 +98,9 @@ export function registerNativeConfigurationRoutes(app,{codex,route,requireId,...
  const threadId=req=>req.query.threadId?requireId(req.query.threadId):undefined;
  app.get('/api/native/capabilities',route(async(req,res)=>{await codex.connect();res.json(native.descriptor(threadId(req)));}));
  app.get('/api/native/configuration',route(async(req,res)=>res.json(await native.inspect({threadId:threadId(req),section:req.query.section||'settings',cursor:req.query.cursor,pluginView:req.query.pluginView,query:req.query.query,refresh:req.query.refresh}))));
+ app.get('/api/native/mcp-auth',route(async(req,res)=>{if(!native.mcpAuth)throw fail('MCP sign-in unavailable.',409);const {_snapshot,...view}=await native.mcpAuth.detail({threadId:threadId(req),name:req.query.name},req.device.id);res.set('Cache-Control','no-store').json(view);}));
  app.get('/api/native/plugins/receipts',route(async(req,res)=>res.json({receipts:native.plugins?.recent(typeof req.query.key==='string'?req.query.key:undefined)||[]})));
  app.get('/api/native/plugins/detail',route(async(req,res)=>{if(!native.plugins)throw fail('Plugin management is unavailable.',409);const {_origin,_snapshot,...view}=await native.plugins.detail({threadId:threadId(req),key:req.query.key});res.json(view);}));
- app.post('/api/native/configuration',route(async(req,res)=>{const body={...req.body,threadId:req.body.threadId?requireId(req.body.threadId):undefined};if(body.section==='plugins'){if(!native.plugins)throw fail('Plugin management is unavailable.',409);return res.json(await native.plugins.mutate(body,req.humanPrincipal));}res.json(await native.configure(body));}));
+ app.post('/api/native/configuration',route(async(req,res)=>{const body={...req.body,threadId:req.body.threadId?requireId(req.body.threadId):undefined};if(body.section==='mcp'&&['oauthStart','oauthAcknowledge'].includes(body.action)){if(!native.mcpAuth)throw fail('MCP sign-in unavailable.',409);return res.set('Cache-Control','no-store').json(await native.mcpAuth[body.action==='oauthStart'?'start':'acknowledge'](body,req.humanPrincipal));}if(body.section==='plugins'){if(!native.plugins)throw fail('Plugin management is unavailable.',409);return res.json(await native.plugins.mutate(body,req.humanPrincipal));}res.json(await native.configure(body));}));
  return native;
 }

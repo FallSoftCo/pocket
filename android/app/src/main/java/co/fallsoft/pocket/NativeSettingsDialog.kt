@@ -29,6 +29,7 @@ import org.json.JSONObject
     var notice by remember{mutableStateOf("")}
     var changing by remember{mutableStateOf<String?>(null)}
     var uncertain by remember{mutableStateOf(false)}
+    var mcpAuthName by remember{mutableStateOf<String?>(null)}
     var pluginKey by remember{mutableStateOf<String?>(null)}
     var pluginView by remember{mutableStateOf("installed")}
     var pluginSearch by remember{mutableStateOf("")}
@@ -44,6 +45,7 @@ import org.json.JSONObject
         check(current()){ "The selected environment changed." }
         return response
     }
+    mcpAuthName?.let{name->NativeMcpAuthDialog(destination,threadId,name){mcpAuthName=null;revision++};return}
     pluginKey?.let{key->NativePluginDialog(destination,threadId,key){pluginKey=null;pluginCursor=null;pluginRefresh=true;revision++};return}
     LaunchedEffect(section,revision,pluginView,pluginQuery,pluginCursor){
         if(section=="plugins")catalogScroll.scrollTo(0)
@@ -109,6 +111,7 @@ import org.json.JSONObject
                             if(expanded)tools.forEach{tool->WorkflowText("${tool.s("name")} · ${tool.s("description")}",fontSize=11.sp,color=Muted)}
                         }
                         if(section=="plugins"&&item.optBoolean("inspectable"))OutlinedButton({if(current())pluginKey=item.s("key")},enabled=current()&&!loading&&changing==null){BilingualLabel("Review plugin")}
+                        if(section=="mcp"&&item.optBoolean("canReviewAuthentication"))OutlinedButton({if(current())mcpAuthName=item.s("id")},enabled=current()&&!loading&&changing==null){BilingualLabel("Review sign-in")}
                         if(item.optBoolean("configurable"))OutlinedButton(onClick={
                             if(current())scope.launch{
                                 changing=item.s("id");problem=""

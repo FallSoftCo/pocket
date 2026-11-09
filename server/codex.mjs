@@ -85,11 +85,11 @@ export class Codex extends EventEmitter {
       }
     });
   }
-  // Plugin mutation lifetime is distinct from the caller's ordinary 25 s wait.
+  // Explicit native mutation lifetime is distinct from the caller's ordinary 25 s wait.
   // Native globally serializes these writes: retain at most one original reply.
   operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation);}
   callOperation(method,params,onOutcome){
-    if(!['plugin/install','plugin/uninstall'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
+    if(!['plugin/install','plugin/uninstall','mcpServer/oauth/login'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
     return this.callPending(method,params,onOutcome);
   }
   call(method,params={}){return this.callPending(method,params);}
