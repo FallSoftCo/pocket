@@ -77,9 +77,11 @@ internal object CodexConversations {
         val old=session;session=null;old?.let{UxMeasurements.end(it.uxOpen,UxEnd.SUPERSEDED);UxMeasurements.end(it.uxSend,UxEnd.SUPERSEDED)};old?.scope?.cancel()
     }
     /** Selection is owned here even through legacy/test adapters; no read is implied. */
-    fun select(id:String?,force:Boolean=false,openLatest:Boolean=false){
+    fun select(id:String?,force:Boolean=false,openLatest:Boolean=false,explicitNavigation:Boolean=false){
         if(!force&&selected==id&&session?.let{current(it)}==true)return
-        navigationGeneration++
+        // History replacement/revert also forces a new read lifetime. It is
+        // not navigation: keep the operation panel and in-progress editor.
+        if(explicitNavigation||selected!=id)navigationGeneration++
         retire();selected=id;detail=null;viewport=id!=null
         if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
         attach(id,openLatest,measureOpen=true)
