@@ -1,6 +1,6 @@
 const kinds=new Set(['open','send','history_request']);
 const metricKinds={open_first_content_layout:'open',open_cached_first_content_layout:'open',open_fresh_content_layout:'open',send_feedback_committed:'send',send_admitted_callback:'send',history_response:'history_request'};
-const ends=new Set(['superseded','backgrounded','failed','cancelled','complete']);
+const ends=new Set(['superseded','backgrounded','failed','unknown','cancelled','complete']);
 /** Enum-only recent local diagnostics. No IDs/content/URLs/input capture and no timers. */
 export class UxMeasurements {
  constructor({now=()=>performance.now()}={}){this.now=now;this.visible=false;this.serial=0;this.flights=new Map();this.samples=new Map();this.counts={};}

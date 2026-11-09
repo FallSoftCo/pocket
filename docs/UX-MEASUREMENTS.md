@@ -50,3 +50,16 @@ under continuous emissions and unsubscribing. Native Compose/layout and browser
 DOM qualification remain separate from aggregate/coroutine unit tests. Reports
 support comparisons of observed interactions; they are not population analytics
 or proof of universal responsiveness.
+
+Initial send admission has separate `send_failed`, `send_unknown`, and
+`send_cancelled` counters. Android uses an optional, non-persisted diagnostic
+callback tied to the original dispatch; storage failure before dispatch or a
+validated failed receipt is failed, while a timeout/lost or unknown receipt is
+unknown. Unknown means reconciliation is still required, never proof execution
+was absent. The web likewise separates local persistence failure from uncertain
+admission/receipt refresh. Later recovery and model/task outcomes do not rewrite
+that initial observation or replay its callback. Closed journeys ignore duplicate
+or late callbacks. Existing command journals, retries, drafts and final `onDone`
+callbacks are unchanged; trailing-lambda callers retain their original binding.
+
+Web exports include the export timestamp, current viewport dimensions and device pixel ratio as export-time context only. They are not per-sample layout evidence. Loaded JavaScript build identity is explicitly unavailable; a backend version is not substituted for client identity.

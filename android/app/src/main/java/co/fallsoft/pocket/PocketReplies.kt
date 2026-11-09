@@ -4,6 +4,8 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.*
 import org.json.JSONObject
 
+/** Diagnostic admission outcome only; never a command or delivery receipt. */
+enum class ReplyAdmissionObservation { FAILED, UNKNOWN, CANCELLED }
 internal object PocketReplies {
     private const val storeKey="client-replies:v1"
     private val journal by lazy{ClientReplyJournal({Pocket.prefs.getString(storeKey,"[]")?:"[]"},{Pocket.prefs.edit().putString(storeKey,it).commit()})}
@@ -46,29 +48,33 @@ internal object PocketReplies {
         val next=runCatching{journal.update(intent.id){old->if(old.phase=="observed")old.copy(message=checkMessage(old.message,message)) else old.copy(state="unconfirmed",message=checkMessage(old.message,message))}}.getOrElse{if(Pocket.captureEnvironment()?.let{current(intent)?.matches(it)}==true)Pocket.recordReplyFailure(intent.thread,intent.id,"Could not update saved delivery state. Your message remains saved.");return}
         if(next!=null){revision++;if(current(next)?.matches(Pocket.captureEnvironment()?:return)==true)Pocket.recordReplyFailure(next.thread,next.id,next.message)}
     }
-    fun submit(text:String,thread:String,mode:String,draftKey:String?,onDone:()->Unit){
-        val destination=Pocket.captureEnvironment()?:return
+    fun submit(text:String,thread:String,mode:String,draftKey:String?,onDiagnosticOutcome:(ReplyAdmissionObservation)->Unit={},onDone:()->Unit){
+        fun diagnose(outcome:ReplyAdmissionObservation){runCatching{onDiagnosticOutcome(outcome)}}
+        val destination=Pocket.captureEnvironment()?:run{diagnose(ReplyAdmissionObservation.CANCELLED);return}
         val owner=backendOwner(destination.endpoint,destination.token)
         try{
             val old=journal.all().firstOrNull{it.environment==destination.environment.id&&it.thread==thread&&it.text.trim()==text.trim()&&it.mode==mode&&it.state in listOf("unconfirmed","unknown")}
-            if(old!=null){Pocket.recordReplyFailure(thread,old.id,if(old.owner==owner)"Check this message’s delivery before sending it again."else "This message was saved under a previous pairing. Review its saved copy before sending again.");check(old);return}
+            if(old!=null){Pocket.recordReplyFailure(thread,old.id,if(old.owner==owner)"Check this message’s delivery before sending it again."else "This message was saved under a previous pairing. Review its saved copy before sending again.");check(old);diagnose(ReplyAdmissionObservation.UNKNOWN);return}
             val intent=ClientReplyIntent(java.util.UUID.randomUUID().toString(),destination.environment.id,owner,thread,text,mode,draftKey,draftGeneration=draftKey?.let{replyDraftGeneration(it)}?:"legacy")
-            journal.put(intent);revision++;dispatch(intent,destination,onDone)
-        }catch(e:Exception){Pocket.recordReplyFailure(thread,"storage",e.message?:"Could not save message")}
+            journal.put(intent);revision++;dispatch(intent,destination,onDiagnosticOutcome=onDiagnosticOutcome,onDone=onDone)
+        }catch(e:Exception){Pocket.recordReplyFailure(thread,"storage",e.message?:"Could not save message");diagnose(ReplyAdmissionObservation.FAILED)}
     }
-    private fun dispatch(intent:ClientReplyIntent,destination:EnvironmentRequest,onDone:()->Unit={}){
+    private fun dispatch(intent:ClientReplyIntent,destination:EnvironmentRequest,onDiagnosticOutcome:(ReplyAdmissionObservation)->Unit={},onDone:()->Unit={}){
+        fun diagnose(outcome:ReplyAdmissionObservation){runCatching{onDiagnosticOutcome(outcome)}}
         sendingOwners[intent.id]=destination;profileChanged();busy=busy+intent.id;dispatching=dispatching+intent.id
         Pocket.scope.launch{
-            var marked=false
+            var marked=false;var admitted=false
             try{
-                if(current(intent)?.matches(destination)!=true)return@launch
-                journal.update(intent.id){it.copy(phase="dispatched")}?:return@launch;marked=true;revision++
+                if(current(intent)?.matches(destination)!=true){diagnose(ReplyAdmissionObservation.CANCELLED);return@launch}
+                journal.update(intent.id){it.copy(phase="dispatched")}?:run{diagnose(ReplyAdmissionObservation.CANCELLED);return@launch};marked=true;revision++
                 val receipt=Pocket.apiEnvironment(destination,"/api/threads/${intent.thread}/reply",JSONObject().put("id",intent.id).put("text",intent.text).put("mode",intent.mode))
                 val state=observed(intent,receipt)
-                if(state in admittedReplyStates){if(Pocket.captureEnvironment()?.matches(destination)==true){Pocket.rememberSessionInteraction(intent.thread,"reply:"+intent.id);onDone()}}
+                when(state){"failed"->diagnose(ReplyAdmissionObservation.FAILED);"unknown"->diagnose(ReplyAdmissionObservation.UNKNOWN);"cancelled"->diagnose(ReplyAdmissionObservation.CANCELLED)}
+                if(state in admittedReplyStates){admitted=true;if(Pocket.captureEnvironment()?.matches(destination)==true){Pocket.rememberSessionInteraction(intent.thread,"reply:"+intent.id);onDone()}}
                 else if(state in listOf("failed","unknown")&&Pocket.captureEnvironment()?.matches(destination)==true)Pocket.recordReplyFailure(intent.thread,intent.id,receipt.s("error","Message delivery needs attention"))
                 if(Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==intent.thread)Pocket.scheduleRefresh()
-            }catch(e:CancellationException){throw e}catch(e:Exception){problem(intent,e.message?:"Message delivery could not be confirmed")}
+            }catch(e:CancellationException){if(!admitted)diagnose(if(marked)ReplyAdmissionObservation.UNKNOWN else ReplyAdmissionObservation.CANCELLED);throw e}
+            catch(e:Exception){problem(intent,e.message?:"Message delivery could not be confirmed");if(!admitted)diagnose(if(marked)ReplyAdmissionObservation.UNKNOWN else ReplyAdmissionObservation.FAILED)}
             finally{busy=busy-intent.id;dispatching=dispatching-intent.id;sendingOwners.remove(intent.id);profileChanged();val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)};if(marked&&!Pocket.sending&&Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true)entries(intent.thread).firstOrNull{it.phase=="prepared"&&it.id !in busy&&matchesCurrent(it)}?.let{next->current(next)?.let{dispatch(next,it)}}}
         }
     }

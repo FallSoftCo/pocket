@@ -50,4 +50,14 @@ class UxMeasurementsTest {
             frame={frames++;if(frames==1)store.end(open,UxEnd.SUPERSEDED)},observed={store.contentLayout(open,it)})
         assertTrue(metrics(store).isEmpty());assertEquals(0,changes.subscriptionCount.value)
     }
+
+    @Test fun unknownOrFailedInitialAdmissionEndsOnceWithoutInventingSuccess(){
+        val store=UxMeasurementStore{10};store.foreground(true)
+        val unknown=store.begin(UxJourney.SEND);store.mark(unknown,UxMetric.SEND_FEEDBACK_COMMITTED)
+        store.end(unknown,UxEnd.UNKNOWN);store.end(unknown,UxEnd.UNKNOWN);store.mark(unknown,UxMetric.SEND_ADMITTED_CALLBACK)
+        val failed=store.begin(UxJourney.SEND);store.end(failed,UxEnd.FAILED);store.end(failed,UxEnd.FAILED)
+        val counts=store.snapshot()["counts"] as Map<*,*>
+        assertEquals(1L,counts["send_unknown"]);assertEquals(1L,counts["send_failed"]);assertNull(counts["send_complete"])
+        assertFalse(metrics(store).containsKey("send_admitted_callback"));assertFalse(store.active(unknown));assertFalse(store.active(failed))
+    }
 }
