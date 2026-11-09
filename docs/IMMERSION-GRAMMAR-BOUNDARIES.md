@@ -44,6 +44,15 @@ marks a word with fill instead of enclosing every word in a border. These are
 visual references, not evidence of bilingual learning effectiveness. NextComp
 uses its own existing palette and geometry; no reference assets are copied.
 
+Native large-text qualification also exposed a reserved-box conversion error:
+Compose Android 1.9.3 renders placeholder SP dimensions with linear scaling,
+whereas `Density.toSp()` uses nonlinear accessible font scaling. Applying the
+latter to already measured pixel dimensions oversized the boxes at 2x text.
+The renderer now inverts the placeholder's own linear conversion. Glyphs still
+use normal accessible font scaling, and the measured reserve stays within the
+paragraph. The existing native reading journey checks actual placeholder bounds,
+row separation and unchanged geometry across language flips at both sizes.
+
 ## Synthetic before/after
 
 | Italian | Former mechanical support | Candidate support |
