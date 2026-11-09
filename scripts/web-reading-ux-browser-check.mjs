@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';import {pathToFileURL} from 'node:url';import {mkdir,writeFile} from 'node:fs/promises';
 import {fixture} from '../tests/web-browser-fixture.mjs';
-export async function runReadingVisualCheck({context,dir,visualOnly=false,widths=[1440,390,320],fontScales=[1,2]}){
+export async function runReadingVisualCheck({context,dir,visualOnly=false,decisionOnly=false,widths=[1440,390,320],fontScales=[1,2]}){
  await mkdir(dir,{recursive:true});
  if(!Array.isArray(fontScales)||!fontScales.length||fontScales.some(f=>![1,2].includes(f)))throw Error('Select supported text scales');
  if(!Array.isArray(widths)||!widths.length||widths.some(w=>![1440,390,320].includes(w))||new Set(widths).size!==widths.length)throw Error('Select supported visual matrix widths');
- const f=await fixture();let page;const report={state:'running',syntheticOnly:true,errors:[],visualMatrix:[],limits:['Text enlargement applies computed DOM fonts, not OS accessibility settings.','Reduced viewport with focused editor is not native IME proof.','Component phrase probe is separate from real message capture.']};
+ const f=await fixture();let page;const report={state:'running',syntheticOnly:true,errors:[],httpResponses:[],visualMatrix:[],limits:['Text enlargement applies computed DOM fonts, not OS accessibility settings.','Reduced viewport with focused editor is not native IME proof.','Component phrase probe is separate from real message capture.']};
  try{
- page=await context.newPage();await page.bringToFront();await page.setViewportSize({width:1440,height:1000});page.setDefaultTimeout(8000);page.on('pageerror',e=>report.errors.push(e.message));
+ page=await context.newPage();await page.bringToFront();await page.setViewportSize({width:1440,height:1000});page.setDefaultTimeout(8000);page.on('pageerror',e=>report.errors.push(e.message));page.on('response',r=>{const u=new URL(r.url());if(u.pathname.startsWith('/api/'))report.httpResponses.push({path:u.pathname,query:u.search,status:r.status(),at:Date.now()});});
  await page.goto(f.url);await page.locator('#pair-form input[name=code]').fill('synthetic');await page.locator('#pair-form button[type=submit]').click();await page.locator('.work-card[data-id="parent-123"] .preview').click();
  await page.locator('#requests input').waitFor();assert.equal(await page.locator('#review-pane').isVisible(),true);assert.match(await page.locator('#review-toggle').innerText(),/Needs you/);assert.equal(await page.locator('#answers-filter').count(),0);
  if(visualOnly){
@@ -20,7 +20,26 @@ export async function runReadingVisualCheck({context,dir,visualOnly=false,widths
  await page.locator('#requests').getByRole('button',{name:'Wood',exact:true}).click();assert.equal(await page.locator('#requests input').inputValue(),'Wood');
  await page.locator('#requests input').focus();f.addRequest({id:'second-request',method:'item/commandExecution/requestApproval',params:{threadId:'parent-123',message:'Allow the synthetic check?'}});f.broadcast({type:'request',threadId:'parent-123'});await page.waitForSelector('[data-request-id=second-request]');assert.equal(await page.locator('#requests input').inputValue(),'Wood');assert.equal(await page.locator('#requests input').evaluate(n=>document.activeElement===n),true);
  await page.locator('#draft').fill('Synthetic unfinished draft');await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();assert.equal(await page.locator('#draft').inputValue(),'Synthetic unfinished draft');await page.locator('#review-toggle').click();
- f.failHead('parent-123');await page.locator('#requests').getByRole('button',{name:'Submit answers',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.request-status')?.textContent.includes('Decision submitted. Live status is reconnecting.'));assert.equal(await page.locator('#requests').getByRole('button',{name:'Submit answers',exact:true}).isDisabled(),true);f.broadcast({type:'request',threadId:'parent-123'});await page.waitForFunction(()=>!document.querySelector('#requests input'));assert.ok(f.writes.some(w=>w.path.includes('/api/requests/question-123/answer')&&w.body.answers.material==='Wood'));
+ // A successful background read may remove this submitted card before the
+ // browser's next animation-frame poll. Retain the actual DOM transition before
+ // clicking, rather than requiring a transient recovery notice to stay visible.
+ await page.evaluate(()=>{
+  const observations=[];const record=()=>{const card=document.querySelector('[data-request-id="question-123"]');if(!card)return;
+   observations.push({status:card.querySelector('.request-status')?.textContent,controlsDisabled:[...card.querySelectorAll('button,input')].every(n=>n.disabled)});
+  };
+  const observer=new MutationObserver(record);observer.observe(document.querySelector('#requests'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['disabled']});
+  window.__decisionObservation={observations,observer};
+ });
+ try{
+  f.failHead('parent-123');await page.locator('#requests').getByRole('button',{name:'Submit answers',exact:true}).click();
+  await page.waitForFunction(()=>window.__decisionObservation.observations.some(o=>o.status==='Decision submitted. Live status is reconnecting.'&&o.controlsDisabled));
+  report.decisionObservations=await page.evaluate(()=>window.__decisionObservation.observations);
+  f.broadcast({type:'request',threadId:'parent-123'});await page.waitForFunction(()=>!document.querySelector('#requests input'));
+  const answers=f.writes.filter(w=>w.path==='/api/requests/question-123/answer');assert.equal(answers.length,1);assert.equal(answers[0].body.answers.material,'Wood');
+  report.decisionRefresh={acceptedOnce:true,failedRefreshObservedWithDisabledControls:true,reconciled:true};
+ }finally{await page.evaluate(()=>{window.__decisionObservation?.observer.disconnect();delete window.__decisionObservation;});}
+ if(decisionOnly){report.state='passed';report.decisionOnly=true;return report;}
+
  // Saved results are actionable, and duplicate user inputs never appear there.
  f.emit({id:'saved-user',kind:'user',text:'I found two useful options. Which material should we use?'});await page.waitForFunction(()=>document.querySelectorAll('.saved-result').length===0);
  f.rows.get('parent-123').splice(f.rows.get('parent-123').findIndex(r=>r.id==='saved-user'),1);await page.reload();await page.waitForSelector('.saved-result',{state:'attached'});await page.locator('#review-toggle').click();
@@ -43,7 +62,7 @@ export async function runReadingVisualCheck({context,dir,visualOnly=false,widths
  await page.setViewportSize({width:390,height:844});if(!await page.locator('#review-pane').isVisible())await page.locator('#review-toggle').click();assert.equal(await page.locator('#review-pane').isVisible(),true);const drawer=await page.locator('#review-pane').boundingBox();assert.ok(drawer.x>=0&&drawer.width<=390);await page.screenshot({path:dir+'/mobile.png'});await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();assert.match(await page.locator('#draft').inputValue(),/Synthetic unfinished draft/);
  await captureLayoutMatrix(page,dir,report,widths,fontScales);
  report.state='passed';Object.assign(report,{pendingQuestionImmediatelyVisible:true,answerSubmittedOnce:true,acceptedAnswerSurvivesRefreshFailure:true,draftPreserved:true,userInputNotAResult:true,resultReplyNavigateDismiss:true,galleryLinkInline:true,noLayoutShiftOnFlip:true,directPhraseTap:true,mobileDrawer:true});assert.deepEqual(report.errors,[]);
-}catch(error){report.state='failed';report.failure=error.message;throw error;}finally{await page?.close();await f.close();report.ownedFixturesStopped=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
+}catch(error){report.state='failed';report.failure=error.message;report.fixtureWrites=f.writes;report.fixtureReads=f.reads;report.failureDom=await page?.evaluate(()=>({statuses:[...document.querySelectorAll('.request-status')].map(n=>n.textContent),requests:document.querySelector('#requests')?.textContent,error:document.querySelector('#error')?.textContent})).catch(()=>null);throw error;}finally{await page?.close();await f.close();report.ownedFixturesStopped=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
  return report;
 }
 async function captureLayoutMatrix(page,dir,report,widths,fontScales){
