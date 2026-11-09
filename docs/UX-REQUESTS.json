@@ -4010,7 +4010,7 @@
   "queued_message_promotion_20261109": {
     "requirement": "Promote an already queued message into a steer directly from its visible card, on Android and web.",
     "behavior": "Steer now for active work; Send now for confirmed idle work. Retain the original outgoing identity, text, environment and receipt. Do not delete/recreate the message, replay unknown delivery, resume unrelated held messages, or send twice on repeated taps. Keep drafts and keyboard intact.",
-    "status": "Implementation in candidate184; existing send action audited, direct card affordance and source-bound ACK handling in progress.",
-    "verification": "Real HTTP/native delivery race coverage plus composed browser and native queue interaction; original accepted/unknown receipts retained."
+    "status": "Delivered184: Android published to both channels; web and both backends live. Physical-phone installation unverified.",
+    "verification": "27 focused real HTTP/native-socket checks, composed DOM/browser queue interactions,20 native journeys and exact optimized release review passed. Native queue test verifies direct promotion, repeated tap protection, same original identity, draft/IME retention and source-bound late ACK. See qualification/queued-steering-apps-184.json."
   }
 }
