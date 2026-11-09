@@ -431,18 +431,34 @@ async function attach(threadId,{before=null,recent=false}={}){
 }
 const isActive=t=>t.status?.type==='active';
 const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};
+// Only an explicit queue promotion requests a wake after the current thread drain.
+const promotedOutgoing=new Map();
 async function sendOutgoing(row,initialThread=null){
   try{conversationTools.assertInputAllowed(row.thread_id);}catch{return;}
   const threadId=row.thread_id,id=row.id;
-  if(syncing.has(threadId))return;
+  if(syncing.has(threadId)){
+    if(row.promoted&&(promotedOutgoing.has(threadId)||promotedOutgoing.size<64)){let ids=promotedOutgoing.get(threadId);if(!ids)promotedOutgoing.set(threadId,ids=new Set());if(ids.size<64)ids.add(id);}
+    // Overflow remains durable queued work for the existing flush, never a new timer.
+    return;
+  }
   syncing.add(threadId);
   try{
+    row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+    if(!row||row.state!=='queued')return;
     let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
     if(row.mode==='queue'&&db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(threadId,id))return;
-    const t=initialThread||(row.mode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await attach(threadId));requireDirectSessionInput(t);
+    const attachedMode=row.mode;
+    let t=initialThread||(attachedMode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await attach(threadId,{recent:attachedMode==='steer'}));requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
     // Re-read after attachment: the user may have edited or removed the waiting message.
     row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
     if(!row||row.state!=='queued')return;
+    // A queued metadata read has no active-turn identity. Promotion during that
+    // await requires a bounded current-turn read, then another edit/remove check.
+    if(attachedMode==='queue'&&row.mode==='steer'){
+      t=await attach(threadId,{recent:true});requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+      row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+      if(!row||row.state!=='queued')return;
+    }
     if(row.mode==='queue'){
       if(t.status?.type!=='idle')return;
       const earlier=db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(row.thread_id,row.id);
@@ -454,13 +470,20 @@ async function sendOutgoing(row,initialThread=null){
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
+      const steerTransport=codex.transport;
       try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,clientUserMessageId:row.id,input});}
       catch(e){
         // Retry only when Codex explicitly reports that the turn has finished.
-        if(e.rpc && /no active turn|no turn in progress/i.test(e.message))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});else throw e;
+        if(e.rpc && /no active turn|no turn in progress/i.test(e.message)){
+          const fresh=(await codex.call('thread/read',{threadId:t.id,includeTurns:false})).thread;
+          if(codex.transport!==steerTransport||fresh?.id!==t.id||fresh.status?.type!=='idle')throw e;
+          requireDirectSessionInput(fresh);
+          result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+        }else throw e;
       }
     }else if(isActive(t))throw new Error('The active turn is not ready for replies. Try again shortly.');
-    else result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+    else if(t.status?.type==='idle')result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+    else throw new Error('The conversation is not confirmed idle. Refresh before sending this message.');
     db.prepare("UPDATE outgoing SET state='accepted',result=?,updated_at=? WHERE id=?").run(JSON.stringify(result),now(),row.id);
     resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
     emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
@@ -471,7 +494,11 @@ async function sendOutgoing(row,initialThread=null){
     // that cancelled row, or overwrite a later accepted outcome.
     const changed=db.prepare("UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=? AND state IN ('queued','sending')").run(state,e.message,now(),id);
     if(changed.changes)emit('reply',{id,threadId,state,error:e.message});
-  }finally{syncing.delete(threadId);}
+  }finally{
+    syncing.delete(threadId);
+    const ids=promotedOutgoing.get(threadId),next=ids?.values().next().value;
+    if(next){ids.delete(next);if(!ids.size)promotedOutgoing.delete(threadId);void sendOutgoing({id:next,thread_id:threadId,promoted:true});}
+  }
 }
 async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY rowid").all())await sendOutgoing(row);}
 db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during delivery; check the conversation before resending.' WHERE state='sending'").run();
@@ -899,10 +926,10 @@ app.post('/api/threads/:id/replies/:replyId',route(async(req,res)=>{
   const threadId=requireId(req.params.id),id=req.params.replyId;
   const outcome=admissionTransaction(db,()=>{const value=recoverReply(db,threadId,id,req.body,now());if(!value.error)humanIngress.action('reply',id,req.body.action,req.humanPrincipal);return value;});
   if(outcome.error)return res.status(outcome.status).json({error:outcome.error});
-  emit('reply',{threadId,id,state:outcome.state});res.json({id,state:outcome.state,...outgoingProjection.fields(threadId)});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId});
+  emit('reply',{threadId,id,state:outcome.state});res.json({id,state:outcome.state,mode:outcome.mode,...outgoingProjection.fields(threadId)});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId,promoted:req.body.action==='send'});
 }));
 app.get('/api/replies/:id',(req,res)=>{
-  const row=db.prepare('SELECT id,thread_id,state,result FROM outgoing WHERE id=?').get(req.params.id);
+  const row=db.prepare('SELECT id,thread_id,mode,state,result FROM outgoing WHERE id=?').get(req.params.id);
   if(!row)return res.status(404).json({error:'Reply not found.'});
   res.json({...row,...outgoingProjection.fields(row.thread_id)});
 });
