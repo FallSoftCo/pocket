@@ -4,7 +4,7 @@ The November 9 review starts from Android 180 and the same backend/web release.
 The owner reports installing that build; a read-only package-manager check also
 reports version 180. That proves installation, not visual or performance quality.
 
-## What is measured today
+## Baseline before 181
 
 Android's explicit **Report a slowdown** action records at most 15 foreground
 seconds of frame durations, input/layout/draw breakdowns, main-queue delay and
@@ -59,3 +59,18 @@ boundaries. Preserve the original failures and complete the affected native and
 optimized release checks once the integrated source is stable. The existing
 180 delivery remains available throughout. No new release number or successful
 delivery is claimed by this plan.
+
+## November 9 result
+
+Android 181 is qualified and published on both paired channels. Bounded local
+measurements now distinguish cached content, fresh content and initial send
+outcomes; see [the measurement contract](UX-MEASUREMENTS.md). Native footer
+images are now release-bound evidence, and the card shape mismatch is fixed.
+The integrated browser journey also exposed and fixed enlarged-text footer
+overflow. A separate catalog-title density problem remains under review.
+
+All 19 required native journeys and exact optimized-artifact review passed.
+These are software-emulator results, not handset frame-pacing measurements.
+The backend/web closure remains staged pending quiet clients; do not describe
+its OAuth controls or web instrumentation as active before cutover. The team
+is continuing guarded MCP parity and visual review at medium effort.
