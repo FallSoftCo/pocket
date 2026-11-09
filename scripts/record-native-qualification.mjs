@@ -177,7 +177,7 @@ try{
  if(name===footerVisualCase){
   const matrixText=run(['exec-out','run-as','co.fallsoft.pocket','cat','files/footer-paging-matrix.json']);
   const matrix=JSON.parse(matrixText),rows=footerMatrixScenarios(matrix,receipt.qaRunId);
-  const path='native-'+id+'-footer-matrix.json';writeFileSync(join(directory,path),matrixText,{flag:'wx',mode:0o600});
+  const path='visual-'+id+'-footer-matrix.json';writeFileSync(join(directory,path),matrixText,{flag:'wx',mode:0o600});
   receipt.visualMatrix={schema:1,path,sha256:fileSha(join(directory,path)),artifacts:[]};persist();
   for(const row of rows){
    // Only names validated against the exact expected scenario set reach adb.
