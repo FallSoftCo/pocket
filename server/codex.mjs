@@ -89,7 +89,7 @@ export class Codex extends EventEmitter {
   // Native globally serializes these writes: retain at most one original reply.
   operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation);}
   callOperation(method,params,onOutcome){
-    if(!['plugin/install','plugin/uninstall','mcpServer/oauth/login'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
+    if(!['plugin/install','plugin/uninstall','mcpServer/oauth/login','config/mcpServer/reload'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
     return this.callPending(method,params,onOutcome);
   }
   call(method,params={}){return this.callPending(method,params);}

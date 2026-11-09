@@ -29,6 +29,7 @@ import org.json.JSONObject
     var notice by remember{mutableStateOf("")}
     var changing by remember{mutableStateOf<String?>(null)}
     var uncertain by remember{mutableStateOf(false)}
+    var mcpReloadOpen by remember{mutableStateOf(false)}
     var mcpAuthName by remember{mutableStateOf<String?>(null)}
     var pluginKey by remember{mutableStateOf<String?>(null)}
     var pluginView by remember{mutableStateOf("installed")}
@@ -45,6 +46,7 @@ import org.json.JSONObject
         check(current()){ "The selected environment changed." }
         return response
     }
+    if(mcpReloadOpen){NativeMcpReloadDialog(destination,threadId){mcpReloadOpen=false;revision++};return}
     mcpAuthName?.let{name->NativeMcpAuthDialog(destination,threadId,name){mcpAuthName=null;revision++};return}
     pluginKey?.let{key->NativePluginDialog(destination,threadId,key){pluginKey=null;pluginCursor=null;pluginRefresh=true;revision++};return}
     LaunchedEffect(section,revision,pluginView,pluginQuery,pluginCursor){
@@ -74,6 +76,7 @@ import org.json.JSONObject
                     data.optJSONObject("settings")?.let{settings->settings.keys().forEach{key->WorkflowText("${key.replace('_',' ')}: ${settings.opt(key)}",fontSize=13.sp)}}
                     data.optJSONObject("features")?.let{features->features.keys().forEach{key->val feature=features.optJSONObject(key);WorkflowText("$key: ${feature?.s("state")} · ${feature?.s("reason")}",fontSize=11.sp,color=Muted)}}
                 }else{
+                    if(section=="mcp"&&data.optBoolean("canReviewReload"))OutlinedButton({if(current())mcpReloadOpen=true},enabled=current()&&!loading&&changing==null){BilingualLabel("Review host MCP reload")}
                     val parent=data.s("parentThreadId").ifBlank{data.s("rootThreadId")}
                     if(parent.isNotBlank()&&parent!=threadId)TextButton({if(current()){onDismiss();Pocket.open(parent)}}){BilingualLabel("Open parent task")}
                     if(section=="plugins"){
@@ -137,7 +140,7 @@ import org.json.JSONObject
             if(data.s("nextCursor").isNotBlank())TextButton({if(current())pluginCursor=data.s("nextCursor")},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Next plugin page",maxLines=2)}
         }}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
-            TextButton({if(section=="plugins"){pluginCursor=null;pluginRefresh=true};revision++},enabled=current()&&!loading&&changing==null){BilingualLabel("Reload")}
+            TextButton({if(section=="plugins"){pluginCursor=null;pluginRefresh=true};revision++},enabled=current()&&!loading&&changing==null){BilingualLabel(if(section=="mcp")"Refresh MCP status" else "Reload")}
             TextButton(onDismiss){BilingualLabel("Close")}
         }
     }})
