@@ -4006,5 +4006,11 @@
     "design": "Quiet inline highlights at rest; emphasis only on interaction/keyboard focus. Preserve grammatical groups, stable measured geometry, 0%/nearest 50% Italian phases, text contrast, links and original tap behavior. No animation or inference changes.",
     "status": "delivered183: Android published both channels; web live; physical-phone installation unverified",
     "evidence": "Configured Mobbin MCP and six reference screens inspected. Browser light/dark narrow/wide normal/2x phases and links passed. Both Android unit variants/lints and19native journeys passed; actual final reading/footer/optimized screenshots reviewed. Native keyboard focus pixels observed in same-source preview only; final focused capture gap retained without a visual pass claim. See qualification/immersion-reading-183.json."
+  },
+  "queued_message_promotion_20261109": {
+    "requirement": "Promote an already queued message into a steer directly from its visible card, on Android and web.",
+    "behavior": "Steer now for active work; Send now for confirmed idle work. Retain the original outgoing identity, text, environment and receipt. Do not delete/recreate the message, replay unknown delivery, resume unrelated held messages, or send twice on repeated taps. Keep drafts and keyboard intact.",
+    "status": "Implementation in candidate184; existing send action audited, direct card affordance and source-bound ACK handling in progress.",
+    "verification": "Real HTTP/native delivery race coverage plus composed browser and native queue interaction; original accepted/unknown receipts retained."
   }
 }
