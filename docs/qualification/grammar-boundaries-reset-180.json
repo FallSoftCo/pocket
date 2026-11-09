@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "release": {
+    "versionCode": 180,
+    "versionName": "0.5.0-alpha.162",
+    "productionCommit": "7a4a9bc25bb66149b2ffe4e16b00173ce59ecd28",
+    "backendDigest": "87f364c88b24955766e7cdd4beebbc2c9d61afa01837b5bae08f706790bc070a",
+    "androidChannels": "both paired channels published",
+    "backendAndWeb": "live on both paired hosts",
+    "nativeProcessesRestarted": false,
+    "pairingQueuesAndUnknownReceipts": "preserved",
+    "ownerAnnouncements": 1,
+    "fcm": "accepted attempt1",
+    "phoneInstall": "not performed; last verified installed179"
+  },
+  "immersion": {
+    "changes": [
+      "Ordinary multiword glosses retain spaces",
+      "Validated adjacent postnominal modifier and preverbal clitic links mark useful foreign dependencies",
+      "Leading cached contraction-prefix repair retains ambiguous old glosses and genuine compounds",
+      "Android/web measured padding,small rounding,thin outline and subtle fill; instant0/50phase contract unchanged"
+    ],
+    "focusedChecks": 44,
+    "browser": "Actual Chromium, narrow/wide light/dark, fixed geometry over four phases and both-form reveal",
+    "teacher": {
+      "batches": 1,
+      "elapsedSeconds": 22.67,
+      "reportedTokens": 17015,
+      "tools": 0,
+      "structuralAccepted": 5,
+      "retainedError": "Mixed-gender coordinated subject received pronte rather than pronti",
+      "unexercised": "Explicit preverbal clitic link; output selected valid enclitic instead"
+    }
+  },
+  "reset": {
+    "state": "live on existing single minute scheduler",
+    "thresholdUsedPercent": 99,
+    "liveRedemptionPerformed": false,
+    "metadataOnlyBelowThreshold": true,
+    "originalOneoffReceipt": "unchanged",
+    "focusedTests": 9,
+    "coverage": [
+      "durable restart/lost acknowledgement",
+      "exact benefit and UUID persisted before dispatch",
+      "account/cap guards",
+      "state save failure",
+      "stale-high post-reset observation",
+      "unchanged negative outcomes do not drain old inventory"
+    ],
+    "limits": [
+      "Minute scheduler observes threshold; not instantaneous provider-event trigger",
+      "Actual threshold-time live redemption unexercised",
+      "Provider consume lacks atomic account-ID precondition; fresh same-account metadata checked"
+    ]
+  },
+  "verification": {
+    "backend": {
+      "total": 762,
+      "passed": 760,
+      "skipped": 2,
+      "failed": 0
+    },
+    "composedDom": "5 groups passed on fresh evidence directory; original EEXIST preflight retained",
+    "androidUnitEachVariant": {
+      "total": 479,
+      "skipped": 2,
+      "failed": 0
+    },
+    "lints": "both passed",
+    "requiredNativeCases": 18,
+    "optimizedApkSha256": "64d4b29b5e9ac294447a2f1fdce6da1402a8219f97c7375a82183b6d0e426e96",
+    "optimized": [
+      "catalog screenshot bracketed by matching semantics/bounds and visually reviewed",
+      "canonical original pair order and reopen exactly once",
+      "question skip once",
+      "no work submissions"
+    ],
+    "ci": "reset and immersion PR checks passed"
+  },
+  "limits": [
+    "No new physical handset rendering/audio/performance proof",
+    "Older grouped caches lost lexical roles; no speculative relinking or bulk regeneration",
+    "Original emulator System UI ANR blocked first admission before app test interaction; separate identical-build successor passed",
+    "Gallery images/metadata staged; index publication remains blocked on existing storage metadata requests"
+  ]
+}

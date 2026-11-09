@@ -8,7 +8,7 @@ export function phraseSlots(pair,phase,render,{interactive=true}={}){
   const fragment=document.createDocumentFragment();let at=0;
   for(const match of text.data.matchAll(/\uE000(\d+)\uE001/gu)){
    fragment.append(document.createTextNode(text.data.slice(at,match.index)));at=match.index+match[0].length;
-   const index=Number(match[1]),unit=pair.slots[index],box=document.createElement('span'),canInteract=interactive&&!text.parentElement?.closest('a,button,summary,label');box.className='immersion-phrase';if(canInteract){box.tabIndex=0;box.setAttribute('role','button');box.title='Switch this phrase';}else box.classList.add('phrase-label');
+   const index=Number(match[1]),unit=pair.slots[index],box=document.createElement('span'),canInteract=interactive&&unit.target!==unit.meaning&&!text.parentElement?.closest('a,button,summary,label');box.className='immersion-phrase';if(canInteract){box.tabIndex=0;box.setAttribute('role','button');box.title='Switch this phrase';}else box.classList.add('phrase-label');
    const forms=['en','it'].map(language=>{const span=document.createElement('span');span.className='phrase-form';span.lang=language;span.textContent=language==='it'?unit.target:unit.meaning;box.append(span);return span;});
    let manual=null;
    const show=language=>{box.dataset.language=language;for(const span of forms){const visible=span.lang===language;span.style.visibility=visible?'visible':'hidden';span.setAttribute('aria-hidden',String(!visible));}box.setAttribute('aria-label',(language==='it'?unit.target:unit.meaning)+' · Switch language');};

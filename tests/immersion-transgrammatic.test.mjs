@@ -31,7 +31,7 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
   assert.equal(result.planVersion,TRANSGRAMMATIC_VERSION);assert.equal(result.text,target);
   assert.equal(result.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'The your connection is available');
   const instructions=codex.calls.find(c=>c.method==='thread/start').args.developerInstructions;
-  assert.match(instructions,/Translate ALL eligible prose/);assert.match(instructions,/small grammatical flip groups/);assert.match(instructions,/The recordings saved are ready/);assert.doesNotMatch(instructions,/containing only its complete lexical words/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
+  assert.match(instructions,/Translate ALL eligible prose/);assert.match(instructions,/small grammatical flip groups/);assert.match(instructions,/The recordings-saved are ready/);assert.doesNotMatch(instructions,/containing only its complete lexical words/);assert.doesNotMatch(instructions,/Partial mixed-language grammar is explicitly acceptable/);
   worker.submit('device-a',[{id:'second-surface',text:source}]);await worker.flush();
   assert.equal(codex.calls.filter(c=>c.method==='turn/start').length,1);
   assert.equal(saved.get('device-a').translations.length,2);assert.equal(worker.snapshot('other-device').translations.length,0);
@@ -138,7 +138,7 @@ test('phrase-owned scaffold links expansions once and rejects overlapping Italia
  assert.equal(validateTransgrammaticPlan(text,prepared.decode(discontinuous).translations[0]),null);
  const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
  const validated=validateTransgrammaticPlan(text,row);assert.ok(validated);
- assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am-going to-the station');
+ assert.equal(validated.spans[0].targetSegments.map(x=>x.meaning||x.target).join(''),'Am going to the station');
  const bad=structuredClone(row);bad.spans[0].targetSegments.push({...bad.spans[0].targetSegments[1]});
  assert.equal(validateTransgrammaticPlan(text,bad),null);
 });
@@ -158,7 +158,7 @@ test('source-owned sentence punctuation is emitted once for captured teacher phr
   const row=prepared.decode(result).translations[0];row.text=transgrammaticContract.derive(text,row);
   const valid=validateTransgrammaticPlan(text,row);assert.ok(valid);
   assert.equal(valid.text,'Mi sto occupando delle impostazioni dell’account.');
-  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am-taking-care of-the settings of-the-account');
+  assert.equal(valid.spans[0].targetSegments.map(s=>s.meaning||s.target).join(''),'myself am taking care of the settings of the account');
  }
 });
 
@@ -176,7 +176,7 @@ test('phrase plan survives contextual worker decoding without word splitting or 
  const validated=validateTransgrammaticPlan(original,decoded);assert.ok(validated);
  assert.equal(validated.planVersion,TRANSGRAMMATIC_VERSION);
  const phrases=validated.spans[0].targetSegments.filter(s=>s.meaning);
- assert.deepEqual(phrases.map(s=>s.meaning),['Can-you open','the-latest message','in this conversation']);
+ assert.deepEqual(phrases.map(s=>s.meaning),['Can-you open','the latest message','in this conversation']);
  assert.deepEqual(phrases.map(s=>s.target),['Puoi aprire','l’ultimo messaggio','in questa conversazione']);
  assert.match(prepared.input.instruction,/noun phrases/);
  assert.equal(validated.text,target+'?');
@@ -248,4 +248,48 @@ test('authored control catalog has disjoint English lexical meanings',async()=>{
  const {readFileSync}=await import('node:fs');const {introducedEnglishRepetition}=await import('../server/immersion-quality.mjs');
  const rows=JSON.parse(readFileSync(new URL('../web/interface-grammar.json',import.meta.url)));
  for(const [source,parts]of Object.entries(rows))assert.equal(introducedEnglishRepetition(source,parts.map(p=>p.target).join(''),parts.map(p=>p.meaning||p.target).join('')),false,source);
+});
+
+
+test('useful Italian dependency links differ from ordinary lexical expansions and flip groups',()=>{
+ const word=(target,meaning,role,linkPrevious='none',group=0)=>({target,meaning,role,linkPrevious,group,occurrence:0});
+ const examples=[
+  ['Le registrazioni salvate',[word('Le','The','function'),word('registrazioni','recordings','noun'),word('salvate','saved','adjective','postnominal')],'The recordings-saved'],
+  ['le ultime modifiche',[word('le','the','function'),word('ultime','latest','adjective'),word('modifiche','changes','noun')],'the latest changes'],
+  ['alla stazione',[word('alla','to the','function'),word('stazione','station','noun')],'to the station'],
+  ['La tua musica',[word('La','The','function'),word('tua','your','adjective'),word('musica','music','noun')],'The your music'],
+  ['Lo puoi inviare',[word('Lo','It','clitic'),word('puoi','you can','auxiliary','cliticPredicate'),word('inviare','send','verb')],'It-you can send'],
+  ['Non ho ancora finito',[word('Non','Not','function'),word('ho','I have','auxiliary'),word('ancora','yet','other'),word('finito','finished','verb')],'Not I have yet finished']
+ ];
+ for(const [target,words,expected]of examples){const groups=grammaticalTargetSegments(target,words);assert.equal(groups.length,1);assert.equal(groups[0].target,target);assert.equal(groups[0].meaning,expected);}
+ const transparent=[word('il','the','function'),word('file','file','noun','postnominal')];
+ assert.equal(grammaticalTargetSegments('il file',transparent),null);
+ const link=[word('file','file','noun'),word('nuovo','new','adjective','postnominal')];
+ assert.equal(grammaticalTargetSegments('file, nuovo',link),null);
+ assert.equal(grammaticalTargetSegments('file nuovo',link.map((v,i)=>({...v,group:i}))),null);
+ assert.equal(grammaticalTargetSegments('file nuovo',link.map((v,i)=>i?{...v,linkPrevious:'invented'}:v)),null);
+});
+
+
+test('cached transparent contraction repairs preserve genuine compounds and uncertain links without inference',async()=>{
+ const {readableCachedGloss,upgradeTransgrammaticCache}=await import('../server/immersion-transgrammatic.mjs');
+ for(const [target,before,after]of [
+  ['alla stazione','to-the station','to the station'],
+  ['dell’account','of-the-account','of the account'],
+  ['l’ultimo messaggio','the-latest message','the latest message'],
+  ['l’accesso in sola lettura','the-read-only access','the read-only access'],
+  ['Le registrazioni salvate','The recordings-saved','The recordings-saved'],
+  ['Non ho finito','Not I-have finished','Not I-have finished'],
+  ['un accesso in sola lettura','a read-only access','a read-only access'],
+  ['alla stazione','towards-the station','towards-the station'],
+  ['allarme','to-the alarm','to-the alarm'],
+  ['modello della sessione','of-the session model','of-the session model'],
+  ['dell’account','of-theory account','of-theory account'],
+  ['dell’account','of the account','of the account']
+ ])assert.equal(readableCachedGloss(target,before),after);
+ const original='To the station';const raw={version:immersionHash(original),spans:[{source:original,occurrence:0,target:'Alla stazione',targetSegments:[{target:'Alla stazione',occurrence:0,meaning:'To-the station',role:'other',features:[],relations:[]}]}]};raw.text=transgrammaticContract.derive(original,raw);
+ const stored={...validateTransgrammaticPlan(original,raw),id:'cached',density:'strong'};
+ const migrated=upgradeTransgrammaticCache(stored);assert.equal(migrated.spans[0].targetSegments[0].meaning,'To the station');assert.equal(stored.spans[0].targetSegments[0].meaning,'To-the station');assert.strictEqual(upgradeTransgrammaticCache(migrated),migrated);
+ const worker=new ImmersionWorker({codex:new EventEmitter(),cwd:'/owned-qa',contract:transgrammaticContract,load:()=>({enabled:true,density:'strong',translations:[stored]}),delay:100000});
+ try{worker.translate=async()=>{throw Error('No regeneration allowed');};worker.submit('device',[{id:'cached',text:original}]);await worker.flush();assert.equal(worker.snapshot('device').translations[0].spans[0].targetSegments[0].meaning,'To the station');assert.equal(worker.snapshot('device').jobs.length,0);}finally{worker.close();}
 });
