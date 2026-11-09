@@ -8,6 +8,8 @@ The [current supported snapshot](CAPABILITIES.md#current-supported-snapshot--202
 
 The current controls include native session branching/context actions, configuration and installed-tool inspection, supported questions/approvals, retained command output and background terminals where the selected runtime supports them. The qualified Mac ARM64 0.163 runtime exposes read-only catalogs, terminal listing and retained command-output reads. Live backend 182 checks returned a 592-character output and an explicit unavailable response for a command without retained output; they made no model calls or mutations. Configuration changes and terminal termination remain unavailable on that runtime. [Capabilities and limits](CAPABILITIES.md) are method-specific; this is not a claim of complete Codex TUI parity.
 
+[185 Needs you update](qualification/needs-you-185.json) replaces the permanent Work updates feed with a filter on the original session list, and fixes a native preview/catalog feedback read found in qualification. Android is published on both channels, with web and both backends live; phone installation is separately unverified. [184 queued steering and Apps](qualification/queued-steering-apps-184.json) remains included.
+
 ## Understand and evaluate
 
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.

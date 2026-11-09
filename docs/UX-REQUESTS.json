@@ -4018,6 +4018,7 @@
     "design": "Needs you filters the existing source-bound session catalog; original session cards show current request/delivery reason. Count sessions, expose affected delegated children, retain ordinary list position/query, return to all sessions after resolution. No separate report feed, automatic resume/retry or model polling. Routine progress/results remain in conversations/cards.",
     "evidenceContract": "Additive per-session attention v1 from current native pending requests, original failed/unknown delivery records, valid explicit input requests and verified runtime systemError. Missing/stale data is not all-clear; idle/interrupted work is not inferred broken.",
     "preservation": "Retain stored reports, preferences, notification deep-link reader and source/delivery identities. Remove report-entry polling; questions and safe original delivery actions stay in conversation.",
-    "status": "Candidate185 implementation and integrated qualification in progress."
+    "status": "Delivered185: both Android channels published, web and both backends live; phone installation unverified.",
+    "verification": "Real HTTP/native socket projection, browser DOM and narrow/wide rendered journeys,20 native journeys and exact optimized APK review passed. Qualification caught and fixed a native-preview/catalog feedback read using forced overlap. No worker submission or original uncertain delivery replay. See qualification/needs-you-185.json."
   }
 }

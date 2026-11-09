@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "versionCode": 185,
+  "versionName": "0.5.0-alpha.167",
+  "state": "published-android-both-channels-web-and-backends-live",
+  "changes": [
+    "Needs you filters original source-bound session cards instead of opening a second Work updates feed",
+    "Current questions, approvals, failed or uncertain outgoing messages, explicit input requests and runtime errors carry concise reasons in existing previews",
+    "Session counts deduplicate reasons, retain affected delegated children and restore the ordinary list/query/position",
+    "Current pending evidence uses the existing catalog; no new model calls, worker activation, endpoint or polling timer",
+    "Stored reports and settings remain, with Android compatibility handling for old report notification links",
+    "Native catalog invalidation consumes remote preview evidence rather than its own newly rendered preview, preventing a redundant history read when catalog and history completion overlap"
+  ],
+  "evidence": {
+    "backend": {
+      "passed": 785,
+      "skipped": 2,
+      "failed": 0
+    },
+    "catalogIntegration": {
+      "passed": true,
+      "transport": "real HTTP and native socket fixture",
+      "workerMutations": 0
+    },
+    "web": {
+      "requiredDomLanes": 7,
+      "renderedWidths": [
+        390,
+        1100
+      ],
+      "visualReview": "passed after correcting preview overlap and narrow-screen review pane",
+      "sameNativeIdDifferentSources": true,
+      "unknownDeliveryNotResubmitted": true,
+      "returnsPreviousListPosition": true
+    },
+    "deployment": {
+      "runtimeDigest": "e9e1a20bc6f10c71c9238fb2c40b596329ccf1ade74ddbe4ca955fa9459a092e",
+      "sourceCommit": "83525193c5600e166b5baa7b8e55968682718b1f",
+      "backends": [
+        "system76",
+        "macbook-pro"
+      ],
+      "webAssets": "both entry points byte-match immutable source",
+      "nativeProcesses": "unchanged",
+      "pairingQueueUnknown": "preserved",
+      "phoneInstalled": "unverified",
+      "androidVersion": 185,
+      "androidVersionName": "0.5.0-alpha.167",
+      "androidChannels": [
+        "system76",
+        "macbook-pro"
+      ],
+      "qualifiedClientSource": "a06bd1fcf409073eb81bb6c93ecd66a4ddbfa5d8",
+      "updateAnnouncement": "One workstation announcement; no Mac duplicate"
+    },
+    "android": {
+      "needsYouAndQueuedSteeringJourney": "passed native emulator with original identity and no resubmission",
+      "unitTestsPerVariant": 485,
+      "unitSkippedPerVariant": 2,
+      "debugReleaseLint": "passed",
+      "fullNativeLane": "R03 all20 current-source journeys passed",
+      "optimized": "Exact compatible optimized APK passed; pair order, single original pair after reopen, one question skip, catalog and conversation captures inspected.",
+      "catalogHistoryOverlap": "Explicit source-held catalog spans native preview publication; original refusal plus one repair, no feedback read; zero work submissions.",
+      "nativeJourneys": 20,
+      "failed": 0
+    }
+  },
+  "limits": [
+    "Counts cover loaded catalog sessions; unavailable or stale evidence is not all-clear.",
+    "Idle, deliberate interruption and silence do not establish a failure. Unexpected stops without explicit evidence remain unclassified.",
+    "Synthetic UI/socket tests do not establish actual provider execution or physical phone interaction.",
+    "Original uncertain sends require reconciliation and are never automatically replayed."
+  ],
+  "retainedFailure": "Initial browser rendering exposed overlapping reason/preview rows and a retained question drawer covering the narrow catalog; corrected and re-inspected at both widths.",
+  "retainedNativeFailure": "R01 sequential fixture rewound outbox revision after resolving Needs you; production correctly rejected the stale snapshot. R02 preserves monotonic source revisions and the full original queue journey passed. The R01 and R02 product APKs were byte-identical. R03 includes the product correction described next. R02 later caught a redundant background history read: native preview publication during a catalog read fed back into invalidation evidence. R03 separates the remote hint and deliberately overlaps both reads in the existing native lifecycle test; the controlled overlap passed with one original refusal and exactly one repair, without extra work submissions.",
+  "apk": {
+    "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf": {
+      "sha256": "375fdd7b48ea7fbbe184c120f9b41f44122fa891c3e8aa5b3af3cfb541c77bdc",
+      "bytes": 52698047
+    },
+    "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31": {
+      "sha256": "4d3e11c24430a0eab76de8add8ad41638b819e8291a0c430798c7dfdcc185a05",
+      "bytes": 52698047
+    }
+  }
+}
