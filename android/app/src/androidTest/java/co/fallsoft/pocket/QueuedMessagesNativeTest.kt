@@ -23,31 +23,60 @@ class QueuedMessagesNativeTest {
  private fun main(action:()->Unit)=i.runOnMainSync(action)
  private fun await(condition:()->Boolean){compose.waitUntil(15000,condition);compose.waitForIdle()}
  @Test fun queuedMessagesStayVisibleAndRemoveWithoutHistory(){
-  val args=InstrumentationRegistry.getArguments()
-  org.junit.Assume.assumeTrue("Requires real isolated queue backend",args.getString("pairedToken")!=null)
-  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
-  val tid="11111111-1111-4111-8111-111111111111"
-  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
-  device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
+  requireOwnedNativeTarget(device)
+  val tid="same-thread"
   val prefs=c.getSharedPreferences("pocket",Context.MODE_PRIVATE)
   prefs.edit().clear().putString("server","http://127.0.0.1:18880")
-   .putString("token",args.getString("pairedToken")).putString("deviceId",args.getString("pairedDevice")).commit()
-  main{Pocket.init(c);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.refresh()}
-  await{Pocket.connected&&Pocket.tasks.any{it.id==tid}}
-  compose.onNodeWithContentDescription("Open Chat for Queued message study",useUnmergedTree=true).performClick()
-  await{Pocket.selected==tid&&Pocket.detail?.optJSONArray("outgoing")?.length()==3}
-  compose.waitUntil(10000){compose.onAllNodesWithTag("outgoing-queued-ui-3").fetchSemanticsNodes().any{!it.boundsInRoot.isEmpty}}
-  compose.onNodeWithTag("outgoing-queued-ui-3").assertIsDisplayed()
-  compose.onNodeWithText("Third queued request",useUnmergedTree=true).assertIsDisplayed()
-  compose.onNodeWithText("Keyboard").performClick()
-  compose.onNode(hasSetTextAction()).performTextReplacement("Keep my unsent draft")
-  val started=android.os.SystemClock.elapsedRealtime()
-  compose.onNode(hasText("Remove") and hasAnyAncestor(hasTestTag("outgoing-queued-ui-3"))).performClick()
-  await{Pocket.detail?.optJSONArray("outgoing")?.length()==2}
-  compose.onNodeWithTag("outgoing-queued-ui-3").assertDoesNotExist()
-  assertEquals("Keep my unsent draft",compose.onNode(hasSetTextAction()).fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
-  assertEquals("Keep my unsent draft",prefs.getString(Pocket.key("draft:$tid"),null))
-  java.io.File(c.cacheDir,"queued-message-native.json").writeText(org.json.JSONObject().put("visiblePendingRows",3).put("afterRemove",2).put("removeMs",android.os.SystemClock.elapsedRealtime()-started).put("draftPreserved",true).toString())
-  device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native.png"))
+   .putString("token","synthetic-system76-queue").putString("deviceId","synthetic-device-a").commit()
+  main{Pocket.init(c);PocketImmersion.setEnabled(false)}
+  val destination=requireNotNull(Pocket.captureEnvironment())
+  fun qa(action:String)=kotlinx.coroutines.runBlocking{Pocket.apiEnvironment(destination,"/_qa/$action",org.json.JSONObject())}
+  assertTrue("Owned queue fixture setup missing",qa("queue-setup").optBoolean("ok"))
+  try{
+   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open(tid)}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==3}
+   fun row(id:String)=compose.onNodeWithTag("outgoing-$id")
+   fun action(id:String,label:String)=compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("outgoing-$id")))
+   row("queue-promote").assertIsDisplayed()
+   compose.onNodeWithText("Original queued steering text",useUnmergedTree=true).assertIsDisplayed()
+   action("queue-promote","Steer now").assertIsEnabled()
+   compose.onNodeWithText("Keyboard").performClick()
+   val editor=compose.onNode(hasSetTextAction())
+   editor.performClick();editor.performTextReplacement("Keep my unsent draft")
+   await{i.uiAutomation.windows.any{it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD}}
+   action("queue-remove","Remove").performScrollTo().performClick()
+   await{Pocket.detail?.optJSONArray("outgoing")?.length()==2}
+   row("queue-remove").assertDoesNotExist()
+   assertEquals("Keep my unsent draft",prefs.getString(Pocket.key("draft:$tid"),null))
+   val promote=action("queue-promote","Steer now");promote.performScrollTo();promote.assertIsEnabled()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native-before.png")))
+   // Inject two actual touches through the node coordinate transform; root
+   // coordinates are not screen coordinates when system bars inset the app.
+   promote.performTouchInput{doubleClick()}
+   await{qa("queue-state").optJSONArray("calls")?.length()==2}
+   compose.onNode(hasText("Steer now") and hasAnyAncestor(hasTestTag("outgoing-queue-promote"))).assertIsNotEnabled()
+   assertEquals("Keep my unsent draft",editor.fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+   assertTrue("Queue action dismissed IME",i.uiAutomation.windows.any{it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD})
+   val pending=qa("queue-state");val calls=pending.getJSONArray("calls")
+   assertEquals("queue-remove",calls.getJSONObject(0).getString("id"));assertEquals("remove",calls.getJSONObject(0).getString("action"))
+   assertEquals("queue-promote",calls.getJSONObject(1).getString("id"));assertEquals("send",calls.getJSONObject(1).getString("action"))
+   assertEquals("Original queued steering text",calls.getJSONObject(1).getString("text"))
+   assertEquals("native-turn",calls.getJSONObject(1).getString("expectedActiveTurn"))
+   // Leave the originating conversation before its delayed original ACK.
+   main{Pocket.closeTask()};qa("queue-release")
+   await{qa("queue-state").getJSONObject("outbox").getJSONArray("items").length()==1}
+   assertTrue("Late ACK reopened its conversation",Pocket.selected==null)
+   main{Pocket.open(tid)}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==1}
+   row("queue-promote").assertDoesNotExist();row("queue-keep").assertIsDisplayed()
+   assertEquals("held",qa("queue-state").getJSONObject("outbox").getJSONArray("items").getJSONObject(0).getString("state"))
+   assertEquals(2,qa("queue-state").getJSONArray("calls").length())
+   assertEquals("Keep my unsent draft",prefs.getString(Pocket.key("draft:$tid"),null))
+   java.io.File(c.cacheDir,"queued-message-native.json").writeText(org.json.JSONObject().put("syntheticUiFixture",true).put("nativeRpcDeliveryProven",false).put("calls",calls).put("originalAckRemovedPromotion",true).put("otherQueueRemainsHeld",true).put("draftAndImePreservedBeforeNavigation",true).put("lateAckDidNotReopen",true).toString())
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native.png")))
+  }catch(error:Throwable){
+   device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native-failure.png"));device.dumpWindowHierarchy(java.io.File(c.cacheDir,"queued-message-native-failure.xml"));throw error
+  }finally{qa("queue-release");main{Pocket.closeTask();PocketLive.stop()}}
+
  }
 }

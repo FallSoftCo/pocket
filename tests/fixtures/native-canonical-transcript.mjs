@@ -9,7 +9,9 @@ let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads
 let archiveHold=false,archiveError=false,archiveOrigins=[];
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
-const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
+let queueStudy=false,queueRevision=1,queueHold=false;const queueCalls=[];let queueItems=[];
+const queueSnapshot=()=>({version:1,revision:queueRevision,items:structuredClone(queueItems)});
+const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:queueStudy?'active':'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 // Opt-in repository lifecycle evidence; all identities/content remain synthetic.
 let historyLifecycle=false;const lifecycleReads=[],lifecycleThreads=new Map();
 const lifecycleMeta=(id,state)=>({...meta(),id,name:'History '+id,archived:state.archived===true,ephemeral:state.ephemeral===true,path:state.ephemeral?null:'/synthetic/retained-rollout',status:{type:state.status||'idle'},updatedAt:state.revision||1,activityAt:state.revision||1});
@@ -20,7 +22,7 @@ function page(){
   item(2,'request-one','userMessage','Native request one'),
   item(3,'answer-one','agentMessage','Native answer one'),
   ...(revision>1?[item(4,'request-two','userMessage','Native request two'),item(5,'answer-two','agentMessage','Native answer two')]:[]),
-  {type:'turnCompleted',position:revision>1?6:4,turnId:'native-turn',status:'completed'},
+  ...(!queueStudy?[{type:'turnCompleted',position:revision>1?6:4,turnId:'native-turn',status:'completed'}]:[]),
   ...(streamFinished?[
    {type:'turnStarted',position:10,turnId:'stream-turn',startedAt:2},
    {...item(11,'stream-user','userMessage','Native stream request'),turnId:'stream-turn'},
@@ -47,6 +49,24 @@ const server=http.createServer(async(req,res)=>{
  if(!String(req.headers.authorization||'').startsWith('Bearer synthetic-system76')){res.writeHead(401).end('{}');return;}
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
+ if(path==='/_qa/queue-setup'){
+  queueStudy=true;queueHold=true;queueRevision=1;queueCalls.length=0;
+  queueItems=[{id:'queue-keep',threadId:'same-thread',text:'Keep this queue held',state:'held',mode:'queue'},{id:'queue-remove',threadId:'same-thread',text:'Remove only this queued message',state:'queued',mode:'queue'},{id:'queue-promote',threadId:'same-thread',text:'Original queued steering text',state:'held',mode:'queue'}];
+  res.end(JSON.stringify({ok:true}));return;
+ }
+ if(path==='/_qa/queue-release'){queueHold=false;res.end(JSON.stringify({ok:true}));return;}
+ if(path==='/_qa/queue-state'){res.end(JSON.stringify({calls:queueCalls,outbox:queueSnapshot()}));return;}
+ if(queueStudy&&path.startsWith('/api/threads/same-thread/replies/')){
+  const id=decodeURIComponent(path.split('/').at(-1)),action=JSON.parse(raw||'{}').action,row=queueItems.find(r=>r.id===id);
+  if(!row){res.writeHead(404).end('{}');return;}
+  queueCalls.push({id,action,text:row.text,expectedActiveTurn:'native-turn'});
+  if(action==='send')while(queueHold&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
+  if(res.destroyed)return;
+  if(action==='send'||action==='remove'){queueItems=queueItems.filter(r=>r.id!==id);queueRevision++;}
+  else if(action==='edit'){row.text=JSON.parse(raw).text;queueRevision++;}
+  else{res.writeHead(400).end('{}');return;}
+  res.end(JSON.stringify({id,state:action==='send'?'accepted':action==='remove'?'cancelled':row.state,mode:action==='send'?'steer':'queue',outbox:queueSnapshot()}));return;
+ }
  if(path==='/_qa/history-lifecycle'){
   historyLifecycle=true;const change=JSON.parse(raw||'{}');
   if(change.releaseHolds)for(const state of lifecycleThreads.values()){state.holdNative=false;state.holdHead=false;}
@@ -97,7 +117,7 @@ const server=http.createServer(async(req,res)=>{
   const source=replay?captured.get(cursor):page();
   if(!source){res.writeHead(409).end('{"error":"Capture boundary, not end of history"}');return;}
   body={thread:meta(),timeline:projectNativeTimeline(source,{threadId:'same-thread',revision}),revision,
-   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:[],notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
+   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:queueStudy?queueSnapshot().items:[],...(queueStudy?{outbox:queueSnapshot()}:{}),notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
  }else if(path==='/api/threads/same-thread'||path==='/api/threads/same-thread/head'){
   legacyReads++;res.writeHead(500).end('{"error":"Native source used legacy history"}');return;
  }else if(path==='/_qa/result'){retainedResult=true;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
