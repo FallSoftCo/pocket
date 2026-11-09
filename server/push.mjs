@@ -3,6 +3,7 @@ import {sessionIdentity} from './session-catalog.mjs';
 import {teamNotificationFields} from './losangelex-attention.mjs';
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
+import {Agent} from 'node:https';
 import {initializeApp,cert,applicationDefault} from 'firebase-admin/app';
 import {getMessaging} from 'firebase-admin/messaging';
 
@@ -20,6 +21,18 @@ export function pushData(n) {
   // Leave room for the device ID and envelope, including JSON-escaped characters.
   while(Buffer.byteLength(JSON.stringify(data))>3700&&data.body)data.body=clip(data.body,Math.floor(Buffer.byteLength(data.body)/2));
   return data;
+}
+// The Admin SDK wraps OAuth transport failures as invalid credentials. Classify
+// only structured network causes; never log provider messages, JWTs or key data.
+export function pushFailureCode(error){
+  const code=error?.code||'push/send-failed';if(code!=='app/invalid-credential')return code;
+  const network=new Set(['ETIMEDOUT','ECONNRESET','ECONNREFUSED','EHOSTUNREACH','ENETUNREACH','EAI_AGAIN','ENOTFOUND']);
+  const pending=[error.cause],seen=new Set();let count=0;
+  while(pending.length&&count++<24){const cause=pending.shift();if(!cause||typeof cause!=='object'||seen.has(cause))continue;seen.add(cause);
+    if(network.has(cause.code))return 'push/oauth-network-error';
+    if(cause.cause)pending.push(cause.cause);if(Array.isArray(cause.errors))pending.push(...cause.errors.slice(0,8));
+  }
+  return code;
 }
 export class PushDelivery {
   constructor(db,{config=null,send=null,clock=()=>Date.now()}={}){this.hasCatalog=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='pocket_discovered_threads'").get();this.db=db;this.config=config;this.send=send;this.clock=clock;this.busy=false;this.hasTitles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='notification_thread_titles'").get();}
@@ -57,7 +70,7 @@ export class PushDelivery {
           const messageId=await this.send({token:row.token,data:{...pushData({...identity,...row,...teamNotificationFields(this.db,row.notification_id),title:canonical?.title||row.title,title_revision:canonical?.revision||0,id:row.notification_id}),device_id:row.device_id},android:{priority:'high',ttl:86400000,restrictedPackageName:'co.fallsoft.pocket'}});
           this.db.prepare("UPDATE push_deliveries SET state='accepted_by_fcm',attempts=?,message_id=?,error=NULL,updated_at=? WHERE notification_id=? AND device_id=?").run(attempts,messageId,this.clock(),row.notification_id,row.device_id);
         }catch(e){
-          const code=e.code||'push/send-failed';
+          const code=pushFailureCode(e);
           const invalid=['messaging/registration-token-not-registered','messaging/invalid-registration-token','messaging/mismatched-credential'].includes(code);
           const permanent=invalid||['messaging/invalid-argument','messaging/authentication-error','messaging/invalid-package-name'].includes(code);
           const state=permanent||attempts>=10?'failed':'retry';
@@ -75,6 +88,11 @@ export function loadPush(db,dir){
   const config=JSON.parse(readFileSync(configFile));
   for(const k of ['projectId','senderId','applicationId','apiKey'])if(typeof config[k]!=='string'||!config[k])throw Error(`Firebase client configuration is missing ${k}`);
   const key=process.env.GOOGLE_APPLICATION_CREDENTIALS||resolve(dir,'firebase-admin.json');
-  const app=initializeApp({projectId:config.projectId,credential:existsSync(key)?cert(JSON.parse(readFileSync(key))):applicationDefault()},'pocket');
+  // Scope address-selection patience to Google OAuth/FCM. Node's 250 ms
+  // default can abandon reachable IPv4 before an unavailable IPv6 fallback.
+  const httpAgent=new Agent({autoSelectFamilyAttemptTimeout:2000});
+  // The installed SDK's object-form cert path drops GoogleAuth clientOptions,
+  // including the agent. Its file-path form preserves them for token retrieval.
+  const app=initializeApp({projectId:config.projectId,httpAgent,credential:existsSync(key)?cert(key,httpAgent):applicationDefault(httpAgent)},'pocket');
   return new PushDelivery(db,{config,send:message=>getMessaging(app).send(message)});
 }
