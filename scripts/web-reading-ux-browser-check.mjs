@@ -30,14 +30,22 @@ export async function runReadingVisualCheck({context,dir,visualOnly=false,decisi
   const observer=new MutationObserver(record);observer.observe(document.querySelector('#requests'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['disabled']});
   window.__decisionObservation={observations,observer};
  });
+ let failAcceptedRefresh=false;const faultEvents=[];
+ const answerUrl=new URL('/api/requests/question-123/answer',f.url).href;
+ const headUrl=url=>url.origin===new URL(f.url).origin&&url.pathname==='/api/threads/parent-123'&&url.searchParams.get('view')==='timeline'&&!url.searchParams.has('before');
+ const answerRoute=async route=>{const response=await route.fetch();assert.equal(response.status(),200,'Original answer must be accepted before injecting refresh outage');faultEvents.push({kind:'answer-accepted',status:response.status(),at:Date.now()});failAcceptedRefresh=true;await route.fulfill({response});};
+ const headRoute=async route=>{if(!failAcceptedRefresh)return route.continue();faultEvents.push({kind:'refresh-outage',status:503,at:Date.now()});await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Synthetic accepted-answer refresh unavailable'})});};
+ await page.route(answerUrl,answerRoute);await page.route(headUrl,headRoute);
  try{
-  f.failHead('parent-123');await page.locator('#requests').getByRole('button',{name:'Submit answers',exact:true}).click();
+  await page.locator('#requests').getByRole('button',{name:'Submit answers',exact:true}).click();
   await page.waitForFunction(()=>window.__decisionObservation.observations.some(o=>o.status==='Decision submitted. Live status is reconnecting.'&&o.controlsDisabled));
   report.decisionObservations=await page.evaluate(()=>window.__decisionObservation.observations);
-  f.broadcast({type:'request',threadId:'parent-123'});await page.waitForFunction(()=>!document.querySelector('#requests input'));
+  failAcceptedRefresh=false;faultEvents.push({kind:'outage-released',at:Date.now()});f.broadcast({type:'request',threadId:'parent-123'});await page.waitForFunction(()=>!document.querySelector('#requests input'));
+  assert.equal(faultEvents[0]?.kind,'answer-accepted');assert.ok(faultEvents.some(e=>e.kind==='refresh-outage'));
+  const recovered=report.httpResponses.find(r=>r.path==='/api/threads/parent-123'&&r.status===200&&r.at>=faultEvents.at(-1).at);assert.ok(recovered,'Reconciled original head must return200 after outage release');faultEvents.push({kind:'refresh-reconciled',status:200,at:recovered.at});
   const answers=f.writes.filter(w=>w.path==='/api/requests/question-123/answer');assert.equal(answers.length,1);assert.equal(answers[0].body.answers.material,'Wood');
   report.decisionRefresh={acceptedOnce:true,failedRefreshObservedWithDisabledControls:true,reconciled:true};
- }finally{await page.evaluate(()=>{window.__decisionObservation?.observer.disconnect();delete window.__decisionObservation;});}
+ }finally{report.decisionFaultEvents=faultEvents;failAcceptedRefresh=false;await page.unroute(answerUrl,answerRoute);await page.unroute(headUrl,headRoute);await page.evaluate(()=>{window.__decisionObservation?.observer.disconnect();delete window.__decisionObservation;});}
  if(decisionOnly){report.state='passed';report.decisionOnly=true;return report;}
 
  // Saved results are actionable, and duplicate user inputs never appear there.
@@ -58,12 +66,22 @@ export async function runReadingVisualCheck({context,dir,visualOnly=false,decisi
  });assert.deepEqual(geometry.before,geometry.after);assert.equal(geometry.visible,1);assert.equal(geometry.toggled,true);assert.equal(geometry.count,2);report.phraseGeometry=geometry;
  f.setRequests([{id:'followup-question',method:'item/tool/requestUserInput',params:{threadId:'parent-123',questions:[{id:'finish',question:'Which finish should I use?',options:[{label:'Natural',description:'Keep the grain'},{label:'Painted',description:'Cover the grain'}]}]}}]);f.broadcast({type:'request',threadId:'parent-123'});await page.waitForSelector('#requests input');
  await page.locator('#settings').click();await page.locator('#immersion-enabled').check();await page.locator('#settings-dialog .close').click();await page.waitForSelector('.message .immersion-phrase');
- await page.locator('.message .immersion-phrase').first().scrollIntoViewIfNeeded();await page.screenshot({path:dir+'/desktop.png'});
- await page.setViewportSize({width:390,height:844});if(!await page.locator('#review-pane').isVisible())await page.locator('#review-toggle').click();assert.equal(await page.locator('#review-pane').isVisible(),true);const drawer=await page.locator('#review-pane').boundingBox();assert.ok(drawer.x>=0&&drawer.width<=390);await page.screenshot({path:dir+'/mobile.png'});await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();assert.match(await page.locator('#draft').inputValue(),/Synthetic unfinished draft/);
+ await page.locator('.message .immersion-phrase').first().scrollIntoViewIfNeeded();report.desktopFrame=await saveViewportFrame(page,dir+'/desktop.png');
+ await page.setViewportSize({width:390,height:844});if(!await page.locator('#review-pane').isVisible())await page.locator('#review-toggle').click();assert.equal(await page.locator('#review-pane').isVisible(),true);const drawer=await page.locator('#review-pane').boundingBox();assert.ok(drawer.x>=0&&drawer.width<=390);report.mobileFrame=await saveViewportFrame(page,dir+'/mobile.png');await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();assert.match(await page.locator('#draft').inputValue(),/Synthetic unfinished draft/);
  await captureLayoutMatrix(page,dir,report,widths,fontScales);
  report.state='passed';Object.assign(report,{pendingQuestionImmediatelyVisible:true,answerSubmittedOnce:true,acceptedAnswerSurvivesRefreshFailure:true,draftPreserved:true,userInputNotAResult:true,resultReplyNavigateDismiss:true,galleryLinkInline:true,noLayoutShiftOnFlip:true,directPhraseTap:true,mobileDrawer:true});assert.deepEqual(report.errors,[]);
 }catch(error){report.state='failed';report.failure=error.message;report.fixtureWrites=f.writes;report.fixtureReads=f.reads;report.failureDom=await page?.evaluate(()=>({statuses:[...document.querySelectorAll('.request-status')].map(n=>n.textContent),requests:document.querySelector('#requests')?.textContent,error:document.querySelector('#error')?.textContent})).catch(()=>null);throw error;}finally{await page?.close();await f.close();report.ownedFixturesStopped=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
  return report;
+}
+async function viewportPng(page,cdp){
+ const {data}=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});const bytes=Buffer.from(data,'base64');
+ assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(bytes.toString('ascii',12,16),'IHDR');
+ const viewport=await page.evaluate(()=>({width:innerWidth,height:innerHeight,ratio:devicePixelRatio}));
+ assert.equal(bytes.readUInt32BE(16),Math.round(viewport.width*viewport.ratio));assert.equal(bytes.readUInt32BE(20),Math.round(viewport.height*viewport.ratio));return bytes;
+}
+async function saveViewportFrame(page,path){
+ const cdp=await page.context().newCDPSession(page);
+ try{await page.evaluate(()=>document.fonts.ready);const bytes=await viewportPng(page,cdp);await writeFile(path,bytes);return {path,width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20),sha256:createHash('sha256').update(bytes).digest('hex')};}finally{await cdp.detach();}
 }
 async function captureLayoutMatrix(page,dir,report,widths,fontScales){
  const cdp=await page.context().newCDPSession(page);
@@ -86,7 +104,7 @@ async function captureLayoutMatrix(page,dir,report,widths,fontScales){
    for(const size of sizes)sheet.insertRule(`[data-qa-font-size="${size}"]{font-size:${size*2}px!important}`,sheet.cssRules.length);
   });
     await page.evaluate(()=>document.fonts.ready);await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-    const path=`layout-${width}-${fontScale}x-${state}.png`;const capture=Buffer.from((await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true})).data,'base64');await writeFile(dir+'/'+path,capture);
+    const path=`layout-${width}-${fontScale}x-${state}.png`;const capture=await viewportPng(page,cdp);await writeFile(dir+'/'+path,capture);
     const geometry=await page.evaluate(()=>{
      const bounds=n=>{const r=n.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
      const visible=n=>n&&getComputedStyle(n).visibility!=='hidden'&&n.getClientRects().length>0;
