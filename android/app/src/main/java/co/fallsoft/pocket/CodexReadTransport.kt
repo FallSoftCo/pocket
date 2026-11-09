@@ -38,10 +38,12 @@ internal object CodexReadTransport {
             .header("Authorization","Bearer "+destination.token)
         if(body!=null)builder.post(body.toString().toRequestBody("application/json".toMediaType()))
         return suspendCancellableCoroutine{continuation->
+            val measurement=if(body==null&&resource.matches(Regex("/api/threads/[^/]+(?:/head|/native-timeline)?")))UxMeasurements.begin(UxJourney.HISTORY_REQUEST)else 0
             val call=client.newCall(builder.build())
-            continuation.invokeOnCancellation{call.cancel()}
+            continuation.invokeOnCancellation{UxMeasurements.end(measurement,UxEnd.CANCELLED);call.cancel()}
             call.enqueue(object:Callback {
                 override fun onFailure(call:Call,e:IOException){
+                    UxMeasurements.end(measurement,if(call.isCanceled())UxEnd.CANCELLED else UxEnd.FAILED)
                     if(continuation.isActive)continuation.resumeWithException(e)
                 }
                 override fun onResponse(call:Call,response:Response){
@@ -63,8 +65,8 @@ internal object CodexReadTransport {
                             }
                             json
                         }
-                        if(continuation.isActive)continuation.resume(value)
-                    }catch(error:Exception){if(continuation.isActive)continuation.resumeWithException(error)}
+                        if(continuation.isActive){UxMeasurements.mark(measurement,UxMetric.HISTORY_RESPONSE);UxMeasurements.end(measurement,UxEnd.COMPLETE);continuation.resume(value)}
+                    }catch(error:Exception){UxMeasurements.end(measurement,UxEnd.FAILED);if(continuation.isActive)continuation.resumeWithException(error)}
                 }
             })
         }
