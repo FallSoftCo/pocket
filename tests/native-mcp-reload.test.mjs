@@ -30,7 +30,18 @@ test('lost reload transport and recovered receipt never replay; explicit inspect
  assert.equal(recovered.recent('phone','thread-one')[0].state,'unknown');
  assert.equal((await f.detail()).data.canReload,false);assert.equal((await f.api('/api/native/configuration',body)).data.state,'unknown');assert.equal(f.held.length,1);
  const dismiss={section:'mcp',action:'reloadAcknowledge',threadId:'thread-one',attemptId:body.attemptId};assert.equal((await f.api('/api/native/configuration',dismiss)).status,409);
- dismiss.confirmInspected=true;assert.equal((await f.api('/api/native/configuration',dismiss)).data.state,'acknowledged');assert.equal((await f.detail()).data.canReload,true);
+ dismiss.confirmInspected=true;
+ // The original operation affects the whole host, even after reconnect/account change.
+ f.setAccount('second-account');
+ const other=(await f.api('/api/native/configuration?section=mcp&reloadReview=1&threadId=thread-other',undefined,'other-phone')).data;
+ assert.equal(other.canReload,false);assert.match(other.notice,/Return to that original account/);assert.deepEqual(other.receipts,[]);
+ assert.ok(!JSON.stringify(other).includes(body.attemptId));assert.ok(!JSON.stringify(other).includes('thread-one'));
+ assert.equal((await f.api('/api/native/configuration',{...f.input(other),threadId:'thread-other',attemptId:'attempt-other'},'other-phone')).status,409);
+ assert.equal((await f.api('/api/native/configuration',dismiss)).status,409);
+ assert.equal((await f.api('/api/native/configuration',body)).status,409);
+ assert.equal(f.held.length,1);assert.equal(f.db.prepare('SELECT state FROM native_mcp_reload').get().state,'unknown');
+ f.setAccount('first-account');assert.equal((await f.detail()).data.receipts[0].state,'unknown');
+ assert.equal((await f.api('/api/native/configuration',dismiss)).data.state,'acknowledged');assert.equal((await f.detail()).data.canReload,true);
  const next={...f.input((await f.detail()).data),attemptId:'attempt-two'},start=f.api('/api/native/configuration',next);await until(()=>f.held.length===2);f.held[1]();assert.equal((await start).data.state,'accepted');
 });
 
