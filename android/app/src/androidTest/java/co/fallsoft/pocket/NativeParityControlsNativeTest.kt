@@ -469,14 +469,20 @@ class NativeParityControlsNativeTest {
             assertEquals(originalReloadId,qa("state",origin=1).getJSONArray("reloadReceipts").getJSONObject(0).s("id"))
             // A different account cannot bypass the original host-wide unknown effect.
             qa("mcp-account",JSONObject().put("account","secondary"),origin=1)
-            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()&&compose.onAllNodesWithText("Codex settings & agents",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            // Account replacement closes the whole source-bound settings surface.
+            // Re-enter through the actual footer before inspecting the same receipt.
+            menu("Codex settings & agents");tap("MCP")
             tap("Review host MCP reload");reloadNotice("Return to that original account")
             absent("Reload MCP across this host");absent("I inspected the host; review dismissal")
             assertEquals(1,qa("state").getJSONArray("nativeReloadStarts").length())
             assertEquals("unknown",qa("state",origin=1).getJSONArray("reloadReceipts").getJSONObject(0).s("state"))
             capture("06f-mcp-reload-account-blocked")
             qa("mcp-account",JSONObject().put("account","original"),origin=1)
-            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()&&compose.onAllNodesWithText("Codex settings & agents",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            // Account replacement closes the whole source-bound settings surface.
+            // Re-enter through the actual footer before inspecting the same receipt.
+            menu("Codex settings & agents");tap("MCP")
             tap("Review host MCP reload");reloadNotice("Reload outcome unconfirmed")
             tap("I inspected the host; review dismissal");reloadNotice("does not cancel the reload")
             tap("Dismiss inspected reload receipt");reloadNotice("Uncertain reload inspected and dismissed")
