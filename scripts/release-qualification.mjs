@@ -45,6 +45,33 @@ export function confinedFile(directory,name){
  const root=realpathSync(directory),path=realpathSync(resolve(root,name)),rel=relative(root,path);
  if((rel==='..'||rel.startsWith('../'))||isAbsolute(rel)||!statSync(path).isFile())fail('Qualification file escapes artifact directory.');return path;
 }
+export const footerVisualCase='co.fallsoft.pocket.ReaderPagingFooterNativeTest#bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme';
+// Retention/integrity gate only: actual optical review is a separate release observation.
+export function footerMatrixScenarios(matrix,qaRunId){
+ if(!/^[A-Za-z0-9_-]{1,128}$/.test(qaRunId||'')||matrix.qaRunId!==qaRunId||!Array.isArray(matrix.scenarios))fail('Footer matrix has missing or mismatched run identity.');
+ const rows=matrix.scenarios, widths=[...new Set(rows.filter(r=>r.usage===undefined).map(r=>r.widthDp))];
+ if(!widths.includes(320)||!widths.includes(360)||widths.some(w=>!Number.isInteger(w)||w<320||w>4096)||widths.length<2||widths.length>3)fail('Footer matrix widths missing or invalid.');
+ const expected=widths.flatMap(w=>[1,2].flatMap(f=>[false,true].map(ime=>`footer-paging-${w}-${f}.0-${ime}.png`))).concat(['allowance','credits'].flatMap(mode=>[1,2].map(f=>`footer-usage-${mode}-${f}.0.png`)));
+ if(rows.length!==expected.length||new Set(rows.map(r=>r.screenshot)).size!==expected.length)fail('Footer matrix cases missing or duplicated.');
+ for(const row of rows){
+  const mode=row.usage===undefined?null:row.usage==='<0.1%'?'allowance':row.usage==='99.9k cr'?'credits':'invalid';
+  const name=mode===null?`footer-paging-${row.widthDp}-${row.fontScale}.0-${row.ime}.png`:`footer-usage-${mode}-${row.fontScale}.0.png`;
+  if(!expected.includes(name)||row.screenshot!==name||![1,2].includes(row.fontScale)||typeof row.ime!=='boolean'||mode!==null&&(row.ime||row.widthDp!==Math.max(...widths)))fail('Footer matrix scenario metadata differs.');
+ }
+ return rows;
+}
+export function validateFooterVisualMatrix(directory,receipt){
+ const visual=receipt.visualMatrix;
+ if(!visual||visual.schema!==1||!hex.test(visual.sha256)||fileSha(confinedFile(directory,visual.path))!==visual.sha256)fail('Footer matrix missing or changed.');
+ const rows=footerMatrixScenarios(JSON.parse(readFileSync(confinedFile(directory,visual.path),'utf8')),receipt.qaRunId);
+ if(!Array.isArray(visual.artifacts)||visual.artifacts.length!==rows.length||new Set(visual.artifacts.map(a=>a.name)).size!==rows.length)fail('Footer screenshots missing or duplicated.');
+ for(const row of rows){
+  const a=visual.artifacts.find(a=>a.name===row.screenshot);
+  if(!a||!hex.test(a.sha256))fail('Footer screenshot missing.');
+  const bytes=readFileSync(confinedFile(directory,a.path));
+  if(sha256(bytes)!==a.sha256||bytes.length<33||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||bytes.toString('ascii',12,16)!=='IHDR'||bytes.readUInt32BE(16)<320||bytes.readUInt32BE(20)<320)fail('Footer screenshot changed or invalid.');
+ }
+}
 export function validNativeTargetReceipt(receipt){
  if(receipt.avdName==='nextcomp_env_qa')return true; // Historical retained receipts.
  return /^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(receipt.avdName||'')&&
@@ -65,10 +92,12 @@ export function validateReleaseQualification({directory,manifest,build,native,po
  const signers=new Set();for(const v of manifest.variants){if(!hex.test(v.signerSha256)||!hex.test(v.sha256)||signers.has(v.signerSha256)||!Number.isSafeInteger(v.size)||v.size<1||v.size>80*1024*1024)fail('Invalid update signing variant.');signers.add(v.signerSha256);const path=confinedFile(directory,v.path);if(statSync(path).size!==v.size||fileSha(path)!==v.sha256)fail('Prepared APK changed after build.');}
  if(!Array.isArray(native))fail('Native receipts missing.');
  if(policy.schema!==1||!Array.isArray(policy.requiredNativeCases)||!policy.requiredNativeCases.length||new Set(policy.requiredNativeCases).size!==policy.requiredNativeCases.length)fail('Invalid native release policy.');
+ if(policy.requiredNativeVisualMatrices!==undefined&&(!Array.isArray(policy.requiredNativeVisualMatrices)||policy.requiredNativeVisualMatrices.length!==1||policy.requiredNativeVisualMatrices[0]!==footerVisualCase||!policy.requiredNativeCases.includes(footerVisualCase)))fail('Invalid native visual matrix policy.');
  if(build.policySha!==sha256(Buffer.from(JSON.stringify(policy))))fail('Release policy changed after build.');
  const byCase=new Map();for(const receipt of native){
   if(typeof receipt.case!=='string'||!policy.requiredNativeCases.includes(receipt.case)||receipt.schema!==1||receipt.state!=='complete'||receipt.exitCode!==0||receipt.productionSourceSha!==build.productionSourceSha||receipt.qualificationInputSha!==build.qualificationInputSha||receipt.qualificationApkSha!==build.qualificationApkSha||receipt.installedApkSha!==build.qualificationApkSha||receipt.testApkSha!==build.testApkSha||receipt.versionCode!==manifest.versionCode||receipt.finishedAt<receipt.startedAt||receipt.startedAt<build.finishedAt||!Number.isFinite(receipt.startedAt)||!Number.isFinite(receipt.finishedAt)||!validNativeTargetReceipt(receipt))fail('Native receipt is stale, incomplete or for another APK.');
   const log=confinedFile(directory,receipt.log);if(fileSha(log)!==receipt.logSha||!nativeOutputPassed(readFileSync(log,'utf8')))fail('Native test failed or its log changed.');
+  if(receipt.visualMatrix||policy.requiredNativeVisualMatrices?.includes(receipt.case))validateFooterVisualMatrix(directory,receipt);
   if(byCase.has(receipt.case))fail('Duplicate native receipt.');byCase.set(receipt.case,receipt);
  }
  for(const name of policy.requiredNativeCases)if(!byCase.has(name))fail('Required native case missing: '+name);

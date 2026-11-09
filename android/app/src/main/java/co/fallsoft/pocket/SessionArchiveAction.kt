@@ -31,7 +31,7 @@ import kotlin.math.roundToInt
     val width=with(LocalDensity.current){88.dp.toPx()}
     var offset by remember(task.id){mutableFloatStateOf(0f)}
     val archive by rememberUpdatedState(onArchive)
-    Box(modifier.clip(RoundedCornerShape(18.dp)).testTag("swipe-session:"+task.id)){
+    Box(modifier.clip(WorkCardShape).testTag("swipe-session:"+task.id)){
         if(offset<0f)FilledTonalButton(onClick={archive?.invoke()},
             modifier=Modifier.align(Alignment.CenterEnd).width(84.dp).heightIn(min=64.dp).testTag("archive-session:"+task.id),
             shape=RoundedCornerShape(14.dp)){

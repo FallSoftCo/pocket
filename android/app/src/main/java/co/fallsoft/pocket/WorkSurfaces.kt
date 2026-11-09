@@ -29,6 +29,9 @@ import androidx.compose.ui.unit.sp
         verticalArrangement=Arrangement.spacedBy(8.dp,if(reverseLayout)Alignment.Bottom else Alignment.Top),contentPadding=contentPadding,content=content)
 }
 
+// The reveal viewport and painted rim must clip the same outline.
+internal val WorkCardShape=RoundedCornerShape(8.dp)
+
 /** All work stays readable and interactive; activity adds emphasis without dimming idle work. */
 @Composable internal fun WorkCardSurface(active:Boolean,needsInput:Boolean=false,accent:Color=Mint,highlight:Float=0f,modifier:Modifier=Modifier,knownIdle:Boolean=!active&&!needsInput,content:@Composable BoxScope.()->Unit){
     // Cool chroma identifies idle work without reducing legibility or implying disabled.
@@ -36,7 +39,7 @@ import androidx.compose.ui.unit.sp
     val idle=knownIdle&&!active&&!needsInput
     val surface=if(idle)Color(0xff152137)else Panel
     val outline=if(idle)Color(0xff526e98)else Line.copy(alpha=.7f)
-    val shape=RoundedCornerShape(8.dp)
+    val shape=WorkCardShape
     Box(modifier.fillMaxWidth().depthSurface(surface,shape).drawWithCache{
         val glow=if(active||needsInput)1f else 0f
         val light=Brush.radialGradient(listOf(accent.copy(alpha=.26f*glow),accent.copy(alpha=.06f*glow),Color.Transparent),Offset(size.width*.85f,0f),(size.width*.95f).coerceAtLeast(1f))

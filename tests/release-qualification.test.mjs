@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,symlinkSync,chmodSync,existsSync,copyFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {sha256,nativeOutputPassed,validateReleaseQualification,productionSourceSha,qualificationInputSha} from '../scripts/release-qualification.mjs';
+import {sha256,nativeOutputPassed,footerVisualCase,validateReleaseQualification,productionSourceSha,qualificationInputSha} from '../scripts/release-qualification.mjs';
 import {publishQualifiedUpdate} from '../scripts/publish-qualified-update.mjs';
 const digest=v=>sha256(Buffer.from(JSON.stringify(v)));
 function fixture(){
@@ -249,4 +249,30 @@ test('shared native fixture dependencies invalidate the recorded build before na
   }
   const restored=run();assert.equal(restored.status,1);assert.match(restored.stderr,/Provide the private owned-emulator receipt and actor/);
  }finally{rmSync(f.root,{recursive:true,force:true});}
+});
+
+
+test('required footer capture matrix rejects missing, stale, incomplete and tampered artifacts',()=>{
+ for(const mutation of ['none','missing-matrix','wrong-run','missing-case','unsafe-name','wrong-metadata','missing-image','changed-image','changed-matrix']){
+  const f=fixture();try{
+   f.policy.requiredNativeCases=[footerVisualCase];f.policy.requiredNativeVisualMatrices=[footerVisualCase];f.build.policySha=digest(f.policy);
+   const receipt=f.native[0];receipt.case=footerVisualCase;receipt.qaRunId='synthetic-current-run';
+   const scenarios=[320,360,411].flatMap(widthDp=>[1,2].flatMap(fontScale=>[false,true].map(ime=>({widthDp,fontScale,ime,screenshot:`footer-paging-${widthDp}-${fontScale}.0-${ime}.png`})))).concat(['allowance','credits'].flatMap(mode=>[1,2].map(fontScale=>({widthDp:411,fontScale,ime:false,usage:mode==='allowance'?'<0.1%':'99.9k cr',screenshot:`footer-usage-${mode}-${fontScale}.0.png`}))));
+   const matrix={qaRunId:receipt.qaRunId,scenarios};
+   // Header-only synthetic bytes exercise the artifact boundary, not visual rendering.
+   const png=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a','hex').copy(png);png.write('IHDR',12);png.writeUInt32BE(1080,16);png.writeUInt32BE(2400,20);
+   receipt.visualMatrix={schema:1,path:'matrix.json',artifacts:scenarios.map(row=>{writeFileSync(join(f.directory,row.screenshot),png);return {name:row.screenshot,path:row.screenshot,sha256:sha256(png)};})};
+   if(mutation==='wrong-run')matrix.qaRunId='old-run';
+   if(mutation==='missing-case')matrix.scenarios.pop();
+   if(mutation==='unsafe-name')matrix.scenarios[0].screenshot='../escape.png';
+   if(mutation==='wrong-metadata')matrix.scenarios[0].fontScale=2;
+   writeFileSync(join(f.directory,'matrix.json'),JSON.stringify(matrix));receipt.visualMatrix.sha256=sha256(readFileSync(join(f.directory,'matrix.json')));
+   if(mutation==='missing-matrix')delete receipt.visualMatrix;
+   if(mutation==='missing-image')rmSync(join(f.directory,scenarios[0].screenshot));
+   if(mutation==='changed-image')writeFileSync(join(f.directory,scenarios[0].screenshot),'changed');
+   if(mutation==='changed-matrix')writeFileSync(join(f.directory,'matrix.json'),'{}');
+   if(mutation==='none')assert.equal(validateReleaseQualification(f).nativeCases,1);
+   else assert.throws(()=>validateReleaseQualification(f),undefined,mutation);
+  }finally{rmSync(f.root,{recursive:true,force:true});}
+ }
 });
