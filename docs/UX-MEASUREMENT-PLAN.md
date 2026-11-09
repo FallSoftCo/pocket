@@ -71,6 +71,7 @@ overflow. A separate catalog-title density problem remains under review.
 
 All 19 required native journeys and exact optimized-artifact review passed.
 These are software-emulator results, not handset frame-pacing measurements.
-The backend/web closure remains staged pending quiet clients; do not describe
-its OAuth controls or web instrumentation as active before cutover. The team
-is continuing guarded MCP parity and visual review at medium effort.
+The backend/web closure is now live after the owner confirmed readiness.
+Both web routes serve the exact qualified assets; native Codex processes and
+original receipts were preserved. The team continues guarded MCP parity and
+visual review at medium effort.

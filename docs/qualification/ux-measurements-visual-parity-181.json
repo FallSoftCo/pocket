@@ -4,11 +4,13 @@
     "versionCode": 181,
     "versionName": "0.5.0-alpha.163",
     "androidChannels": "both paired channels published",
-    "backendWeb": "qualified closure staged; activation deferred while clients are connected",
+    "backendWeb": "live on both paired backends; both web routes serve exact qualified assets",
     "nativeProcessesRestarted": false,
     "phone": "last independent package read180;181 handset installation/rendering not verified",
     "announcements": 1,
-    "push": "original announcement awaiting retry; OAuth network timeout confirmed, credentials valid; scoped fix implemented separately"
+    "push": "original announcement accepted by FCM on attempt6; no duplicate; acceptance is not phone display proof",
+    "backendDigest": "03a06752a4319bbaac176b07f76dca9b9b94ff2a575337a9407fd63608a3b523",
+    "backendSourceCommit": "b6905ba76eaf9f964bfeeadd228d7cdd768bdb01"
   },
   "measurements": {
     "default": "bounded in-memory foreground aggregates; no automatic upload",
@@ -82,7 +84,19 @@
       "owned emulator SystemUI ANR before candidate admission; same-artifact successor passed",
       "browser observation missed a transient state; preinstalled observation corrected",
       "browser outage fixture raced background repair; injection now follows original acceptance"
-    ]
+    ],
+    "postQualificationBackendFixes": {
+      "scopedOAuthNetworking": "verified path-based Firebase credentials preserve scoped HTTP agent; original retry queue unchanged",
+      "configurationBoundary": "account and native connection identity checked through preflight and immediately before original write",
+      "focusedIntegratedChecks": 21,
+      "independentSourceReview": "accepted",
+      "providerActions": 0
+    },
+    "ci": {
+      "run": "42645335519",
+      "backend": "passed",
+      "android": "passed"
+    }
   },
   "limits": [
     "No new physical-phone frame pacing, visual or provider-login proof",

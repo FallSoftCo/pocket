@@ -364,6 +364,6 @@ The user-operated Report a slowdown action collects at most 15 foreground second
 [The 181 qualification](qualification/ux-measurements-visual-parity-181.json)
 records local timing/outcome measurements, current-run native footer images,
 card-corner correction and integrated browser layout checks. Both Android
-channels are published; backend/web activation is deferred while clients are
-connected. Exact optimized native review and 19 required journeys passed;
+channels are published, both backends are live on 181, and both web routes
+serve the qualified assets. Native processes and original receipts were preserved. Exact optimized native review and 19 required journeys passed;
 physical-phone rendering and provider OAuth remain separate unverified scopes.
