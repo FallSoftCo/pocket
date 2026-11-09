@@ -159,13 +159,15 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 
 /* Reserve a title row and action area without live badge/preview height changes. */
 .card-archive{flex:0 0 auto;min-height:44px;padding:8px 10px;color:var(--muted);font-size:12px;}
-.card-heading .card-title{flex:0 0 100%;min-width:0;width:100%;height:max(28px,1.4em);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-heading .card-title-row{flex:0 0 100%;min-width:0;width:100%;height:max(28px,1.4em);}
+.card-heading .card-title{min-width:0;width:fit-content;max-width:100%;height:max(28px,1.4em);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .card-heading>button:not(.card-title){flex:0 0 auto;min-width:0;max-width:100%;min-height:44px;margin:0;padding:4px 6px;white-space:nowrap;overflow-wrap:normal;}
 /* Compact mouse/trackpad rows only when the sidebar has room relative to text.
    Enlarged text and coarse touch pointers keep the full reserved action area. */
 @media (pointer:fine) and (hover:hover) {
  @container catalog (min-width:15em) {
   .work-card { grid-template-rows:calc(1.4em + 36px) 2.9em 1.4em; }
+  .card-heading .card-title-row { height:1.4em; }
   .work-card .card-heading .card-title { height:1.4em; min-height:1.4em; line-height:1.4; padding-block:0; }
   .card-heading>button:not(.card-title) { min-height:32px; }
  }
