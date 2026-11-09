@@ -51,7 +51,7 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
  if(path==='/_qa/attention-setup'){
-  attentionStudy=true;attentionResolved=false;queueStudy=true;queueRevision=1;queueHold=false;queueCalls.length=0;
+  attentionStudy=true;attentionResolved=false;queueStudy=true;queueRevision++;queueHold=false;queueCalls.length=0;
   queueItems=[{id:'needs-review-original',threadId:'same-thread',text:'Delivery needs checking',state:'unknown',mode:'steer'}];
   res.end(JSON.stringify({ok:true}));return;
  }
@@ -67,7 +67,8 @@ const server=http.createServer(async(req,res)=>{
   res.end(JSON.stringify({threads:[{...meta(),attention:evidence,preview:'Review this original message'},{...meta(),id:'ordinary-work',name:'Ordinary completed work',status:{type:'idle'},preview:'Completed result',attention:{version:1,verified:true,items:[]}}]}));return;
  }
  if(path==='/_qa/queue-setup'){
-  queueStudy=true;queueHold=true;queueRevision=1;queueCalls.length=0;
+  // Scenarios share one source/outbox lifetime: revisions must never rewind.
+  queueStudy=true;queueHold=true;queueRevision++;queueCalls.length=0;
   queueItems=[{id:'queue-keep',threadId:'same-thread',text:'Keep this queue held',state:'held',mode:'queue'},{id:'queue-remove',threadId:'same-thread',text:'Remove only this queued message',state:'queued',mode:'queue'},{id:'queue-promote',threadId:'same-thread',text:'Original queued steering text',state:'held',mode:'queue'}];
   res.end(JSON.stringify({ok:true}));return;
  }
