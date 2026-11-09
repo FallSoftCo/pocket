@@ -93,10 +93,10 @@ test('remote native settings queries and agent navigation preserve host identity
 });
 
 const macUserAgent='codex_pocket/0.163.0 (Mac OS 26.6.0; arm64) unknown (nextcomp_compatibility_readonly; 1)';
-test('Mac 0.163 qualification grants only observed catalog methods, not platform-wide or write compatibility',()=>{
+test('Mac 0.163 qualification grants only observed read methods, not platform-wide or write compatibility',()=>{
  const f=fixture();f.codex.initializeResult.userAgent=macUserAgent;
- for(const method of ['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read','thread/backgroundTerminals/list'])assert.equal(supportsNativeMethod(f.codex,method),true,method);
- for(const method of ['config/value/write','skills/config/write','config/mcpServer/reload','thread/settings/update','thread/fork','thread/revert','thread/compact/start','review/start','thread/backgroundTerminals/terminate','thread/items/read','thread/goal/set'])assert.equal(supportsNativeMethod(f.codex,method),false,method);
+ for(const method of ['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read','thread/backgroundTerminals/list','thread/items/read'])assert.equal(supportsNativeMethod(f.codex,method),true,method);
+ for(const method of ['config/value/write','skills/config/write','config/mcpServer/reload','thread/settings/update','thread/fork','thread/revert','thread/compact/start','review/start','thread/backgroundTerminals/terminate','thread/goal/set'])assert.equal(supportsNativeMethod(f.codex,method),false,method);
  const descriptor=f.native.descriptor('parent-one');
  assert.equal(descriptor.runtime.compatibilityProfile,'mac-arm64-0.163-catalog-reads-20261107');
  for(const key of ['configuration','skills','mcp','apps']){

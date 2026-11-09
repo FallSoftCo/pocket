@@ -6,10 +6,12 @@ export function nativeVersion(codex){return /(?:^|[^\d])(\d+\.\d+\.\d+)(?:[^\d]|
 // Narrow follow-up for the observed Mac ARM64 daemon. These catalogs were read
 // successfully on its pinned 0.163.0 build and compared with stock 0.163 schemas.
 // thread/read is the schema-compatible context read already used by these views.
+// thread/items/read was observed on the same pinned daemon on 2026-11-09:
+// exact completed command identity, retained string output and null output.
 // Matching the reported runtime family is not binary attestation; this is not an
 // audit of every 0.163 method/platform or any mutation.
 export const MAC_0163_READ_PROFILE='mac-arm64-0.163-catalog-reads-20261107';
-const mac0163Reads=new Set(['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read','thread/backgroundTerminals/list']);
+const mac0163Reads=new Set(['config/read','skills/list','mcpServerStatus/list','app/installed','plugin/installed','hooks/list','thread/list','thread/read','thread/backgroundTerminals/list','thread/items/read']);
 const mac0163Profile=({version,userAgent})=>version==='0.163.0'&&/^codex_pocket\/0\.163\.0 \(Mac OS [^;()]+; arm64\)/.test(userAgent||'');
 const qualifiedMethod=(runtime,method)=>runtime.version===AUDITED_NATIVE_VERSION&&methods.has(method)||mac0163Profile(runtime)&&mac0163Reads.has(method);
 export function supportsNativeMethod(codex,method){return qualifiedMethod({version:nativeVersion(codex),userAgent:codex.initializeResult?.userAgent},method);}
@@ -29,7 +31,7 @@ export function describeNativeCapabilities({version,userAgent,connected=true}={}
  features.nativeRequests={state:qualified&&connected?'available':'unavailable',reason:'Only supported requests actually emitted by Codex can be answered.'};
  features.workspaceDiff={state:'available',reason:'Read-only local Git inspection; repository availability is checked on demand.'};
  for(const [key,reason]of Object.entries({worktree:'No native worktree lifecycle method is exposed by this protocol.',hookConfiguration:'Hook inspection is available; no hook configuration RPC is exposed.',agentSpawn:'Delegation is controlled by the parent Codex agent; no standalone agent-spawn RPC exists.',goals:'Goal controls are deliberately disabled. Opening this view never activates continuation.'}))features[key]={state:'unsupported',reason};
- if(legacyReads){features.backgroundTerminals.reason='Read-only terminal inspection verified on the Mac ARM64 0.163 runtime.';features.backgroundTerminals.mutation.reason='Termination has not been qualified on this runtime. Terminals can only be inspected.';}
+ if(legacyReads){features.executionOutput.reason='Read-only retained command output verified on the Mac ARM64 0.163 runtime; individual commands may have no retained output.';features.backgroundTerminals.reason='Read-only terminal inspection verified on the Mac ARM64 0.163 runtime.';features.backgroundTerminals.mutation.reason='Termination has not been qualified on this runtime. Terminals can only be inspected.';}
  return {schemaVersion:1,runtime:{version:version||null,auditedVersion:AUDITED_NATIVE_VERSION,evidence:qualified?'installed-generated-schema':legacyReads?'observed-mac-reads-and-stock-generated-schema':'unqualified-runtime',...(legacyReads?{compatibilityProfile:MAC_0163_READ_PROFILE}:{})},features};
 }
 
