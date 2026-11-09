@@ -272,12 +272,12 @@ object Pocket {
             }
         }?:emptyList() }?.filter{it.text.isNotBlank()}?.takeLast(50)?:emptyList()
     }
-    fun reply(text:String,threadId:String?=selected,mode:String="auto",draftKey:String?=threadId?.let{key("draft:$it")},onDone:()->Unit={}){
-        if(threadId==null||text.isBlank()||sending)return
-        if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return}
+    fun reply(text:String,threadId:String?=selected,mode:String="auto",draftKey:String?=threadId?.let{key("draft:$it")},onDiagnosticOutcome:(ReplyAdmissionObservation)->Unit={},onDone:()->Unit={}){
+        if(threadId==null||text.isBlank()||sending){runCatching{onDiagnosticOutcome(ReplyAdmissionObservation.CANCELLED)};return}
+        if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";runCatching{onDiagnosticOutcome(ReplyAdmissionObservation.FAILED)};return}
         if(threadId==selected)error=""
         replyFailures.remove(replyFailureKey(threadId))
-        PocketReplies.submit(text,threadId,mode,draftKey,onDone)
+        PocketReplies.submit(text,threadId,mode,draftKey,onDiagnosticOutcome=onDiagnosticOutcome,onDone=onDone)
     }
     var replyActionBusy by mutableStateOf(setOf<String>())
     fun isReplyActionBusy(id:String)="$environmentId:$selected:$id" in replyActionBusy

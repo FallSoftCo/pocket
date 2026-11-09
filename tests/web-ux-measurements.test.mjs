@@ -32,3 +32,10 @@ test('send feedback commit precedes admission and neither is model task completi
  at=450;ux.mark(send,'send_admitted_callback');ux.mark(send,'send_admitted_callback');report=ux.snapshot();assert.equal(report.metrics.send_admitted_callback.count,1);assert.equal(report.counts.send_complete,1);
  const failure=ux.begin('history_request');ux.end(failure,'failed');assert.equal(ux.snapshot().counts.history_request_failed,1);assert.equal(ux.snapshot().metrics.history_response,undefined);
 });
+
+test('unknown initial send ends once and late observations cannot imply acceptance or non-execution',()=>{
+ const ux=new UxMeasurements({now:()=>10});ux.foreground(true);const send=ux.begin('send');
+ ux.mark(send,'send_feedback_committed');ux.end(send,'unknown');ux.end(send,'unknown');ux.mark(send,'send_admitted_callback');
+ const failure=ux.begin('send');ux.end(failure,'failed');ux.end(failure,'failed');
+ const report=ux.snapshot();assert.equal(report.counts.send_unknown,1);assert.equal(report.counts.send_failed,1);assert.equal(report.counts.send_complete,undefined);assert.equal(report.metrics.send_admitted_callback,undefined);assert.equal(report.pending.send,0);
+});

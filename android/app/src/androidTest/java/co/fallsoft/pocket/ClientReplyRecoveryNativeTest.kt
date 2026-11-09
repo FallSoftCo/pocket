@@ -73,14 +73,17 @@ class ClientReplyRecoveryNativeTest {
  }
  @Test fun matchingUnknownReceiptRequiresExplicitRecovery(){
   start(draft="Unknown receipt test");qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
-  var completed=false;main{Pocket.reply("Unknown receipt test",onDone={completed=true})}
+  val outcomes=java.util.concurrent.CopyOnWriteArrayList<ReplyAdmissionObservation>()
+  var completed=false;main{Pocket.reply("Unknown receipt test",onDiagnosticOutcome={outcomes.add(it)},onDone={completed=true})}
   await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"&&device.hasObject(By.text("Retry"))}
+  assertEquals(listOf(ReplyAdmissionObservation.UNKNOWN),outcomes.toList())
   assertFalse("Unknown receipt cleared draft callback",completed);assertEquals("Unknown receipt test",Pocket.prefs.getString("draft:same-thread",null))
   Thread.sleep(1000);assertEquals("Unknown receipt started another send",1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
   device.findObject(By.text("Retry")).click();assertEquals(0,qa("state").getJSONArray("recoveries").length())
   device.findObject(By.text("Check and retry")).click();await{PocketReplies.entries("same-thread").isEmpty()}
   assertEquals("Recovery posted original turn again",1,posts().length());val action=qa("state").getJSONArray("recoveries").getJSONObject(0)
   assertEquals(posts().getJSONObject(0).s("id"),action.s("id"));assertTrue(action.optBoolean("confirmUnknown"));assertFalse(Pocket.prefs.contains("draft:same-thread"))
+  assertEquals("Later recovery repeated initial diagnostic callback",listOf(ReplyAdmissionObservation.UNKNOWN),outcomes.toList())
  }
  @Test fun malformedAcknowledgementAndWrongThreadCannotEraseDraftOrResend(){
   start();qa("bad-reply");main{Pocket.open("same-thread",keyboard=true)}

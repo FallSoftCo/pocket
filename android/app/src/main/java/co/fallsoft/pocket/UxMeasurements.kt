@@ -8,7 +8,7 @@ internal enum class UxMetric {
     OPEN_FIRST_CONTENT_LAYOUT, OPEN_CACHED_FIRST_CONTENT_LAYOUT, OPEN_FRESH_CONTENT_LAYOUT,
     SEND_FEEDBACK_COMMITTED, SEND_ADMITTED_CALLBACK, HISTORY_RESPONSE
 }
-internal enum class UxEnd { SUPERSEDED, BACKGROUNDED, FAILED, CANCELLED, COMPLETE }
+internal enum class UxEnd { SUPERSEDED, BACKGROUNDED, FAILED, UNKNOWN, CANCELLED, COMPLETE }
 
 /** Recent foreground-only aggregate diagnostics. Accepts enums/monotonic time,
  * never conversation IDs, text, credentials, URLs, input events or device IDs.

@@ -216,7 +216,7 @@ internal object CodexConversations {
         val owner=session?:return false
         UxMeasurements.end(owner.uxSend,UxEnd.SUPERSEDED)
         val measurement=UxMeasurements.begin(UxJourney.SEND);owner.uxSend=measurement;owner.uxSendRevision=PocketReplies.revision
-        Pocket.reply(text,threadId=key!!.thread,mode=mode,draftKey=draftKey,onDone={UxMeasurements.mark(measurement,UxMetric.SEND_ADMITTED_CALLBACK);onDone()})
+        Pocket.reply(text,threadId=key!!.thread,mode=mode,draftKey=draftKey,onDiagnosticOutcome={outcome->UxMeasurements.end(measurement,when(outcome){ReplyAdmissionObservation.FAILED->UxEnd.FAILED;ReplyAdmissionObservation.UNKNOWN->UxEnd.UNKNOWN;ReplyAdmissionObservation.CANCELLED->UxEnd.CANCELLED})},onDone={UxMeasurements.mark(measurement,UxMetric.SEND_ADMITTED_CALLBACK);onDone()})
         return true
     }
     fun interrupt(key:CodexConversationKey?,incarnation:Long){

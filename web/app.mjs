@@ -265,7 +265,9 @@ async function send(){const text=$('draft').value.trim();if(!text)return;if(deli
  if(isRoom(scope)){if(new TextEncoder().encode(text).length>6000)throw Error('Room messages are limited to 6000 UTF-8 bytes. Draft retained.');const entry=rooms.entry(scope),route=structuredClone(rooms.route(scope)),target={...targetFor(scope)};assertLeadTarget(entry.room,target);if(roomLead(entry.room)&&['coordination','archive'].includes(roomView))throw Error('Open the lead conversation to send new input. Your draft is retained.');message.room=entry.roomId;message.route=route;message.body={operationId:message.id,kind:'request',body:text,audience:target.audience,...(target.recipientId?{recipientId:target.recipientId}:{}),...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})};}
  else if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose an exact Hollywood room on this gateway.');
  ux.end(uxSend,'superseded');uxSend=!isRoom(scope)&&scope!=='coordinator'?ux.begin('send'):0;
- persistPending(message);ux.mark(uxSend,'send_feedback_committed');await deliverPending();}
+ const measurement=uxSend;
+ try{persistPending(message);}catch(error){ux.end(measurement,'failed');throw error;}
+ ux.mark(measurement,'send_feedback_committed');try{await deliverPending();}catch(error){ux.end(measurement,'unknown');throw error;}}
 function clearDelivered(message,receipt){
  if(pending?.id!==message.id||!deliveryAccepted(message,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
  write('delivered.'+deviceId+'.'+message.id,{intent:message,receipt});
@@ -635,7 +637,8 @@ const terminalsControl=button('Background terminals',()=>{const origin=scope;clo
 $('controls-dialog').append(terminalsControl);
 
 $('download-ux').onclick=()=>{
- const url=URL.createObjectURL(new Blob([JSON.stringify(ux.snapshot(),null,2)+'\n'],{type:'application/json'}));
+ const report={...ux.snapshot(),exportedAt:new Date().toISOString(),exportContext:{viewportWidth:window.innerWidth,viewportHeight:window.innerHeight,devicePixelRatio:window.devicePixelRatio,loadedClientBuild:'unavailable',evidence:'Export-time viewport only; not per-sample presentation evidence.'}};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)+'\n'],{type:'application/json'}));
  const link=document.createElement('a');link.href=url;link.download='nextcomp-ux-report.json';link.click();
  requestAnimationFrame(()=>URL.revokeObjectURL(url));
 };
