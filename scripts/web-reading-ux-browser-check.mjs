@@ -131,6 +131,7 @@ async function captureLayoutMatrix(page,dir,report,widths,fontScales){
 }
 export async function runCatalogTitleCheck({context,dir,cases=null}){
  await mkdir(dir,{recursive:true});const f=await fixture();let page;const report={state:'running',syntheticOnly:true,frames:[],actions:{}};
+ const audit=async step=>{(report.actionTrace??=[]).push({step,at:Date.now()});report.actionStep=step;report.fixtureWrites=structuredClone(f.writes);await writeFile(dir+'/action-trace.json',JSON.stringify(report,null,2)+'\n');};
  const pending=[{id:'question-123',method:'item/tool/requestUserInput',params:{threadId:'parent-123',questions:[{id:'material',question:'Which material?',options:[{label:'Wood',description:'Warm surface'},{label:'Metal',description:'Cool surface'}]}]}}];
  try{
   page=await context.newPage();await page.bringToFront();page.setDefaultTimeout(10000);await page.setViewportSize({width:1440,height:1000});
@@ -156,15 +157,15 @@ export async function runCatalogTitleCheck({context,dir,cases=null}){
    assert.equal((await card.boundingBox()).height,initialHeight,'Restoring attention must not resize the card');report.frames.at(-1).liveHeightStable=true;
    await writeFile(dir+'/progress.json',JSON.stringify(report,null,2)+'\n');
   }
-  await clearVisualFontScale(page);
-  await card.locator('.card-title').click();assert.equal(await card.getByRole('textbox',{name:'Session name'}).inputValue(),'Prepare the field guide');await card.getByRole('textbox',{name:'Session name'}).press('Escape');assert.equal(f.writes.filter(w=>w.path.endsWith('/rename')).length,0);report.actions.renameCancelOriginal=true;
-  await card.locator('.child-badge').click();await page.locator('.work-card[data-id="child-123"]').waitFor();report.actions.originalChildExpanded=true;
-  await card.locator('.question-badge').click();await page.locator('#requests input').waitFor();assert.equal(await page.locator('#draft').inputValue(),'Unsent catalog routing draft');assert.match(await page.locator('#requests').innerText(),/Which material/);report.actions.originalAttentionAndDraft=true;
+  await audit('clear-font');await clearVisualFontScale(page);
+  await audit('rename-start');await card.locator('.card-title').click();assert.equal(await card.getByRole('textbox',{name:'Session name'}).inputValue(),'Prepare the field guide');await card.getByRole('textbox',{name:'Session name'}).press('Escape');assert.equal(f.writes.filter(w=>w.path.endsWith('/rename')).length,0);report.actions.renameCancelOriginal=true;await audit('rename-complete');
+  await audit('child-start');await card.locator('.child-badge').click();await page.locator('.work-card[data-id="child-123"]').waitFor();report.actions.originalChildExpanded=true;await audit('child-complete');
+  await audit('attention-start');await card.locator('.question-badge').click();await page.locator('#requests input').waitFor();assert.equal(await page.locator('#draft').inputValue(),'Unsent catalog routing draft');assert.match(await page.locator('#requests').innerText(),/Which material/);report.actions.originalAttentionAndDraft=true;await audit('attention-complete');
   await page.locator('#review-pane .review-heading').getByRole('button',{name:'Close',exact:true}).click();if(await page.locator('#back').isVisible())await page.locator('#back').click();
-  page.once('dialog',dialog=>dialog.accept());await card.locator('.card-archive').click();await page.waitForFunction(()=>!document.querySelector('.work-card[data-id="parent-123"]'));
-  assert.equal(f.writes.filter(w=>w.path==='/api/threads/parent-123/archive').length,1);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')||w.path.startsWith('/api/requests/')).length,0);report.actions.originalArchiveOnce=true;report.actions.noWorkSubmitted=true;
+  await audit('archive-start');let archiveConfirmation;page.once('dialog',dialog=>{report.archiveDialog={type:dialog.type(),message:dialog.message()};archiveConfirmation=dialog.accept();archiveConfirmation.catch(()=>{});});await card.locator('.card-archive').click();assert.ok(archiveConfirmation,'Original archive confirmation must be shown');await archiveConfirmation;await audit('archive-confirmed');await page.waitForFunction(()=>!document.querySelector('.work-card[data-id="parent-123"]'));
+  assert.equal(f.writes.filter(w=>w.path==='/api/threads/parent-123/archive').length,1);assert.equal(f.writes.filter(w=>w.path.endsWith('/reply')||w.path.startsWith('/api/requests/')).length,0);report.actions.originalArchiveOnce=true;report.actions.noWorkSubmitted=true;await audit('archive-complete');
   report.state='checks-passed-awaiting-visual-review';return report;
- }catch(e){report.state='failed';report.failure=e.message;throw e;}finally{await page?.close();await f.close();report.ownedResourcesClosed=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
+ }catch(e){report.state='failed';report.failure=e.message;await audit('failed-at-'+report.actionStep);throw e;}finally{await audit('closing-page');await page?.close();await audit('closing-fixture');await f.close();report.ownedResourcesClosed=true;await writeFile(dir+'/review.json',JSON.stringify(report,null,2)+'\n');}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE||'playwright');const browser=await chromium.launch({headless:true});
