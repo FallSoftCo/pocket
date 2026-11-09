@@ -3556,6 +3556,20 @@
       ],
       "verification": "44 focused checks; four browser views across narrow/desktop light/dark with fixed phase geometry; independent source review; one actual teacher batch retained mixed-gender agreement error. Both Android unit/lint variants, 18 native journeys and exact optimized signed catalog/history review passed. Original admission-blocking emulator System UI ANR retained; passing successor uses identical build. Source cache provenance limitations remain explicit.",
       "evidence": "docs/qualification/grammar-boundaries-reset-180.json"
+    },
+    {
+      "id": "ux-evidence-tui-parity-20261109",
+      "request": "Instrument UX for data-driven decisions, visually detect clipped borders/padding, and continue team work toward Codex TUI parity.",
+      "status": "Three medium-effort workstreams active;180 remains deployed. Phone180 verified by read-only package manager; current ADB unavailable.",
+      "implementationTargets": [
+        "Bounded recent foreground Android/web UX aggregates and explicit local export; no text,identifiers,credentials,keystrokes or uploads",
+        "Measure session selection to initial/fresh presented content separately from network completion; retain failed/superseded outcomes",
+        "Shared card shape fixes observed18dp outerclip/8dp border mismatch",
+        "Retain original large-font/IME screenshots with unique current-run identity and hashes, followed by actual visual review",
+        "Native configured MCP OAuth initiation/completion, respecting supported runtime and source-bound pending/unknown receipts"
+      ],
+      "verification": "Pending integrated source qualification; inherited180 test counts do not qualify this work.",
+      "evidence": "docs/UX-MEASUREMENT-PLAN.md"
     }
   ],
   "current_state": {
