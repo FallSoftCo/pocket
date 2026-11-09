@@ -3530,6 +3530,19 @@
         "android/app/src/main/java/co/fallsoft/pocket/DurableVoiceWork.kt"
       ],
       "verification": "682 backend tests;476 unit cases per Android variant (2 skipped), both lints;12 native integration cases including actual retired drafts/unknown receipts/audio deletion with current host preserved; exact optimized compatible APK reviewed. No removed operation sent or retried."
+    },
+    {
+      "id": "standing-banked-reset-20261108",
+      "request": "Automatically use existing banked Codex usage resets at1percent allowance remaining, recurring across quota cycles.",
+      "status": "Implemented, reviewed and activated on the existing single scheduler; no live redemption while below threshold.",
+      "implementation": [
+        "99% used trigger on validated Codex primary/secondary allowance windows",
+        "Account-bound standing authorization separate from retained original oneoff receipt",
+        "Durable exact benefit/idempotency key before dispatch; unknown outcomes reconcile same attempt",
+        "Successful reset waits for observed allowance recovery; negative outcomes cannot churn unchanged benefit inventory",
+        "Existing socket and one minute timer; no model calls, purchases, API key billing or task resumption"
+      ],
+      "verification": "9 focused cases passed including synthetic native socket, durable runner restarts, lost acknowledgement, cap/account guards and state-write failure. Live scheduler observed26% used with1available reset and remained armed; original receipt unchanged. Actual threshold-time redemption remains unexercised."
     }
   ],
   "current_state": {
