@@ -21,7 +21,7 @@ function fixture(){
   if(method==='config/value/write'){assert.equal(params.expectedVersion,state.version);state.version='v2';return {status:'ok'};}
   throw Error('Unexpected RPC '+method);
  }};
- const native=new NativeConfiguration({codex,host:'fixture-host',savedSettings:()=>({model:'requested-model'}),requestedPermissions:()=>'full'});
+ const native=new NativeConfiguration({codex,accountEvidence:()=>({accountId:'fixture-account'}),host:'fixture-host',savedSettings:()=>({model:'requested-model'}),requestedPermissions:()=>'full'});
  return {native,codex,calls,state};
 }
 test('capabilities identify connected runtime, never infer from a stored thread or requested permission',()=>{
