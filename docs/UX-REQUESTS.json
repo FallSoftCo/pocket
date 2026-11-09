@@ -3991,7 +3991,7 @@
     "requirement": "Closing and reopening the same session must show current messages, not a retained transient questions/settings panel. Background reconnect must preserve reading and drafts.",
     "cause": "Compose may coalesce close/reopen or A-to-B-to-A into the same final source key, preserving a previous screen despite explicit navigation.",
     "implementation": "Separate explicit navigation generation from runtime incarnation and same-source history replacement. Questions panel has CLOSED/MANUAL/ATTENTION ownership: cached pending metadata cannot interrupt reading; verified resolution closes automatic attention while manual result browsing stays open. Attention uses the same revision fingerprint as request drafts, not only a reusable native request ID, and forgets revisions once no longer pending.",
-    "evidence": "Retained native failures exposed independent coalesced navigation, same-source forced reset, and cached answered-question attention; original canonical/context/manual reading assertions retained. Final182r05 original request journey retained a same-ID native-form suppression failure; the fix preserves RequestCard draft fingerprints and all original assertions.",
+    "evidence": "Retained native failures exposed coalesced navigation, same-source forced reset, cached answered-question attention and reused request-ID suppression. Revision-aware native request journey passed with original action identities/counts/drafts and command-output transition; the obsolete expectation that automatic attention remains open was replaced by explicit auto-close and manual-reopen checks. Final signed182 remains pending.",
     "state": "candidate; native qualification pending"
   },
   "native_review_request_ownership_20261109": {
