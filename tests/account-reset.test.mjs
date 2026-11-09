@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {runAccountReset} from '../server/account-reset.mjs';
+import {runAccountReset,standingAccountReset} from '../server/account-reset.mjs';
 const setup=()=>{
  let consumed=false,failAck=false,failVerify=false,percent=93;const calls=[],saved=[];
  const state={enabled:true,status:'scheduled',accountId:'account',creditId:'benefit',idempotencyKey:'same-durable-key',thresholdPercent:98,expiresAt:100000};
@@ -29,4 +29,28 @@ test('different account, exhausted spending cap, unavailable and expired benefit
 });
 test('imminent normal reset waits instead of wasting earned benefit',async()=>{
  const f=setup();f.setPercent(98);const base=f.call;f.call=async(m,p)=>{if(m==='account/rateLimits/read'){const u=f.usage();u.rateLimits.primary.resetsAt=100;return u;}return base(m,p);};await runAccountReset({...f,now:1000});assert.equal(f.state.status,'scheduled');assert.match(f.state.reason,/imminent/);
+});
+
+test('explicit standing migration retains uncertain identity, original receipt and deliberate stops',()=>{
+ const original={enabled:true,status:'redeeming',accountId:'account',creditId:'old-credit',idempotencyKey:'old-key',attemptedAt:1,attempts:2};
+ const before=JSON.stringify(original),options={accountId:'account',authorizationReference:'synthetic-owner-instruction',now:100};
+ const migrated=standingAccountReset(original,options);
+ assert.equal(JSON.stringify(original),before);assert.deepEqual(migrated.legacyReceipt,original);
+ assert.equal(migrated.status,'redeeming');assert.equal(migrated.attempt.creditId,'old-credit');assert.equal(migrated.attempt.idempotencyKey,'old-key');
+ assert.equal(standingAccountReset({...original,status:'acknowledged'},options).status,'awaitingUsageDrop');
+ assert.equal(standingAccountReset({...original,enabled:false},options).enabled,false);
+ assert.equal(standingAccountReset({...original,status:'cancelled'},options).status,'paused');
+ for(const invalid of [{...original,status:'unknown'},{...original,accountId:null},{...original,creditId:null},{...original,idempotencyKey:''},{...original,enabled:null}])assert.throws(()=>standingAccountReset(invalid,options),/reconciliation/);
+ assert.throws(()=>standingAccountReset(original,{...options,accountId:'different'}),/matching account/);
+});
+
+test('standing dispatch cannot proceed or overwrite uncertain disk state when durable save fails',async()=>{
+ const state=standingAccountReset(null,{accountId:'account',authorizationReference:'synthetic-request'});let consumes=0,writes=0;
+ const call=async method=>{
+  if(method==='account/read')return {account:{type:'chatgpt'}};
+  if(method==='account/rateLimits/read')return {accountId:'account',rateLimits:{primary:{usedPercent:99,windowDurationMins:300,resetsAt:null},spendControlReached:false,individualLimit:null},rateLimitResetCredits:{credits:[{id:'banked',status:'available',resetType:'codexRateLimits',expiresAt:null}]}};
+  consumes++;return {outcome:'reset'};
+ };
+ await assert.rejects(runAccountReset({state,call,now:state.nextAt,save:next=>{writes++;if(next.status==='redeeming')throw Error('synthetic disk failure');}}),{code:'RESET_STATE_WRITE_FAILED'});
+ assert.equal(consumes,0);assert.equal(writes,2,'failed intent must not be overwritten with fallback state');
 });
