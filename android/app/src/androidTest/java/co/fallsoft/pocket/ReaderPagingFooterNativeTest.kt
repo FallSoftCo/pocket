@@ -43,6 +43,8 @@ class ReaderPagingFooterNativeTest {
 
     @Test fun bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme(){
         val i=InstrumentationRegistry.getInstrumentation()
+        val qaRunId=InstrumentationRegistry.getArguments().getString("qaRunId").orEmpty()
+        require(qaRunId.matches(Regex("[A-Za-z0-9_-]{1,128}"))){"A current qualification run identity is required"}
         val device=UiDevice.getInstance(i)
         requireOwnedNativeTarget(device)
         val width=mutableIntStateOf(320)
@@ -141,7 +143,7 @@ class ReaderPagingFooterNativeTest {
                     compose.onNodeWithTag("footer-test-editor").assertIsFocused()
                     assertEquals("$label paging changed IME visibility",ime,imeVisible())
                     records.put(JSONObject().put("widthDp",w).put("fontScale",f).put("ime",ime)
-                        .put("pageUp",up.toString()).put("pageDown",down.toString()))
+                        .put("screenshot","footer-paging-$w-$f-$ime.png").put("pageUp",up.toString()).put("pageDown",down.toString()))
                     assertTrue(device.takeScreenshot(i.targetContext.filesDir.resolve("footer-paging-$w-$f-$ime.png")))
                 }
             }
@@ -171,11 +173,12 @@ class ReaderPagingFooterNativeTest {
                 compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed()
                 assertEquals("Numeric usage orphaned Page down",bounds("reader-page-up").top,bounds("reader-page-down").top,1f)
                 records.put(JSONObject().put("widthDp",availableWidth).put("fontScale",f).put("ime",false)
-                    .put("usage",primary).put("pageUp",bounds("reader-page-up").toString()).put("pageDown",bounds("reader-page-down").toString()))
+                    .put("screenshot","footer-usage-${if(value.remainingPercent==0.0)"credits" else "allowance"}-$f.png").put("usage",primary).put("pageUp",bounds("reader-page-up").toString()).put("pageDown",bounds("reader-page-down").toString()))
                 assertTrue(device.takeScreenshot(i.targetContext.filesDir.resolve("footer-usage-${if(value.remainingPercent==0.0)"credits" else "allowance"}-$f.png")))
             }
         }
         i.targetContext.filesDir.resolve("footer-paging-matrix.json").writeText(JSONObject()
+            .put("qaRunId",qaRunId)
             .put("scope","Native component fixture, not full conversation send or physical phone proof")
             .put("scenarios",records).toString(2))
     }

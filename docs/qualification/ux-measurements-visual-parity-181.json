@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "release": {
+    "versionCode": 181,
+    "versionName": "0.5.0-alpha.163",
+    "androidChannels": "both paired channels published",
+    "backendWeb": "live on both paired backends; both web routes serve exact qualified assets",
+    "nativeProcessesRestarted": false,
+    "phone": "last independent package read180;181 handset installation/rendering not verified",
+    "announcements": 1,
+    "push": "original announcement accepted by FCM on attempt6; no duplicate; acceptance is not phone display proof",
+    "backendDigest": "03a06752a4319bbaac176b07f76dca9b9b94ff2a575337a9407fd63608a3b523",
+    "backendSourceCommit": "b6905ba76eaf9f964bfeeadd228d7cdd768bdb01"
+  },
+  "measurements": {
+    "default": "bounded in-memory foreground aggregates; no automatic upload",
+    "metrics": [
+      "first visible content",
+      "cached first visible content",
+      "fresh visible content",
+      "history transport response",
+      "local send feedback commit",
+      "original send admission callback"
+    ],
+    "outcomes": [
+      "failed",
+      "unknown",
+      "cancelled",
+      "superseded",
+      "backgrounded",
+      "pending"
+    ],
+    "excludes": [
+      "content",
+      "identifiers",
+      "URLs",
+      "credentials",
+      "keystrokes"
+    ],
+    "expensiveCapture": "explicit Android Report a slowdown only",
+    "limitations": [
+      "layout/DOM commit is not optical presentation",
+      "small local sample is not population analytics",
+      "process exit resets buffer",
+      "voice and coordinator timing not covered by these new aggregates"
+    ]
+  },
+  "visual": {
+    "fixes": [
+      "shared card border/fill/clip shape",
+      "320px enlarged-text web footer wrapping"
+    ],
+    "nativeFooter": "16 current-run screenshot artifacts retained and bound to release; normal/enlarged/IME variants reviewed",
+    "optimized": "exact compatible release APK catalog/history/question/reopen journey passed and screenshots reviewed",
+    "browser": "integrated root assets;12 width/font/conversation/drawer/focused-short cases passed",
+    "remaining": "web catalog title can be squeezed by badges; separate candidate not included"
+  },
+  "parity": {
+    "added": "source/account/native-transport-bound MCP OAuth initiation and original completion handling on qualified0.167 runtime",
+    "limits": [
+      "host-local callback requires original-host browser; no mobile OAuth relay",
+      "no actual provider login in synthetic qualification",
+      "Mac0.163 remains read-only",
+      "MCP process-wide reload candidate remains separate and unqualified natively"
+    ]
+  },
+  "verification": {
+    "nativeRequiredCases": 19,
+    "androidUnitPerVariant": {
+      "total": 485,
+      "skipped": 2,
+      "failed": 0
+    },
+    "bothLints": "passed",
+    "backend": {
+      "passed": 774,
+      "skipped": 2,
+      "failed": 0
+    },
+    "productionSourceSha": "a56a79e830c3564ef2cf43ef2f89e5a2e82aa8aaaa0da8799c453d38ee7c106e",
+    "compatibleApkSha256": "2815383899446964ab22e3eb8ec5689af98fbb3539b1495016425c72f1212b89",
+    "publicApkSha256": "dbccffdf2e65211c328ba040f03f787aebb2c9b7116cb095eb15793d57edac60",
+    "retainedFailures": [
+      "owned emulator SystemUI ANR before candidate admission; same-artifact successor passed",
+      "browser observation missed a transient state; preinstalled observation corrected",
+      "browser outage fixture raced background repair; injection now follows original acceptance"
+    ],
+    "postQualificationBackendFixes": {
+      "scopedOAuthNetworking": "verified path-based Firebase credentials preserve scoped HTTP agent; original retry queue unchanged",
+      "configurationBoundary": "account and native connection identity checked through preflight and immediately before original write",
+      "focusedIntegratedChecks": 21,
+      "independentSourceReview": "accepted",
+      "providerActions": 0
+    },
+    "ci": {
+      "run": "42645335519",
+      "backend": "passed",
+      "android": "passed"
+    }
+  },
+  "limits": [
+    "No new physical-phone frame pacing, visual or provider-login proof",
+    "No claim of complete TUI parity",
+    "Existing gallery index blocked by storage metadata; screenshots retained, not claimed gallery-published"
+  ]
+}

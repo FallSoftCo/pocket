@@ -34,7 +34,7 @@ internal object CodexConversations {
     private data class LatestIntent(val due:Long,val attempt:Int,val hooks:LatestHooks?=null,val waiters:List<CompletableDeferred<Unit>> = emptyList())
     private data class Session(
         val key:CodexConversationKey,val incarnation:Long,val destination:EnvironmentRequest,
-        val scope:CoroutineScope,var probe:Job?=null,var historicalTimer:Job?=null,
+        val scope:CoroutineScope,val uxOpen:Long=0,var uxSend:Long=0,var uxSendRevision:Int=0,var probe:Job?=null,var historicalTimer:Job?=null,
         val latestWake:Channel<Unit> = Channel(Channel.CONFLATED),var latestIntent:LatestIntent?=null,
         val readerBusy:MutableStateFlow<Boolean> = MutableStateFlow(false)
     )
@@ -69,19 +69,19 @@ internal object CodexConversations {
 
     private fun retire(){
         if(session!=null)PocketTranscript.pauseState()
-        val old=session;session=null;old?.scope?.cancel()
+        val old=session;session=null;old?.let{UxMeasurements.end(it.uxOpen,UxEnd.SUPERSEDED);UxMeasurements.end(it.uxSend,UxEnd.SUPERSEDED)};old?.scope?.cancel()
     }
     /** Selection is owned here even through legacy/test adapters; no read is implied. */
     fun select(id:String?,force:Boolean=false,openLatest:Boolean=false){
         if(!force&&selected==id&&session?.let{current(it)}==true)return
         retire();selected=id;detail=null;viewport=id!=null
         if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
-        attach(id,openLatest)
+        attach(id,openLatest,measureOpen=true)
     }
-    private fun attach(id:String,openLatest:Boolean=false):Session? {
+    private fun attach(id:String,openLatest:Boolean=false,measureOpen:Boolean=false):Session? {
         val destination=Pocket.captureEnvironment()?:return null
         val scope=CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination))
-        val value=Session(key(destination,id),++serial,destination,scope)
+        val value=Session(key(destination,id),++serial,destination,scope,uxOpen=if(measureOpen)UxMeasurements.begin(UxJourney.OPEN)else 0)
         selectionKey=value.key;session=value
         detailValue=outgoing.overlay(value.key,null)
         PocketTranscript.resetState(id,scope,openLatest)
@@ -101,7 +101,7 @@ internal object CodexConversations {
     fun suspendReading(){retire()}
     fun onForeground(visible:Boolean){
         if(foreground==visible)return
-        foreground=visible
+        foreground=visible;UxMeasurements.foreground(visible)
         if(!visible){retire();return}
         if(viewport)active()?.let{invalidate(immediate=true)}
     }
@@ -193,6 +193,14 @@ internal object CodexConversations {
     suspend fun readFrom(key:CodexConversationKey?,incarnation:Long,older:Boolean=false){
         if(owns(key,incarnation))read(older=older)
     }
+    fun hasOpenMeasurement(key:CodexConversationKey?,incarnation:Long)=owns(key,incarnation)&&session?.let{UxMeasurements.active(it.uxOpen)}==true
+    fun hasSendMeasurement(key:CodexConversationKey?,incarnation:Long)=owns(key,incarnation)&&session?.let{UxMeasurements.active(it.uxSend)}==true
+    fun measuredContentLayout(key:CodexConversationKey?,incarnation:Long,fresh:Boolean){
+        if(owns(key,incarnation))session?.let{UxMeasurements.contentLayout(it.uxOpen,fresh)}
+    }
+    fun measuredSendFeedback(key:CodexConversationKey?,incarnation:Long){
+        if(owns(key,incarnation))session?.takeIf{PocketReplies.revision>it.uxSendRevision}?.let{UxMeasurements.mark(it.uxSend,UxMetric.SEND_FEEDBACK_COMMITTED)}
+    }
     fun readerInteraction(key:CodexConversationKey?,incarnation:Long){
         if(owns(key,incarnation))PocketTranscript.readerInteraction()
     }
@@ -205,7 +213,10 @@ internal object CodexConversations {
     /** Preserve the original journal; only a still-current source may admit UI input. */
     fun submit(key:CodexConversationKey?,incarnation:Long,text:String,mode:String,draftKey:String,onDone:()->Unit):Boolean{
         if(!owns(key,incarnation)){Pocket.error="Conversation changed. Your draft is preserved.";return false}
-        Pocket.reply(text,threadId=key!!.thread,mode=mode,draftKey=draftKey,onDone=onDone)
+        val owner=session?:return false
+        UxMeasurements.end(owner.uxSend,UxEnd.SUPERSEDED)
+        val measurement=UxMeasurements.begin(UxJourney.SEND);owner.uxSend=measurement;owner.uxSendRevision=PocketReplies.revision
+        Pocket.reply(text,threadId=key!!.thread,mode=mode,draftKey=draftKey,onDiagnosticOutcome={outcome->UxMeasurements.end(measurement,when(outcome){ReplyAdmissionObservation.FAILED->UxEnd.FAILED;ReplyAdmissionObservation.UNKNOWN->UxEnd.UNKNOWN;ReplyAdmissionObservation.CANCELLED->UxEnd.CANCELLED})},onDone={UxMeasurements.mark(measurement,UxMetric.SEND_ADMITTED_CALLBACK);onDone()})
         return true
     }
     fun interrupt(key:CodexConversationKey?,incarnation:Long){

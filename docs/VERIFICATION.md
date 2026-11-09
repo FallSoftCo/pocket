@@ -357,3 +357,13 @@ Use the production frame clock and UiAutomator for full network/IME journeys. Co
 Real-room qualification uses only the separate nonexecuting QA authority and retained pairing. Every request has a private journal; reconcile its original command/delivery before another run. Lost Stop acknowledgements must result in GET of that same delivery, never another POST. A completed journey can be observed again only when its code/resources/manifest payload is identical; retain both actual APK hashes. Assert the latest current material message rather than an old fixture message staying in the viewport. Verify the original accepted event once by canonical identity.
 
 The user-operated Report a slowdown action collects at most 15 foreground seconds, stops on backgrounding, and exports bounded frame durations, main-queue delays and stack frames locally. It records no conversations, credentials, account IDs, screenshots or audio and performs no upload/model call. Private latest JSON is under app files/diagnostics; Android29+ also exports to Downloads/NextComp. On older Android it uses the app external diagnostics directory. Software-emulator draw callback timings remain distinct from physical phone/optical latency.
+
+
+## UX measurements and visual parity — Android 181
+
+[The 181 qualification](qualification/ux-measurements-visual-parity-181.json)
+records local timing/outcome measurements, current-run native footer images,
+card-corner correction and integrated browser layout checks. Both Android
+channels are published, both backends are live on 181, and both web routes
+serve the qualified assets. Native processes and original receipts were preserved. Exact optimized native review and 19 required journeys passed;
+physical-phone rendering and provider OAuth remain separate unverified scopes.

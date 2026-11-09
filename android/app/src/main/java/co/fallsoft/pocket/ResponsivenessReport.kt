@@ -117,6 +117,7 @@ internal object ResponsivenessReport {
             return JSONObject().put("schema",1).put("capturedAt",startedAt).put("durationMs",SystemClock.elapsedRealtime()-started)
                 .put("metadata",metadata).put("totalFrames",totalFrames).put("droppedFrameCallbacks",dropped)
                 .put("frameColumns",JSONArray(listOf("atMs","totalNs","inputNs","layoutNs","drawNs","syncNs","commandNs","swapNs")))
+                .put("ux",JSONObject(UxMeasurements.snapshot()))
                 .put("frames",JSONArray(rows)).put("mainAcknowledgementNs",JSONArray(acks)).put("mainStalls",JSONArray(blocked))
                 .put("limits","User-initiated 15-second foreground capture; bounded samples. No conversation text, account IDs, tokens, audio, screenshots or automatic upload.")
         }

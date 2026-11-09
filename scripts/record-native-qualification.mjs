@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import {readFileSync,writeFileSync,existsSync,openSync,closeSync,realpathSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {fileSha,sha256,productionSourceSha,qualificationInputSha,nativeOutputPassed} from './release-qualification.mjs';
+import {fileSha,sha256,productionSourceSha,qualificationInputSha,nativeOutputPassed,footerVisualCase,footerMatrixScenarios,validateFooterVisualMatrix} from './release-qualification.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const [stage,name]=process.argv.slice(2),directory=resolve(stage||'.');
 const read=path=>JSON.parse(readFileSync(path,'utf8'));
@@ -164,7 +164,8 @@ try{
   const setup=spawnSync(adb,['-s',serial,'shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'"],{input:liveAudioPreferences,encoding:'utf8',env:childEnv,timeout:30000});
   if(setup.status!==0||run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml'])!==liveAudioPreferences)throw Error('Isolated audio preferences readback differs.');
  }
- const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,...(parityCase?['-e','nativeParityFixture','loopback']:[]),'-e','qaRunId','release'+manifest.versionCode+'_'+build.productionSourceSha.slice(0,8)+'_'+build.qualificationInputSha.slice(0,8),'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
+ receipt.qaRunId='release'+manifest.versionCode+'_'+crypto.randomUUID();persist();
+ const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,...(parityCase?['-e','nativeParityFixture','loopback']:[]),'-e','qaRunId',receipt.qaRunId,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
  if(liveAudioCase){
   for(const artifact of ['coordinator-native-audio-live.json','coordinator-native-audio-diagnostics.json']){
@@ -173,6 +174,20 @@ try{
   }
  }
  if(r.status!==0||!nativeOutputPassed(output)||!current()||installed()!==build.qualificationApkSha)throw Error('Native qualification failed; channel must not be published.');
+ if(name===footerVisualCase){
+  const matrixText=run(['exec-out','run-as','co.fallsoft.pocket','cat','files/footer-paging-matrix.json']);
+  const matrix=JSON.parse(matrixText),rows=footerMatrixScenarios(matrix,receipt.qaRunId);
+  const path='visual-'+id+'-footer-matrix.json';writeFileSync(join(directory,path),matrixText,{flag:'wx',mode:0o600});
+  receipt.visualMatrix={schema:1,path,sha256:fileSha(join(directory,path)),artifacts:[]};persist();
+  for(const row of rows){
+   // Only names validated against the exact expected scenario set reach adb.
+   const result=spawnSync(adb,['-s',serial,'exec-out','run-as','co.fallsoft.pocket','cat','files/'+row.screenshot],{env:childEnv,timeout:30000,maxBuffer:16*1024*1024});
+   if(result.status!==0)throw Error('Footer screenshot extraction failed.');
+   const capturePath='native-'+id+'-'+row.screenshot;writeFileSync(join(directory,capturePath),result.stdout,{flag:'wx',mode:0o600});
+   receipt.visualMatrix.artifacts.push({name:row.screenshot,path:capturePath,sha256:fileSha(join(directory,capturePath))});persist();
+  }
+  validateFooterVisualMatrix(directory,receipt);
+ }
  receipt.state='complete';receipt.finishedAt=Date.now();persist();console.log(JSON.stringify({state:'complete',case:name,elapsedMs:receipt.finishedAt-receipt.startedAt}));
 }catch(error){receipt.state='failed';receipt.finishedAt=Date.now();receipt.error=error.message;persist();throw error;}
 finally{

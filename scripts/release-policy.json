@@ -2,6 +2,7 @@
   "schema": 1,
   "qualification": "codex-only-upgrade-canonical-history-and-native-voice",
   "requiredNativeCases": [
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#matchingUnknownReceiptRequiresExplicitRecovery",
     "co.fallsoft.pocket.CoordinatorNativeAudioLiveTest#liveInputFinalizesAndOutputPlaysBeforeCompleteBuffer",
     "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#nativeOrderSurvivesDelayedArrivalQuestionsAndReconnectWithoutLegacyRepair",
@@ -49,5 +50,8 @@
     "178 extends the existing context/settings native journey with source-bound plugin details, required installation notice, explicit confirmation and authentication-pending readback. HTTP/socket and DOM fixtures additionally cover original late replies, stale concurrent preflight and environment/account changes. No live plugin installation, provider authentication or readiness is certified by synthetic qualification."
   ],
   "requiredOptimizedReview": "native-codex-catalog-and-history",
-  "captureInteraction": "volume-buttons"
+  "captureInteraction": "volume-buttons",
+  "requiredNativeVisualMatrices": [
+    "co.fallsoft.pocket.ReaderPagingFooterNativeTest#bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme"
+  ]
 }

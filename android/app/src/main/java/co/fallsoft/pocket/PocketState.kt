@@ -39,6 +39,7 @@ object Pocket {
     fun captureEnvironment(id:String=environmentId)=environmentProfiles.capture(id)
     fun notificationTag(id:String)=if(id in setOf("workstation","phone"))null else "environment:$id"
     fun notificationIntent(environment:String,kind:String,id:Int)=android.net.Uri.Builder().scheme("nextcomp-action").authority(environment).appendPath(kind).appendPath(id.toString()).build()
+    var nativeAuthGeneration by mutableStateOf(0)
     var connected by mutableStateOf(false); var codexOnline by mutableStateOf(false)
     var connectionError by mutableStateOf("")
     val refreshError get()=CodexCatalog.error
@@ -271,12 +272,12 @@ object Pocket {
             }
         }?:emptyList() }?.filter{it.text.isNotBlank()}?.takeLast(50)?:emptyList()
     }
-    fun reply(text:String,threadId:String?=selected,mode:String="auto",draftKey:String?=threadId?.let{key("draft:$it")},onDone:()->Unit={}){
-        if(threadId==null||text.isBlank()||sending)return
-        if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";return}
+    fun reply(text:String,threadId:String?=selected,mode:String="auto",draftKey:String?=threadId?.let{key("draft:$it")},onDiagnosticOutcome:(ReplyAdmissionObservation)->Unit={},onDone:()->Unit={}){
+        if(threadId==null||text.isBlank()||sending){runCatching{onDiagnosticOutcome(ReplyAdmissionObservation.CANCELLED)};return}
+        if(tasks.firstOrNull{it.id==threadId}?.canAcceptDirectInput==false){error="Open the parent task to send guidance to this agent.";runCatching{onDiagnosticOutcome(ReplyAdmissionObservation.FAILED)};return}
         if(threadId==selected)error=""
         replyFailures.remove(replyFailureKey(threadId))
-        PocketReplies.submit(text,threadId,mode,draftKey,onDone)
+        PocketReplies.submit(text,threadId,mode,draftKey,onDiagnosticOutcome=onDiagnosticOutcome,onDone=onDone)
     }
     var replyActionBusy by mutableStateOf(setOf<String>())
     fun isReplyActionBusy(id:String)="$environmentId:$selected:$id" in replyActionBusy
@@ -311,7 +312,9 @@ object Pocket {
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"),coroutineContext[EnvironmentRequestContext]?.destination)
             "sessionInteraction" -> {rememberSessionInteraction(json.s("threadId"),"item:"+json.s("interactionId"));discoverSession(json.s("threadId"))}
+            "nativeAuthBoundary" -> {nativeAuthGeneration++}
             "status" -> {
+                if(!json.optBoolean("connected"))nativeAuthGeneration++
                 statusRevision++
                 val recovered=!codexOnline&&json.optBoolean("connected")
                 codexOnline=json.optBoolean("connected");codexConnectionMessage=ConnectionMessages.server(json.optJSONObject("problem")?.s("message")?:"")

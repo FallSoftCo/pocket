@@ -19,7 +19,7 @@ class ClientReplyRecoveryNativeTest {
  private fun await(b:()->Boolean){val end=System.currentTimeMillis()+15000;while(System.currentTimeMillis()<end){if(b())return;Thread.sleep(50)};assertTrue("Delivery condition timed out",b())}
  private fun qa(path:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/"+path,JSONObject())}
  private fun start(reset:Boolean=true,draft:String="Receipt test"){
-  check(device.executeShellCommand("getprop ro.boot.qemu.avd_name").trim()=="nextcomp_env_qa")
+  requireOwnedNativeTarget(device)
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.POST_NOTIFICATIONS")
   device.executeShellCommand("pm grant co.fallsoft.pocket android.permission.RECORD_AUDIO")
   if(reset)context.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76").putString("deviceId","synthetic-device-a").putString("draft:same-thread",draft).commit()
@@ -73,14 +73,17 @@ class ClientReplyRecoveryNativeTest {
  }
  @Test fun matchingUnknownReceiptRequiresExplicitRecovery(){
   start(draft="Unknown receipt test");qa("unknown-reply");main{Pocket.open("same-thread")};await{Pocket.detail!=null&&!PocketTranscript.updating}
-  var completed=false;main{Pocket.reply("Unknown receipt test",onDone={completed=true})}
+  val outcomes=java.util.concurrent.CopyOnWriteArrayList<ReplyAdmissionObservation>()
+  var completed=false;main{Pocket.reply("Unknown receipt test",onDiagnosticOutcome={outcomes.add(it)},onDone={completed=true})}
   await{!Pocket.sending&&PocketReplies.entries("same-thread").singleOrNull()?.state=="unknown"&&device.hasObject(By.text("Retry"))}
+  assertEquals(listOf(ReplyAdmissionObservation.UNKNOWN),outcomes.toList())
   assertFalse("Unknown receipt cleared draft callback",completed);assertEquals("Unknown receipt test",Pocket.prefs.getString("draft:same-thread",null))
   Thread.sleep(1000);assertEquals("Unknown receipt started another send",1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
   device.findObject(By.text("Retry")).click();assertEquals(0,qa("state").getJSONArray("recoveries").length())
   device.findObject(By.text("Check and retry")).click();await{PocketReplies.entries("same-thread").isEmpty()}
   assertEquals("Recovery posted original turn again",1,posts().length());val action=qa("state").getJSONArray("recoveries").getJSONObject(0)
   assertEquals(posts().getJSONObject(0).s("id"),action.s("id"));assertTrue(action.optBoolean("confirmUnknown"));assertFalse(Pocket.prefs.contains("draft:same-thread"))
+  assertEquals("Later recovery repeated initial diagnostic callback",listOf(ReplyAdmissionObservation.UNKNOWN),outcomes.toList())
  }
  @Test fun malformedAcknowledgementAndWrongThreadCannotEraseDraftOrResend(){
   start();qa("bad-reply");main{Pocket.open("same-thread",keyboard=true)}

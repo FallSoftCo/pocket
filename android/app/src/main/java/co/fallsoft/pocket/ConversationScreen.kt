@@ -158,6 +158,22 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val runProjection=remember(filteredRows,expandedRunIds){commandRunProjection(filteredRows,expandedRunIds)}
     val shownRows=runProjection.rows
     val latestRunProjection by rememberUpdatedState(runProjection)
+    val measuredRows by rememberUpdatedState(shownRows)
+    val measuredFresh by rememberUpdatedState(conversation.freshness.current)
+    LaunchedEffect(list,conversation.key,conversation.incarnation){
+        fun visibleContent():Boolean{
+            val visible=list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()
+            return measuredRows.any{it.s("id") in visible&&it.s("kind") in setOf("message","user")}
+        }
+        val active={CodexConversations.hasOpenMeasurement(conversation.key,conversation.incarnation)}
+        observeOpenUxPresentation(
+            changes=snapshotFlow{val enabled=active();Triple(enabled,enabled&&AppWindowVisibility.focused&&visibleContent(),measuredFresh)},
+            active=active,visible=::visibleContent,fresh={measuredFresh},focused={AppWindowVisibility.focused},
+            frame={withFrameNanos{}},
+            observed={fresh->CodexConversations.measuredContentLayout(conversation.key,conversation.incarnation,fresh)})
+    }
+    // Composition commit is intentionally a separate evidence level from layout.
+    SideEffect{if(Pocket.sending&&clientReplies.isNotEmpty()&&AppWindowVisibility.focused&&CodexConversations.hasSendMeasurement(conversation.key,conversation.incarnation))CodexConversations.measuredSendFeedback(conversation.key,conversation.incarnation)}
     val pendingFilter=filterRequest
     SideEffect{
         if(pendingFilter!=null&&pendingFilter.environment==Pocket.environmentId&&pendingFilter.thread==Pocket.selected&&pendingFilter.important==important){
