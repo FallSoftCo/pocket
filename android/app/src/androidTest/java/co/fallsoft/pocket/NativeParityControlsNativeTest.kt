@@ -396,6 +396,37 @@ class NativeParityControlsNativeTest {
             compose.onNodeWithText("Apps requiring authentication: Synthetic connector").performScrollTo().assertIsDisplayed()
             capture("06b-plugin-auth-pending")
             tap("Back to plugins");tap("Close",inDialog=true)
+            fun authNotice(text:String){
+                await{compose.onAllNodesWithText(text,useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+                compose.onNodeWithText(text).performScrollTo().assertIsDisplayed()
+            }
+            // Real new dialog against the production receipt controller and synthetic native auth.
+            // A reviewed Alpha source must disappear before any Beta action is admitted.
+            navigate("workstation");menu("Codex settings & agents");tap("MCP");tap("Review sign-in")
+            visible("MCP sign-in");visible("Start sign-in on original host")
+            assertTrue(qa("state").getJSONArray("nativeAuthStarts").objects().isEmpty())
+            navigate("parity_beta");absent("MCP sign-in")
+            menu("Codex settings & agents");tap("MCP");tap("Review sign-in");tap("Start sign-in on original host")
+            authNotice("Sign-in started. Complete authorization on the original host; its callback may be host-local. Reload this receipt afterward.")
+            compose.onNodeWithText("https://auth.invalid/Beta/synthetic-sign-in").performScrollTo().assertIsDisplayed()
+            absent("Native sign-in completed. Reload MCP status to inspect tool readiness.")
+            capture("06c-mcp-sign-in-pending")
+            val authStarts=qa("state").getJSONArray("nativeAuthStarts").objects()
+            assertEquals(1,authStarts.size);assertEquals("Beta",authStarts.single().s("origin"))
+            val loginId=authStarts.single().s("loginId")
+            navigate("workstation");absent("MCP sign-in");absent("https://auth.invalid/Beta/synthetic-sign-in")
+            // Wrong source completion cannot complete Beta; reopening only reads its saved receipt.
+            qa("mcp-completion",JSONObject().put("name","fixture-mcp").put("threadId",thread).put("loginId",loginId).put("success",true))
+            navigate("parity_beta");menu("Codex settings & agents");tap("MCP");tap("Review sign-in")
+            authNotice("Sign-in started. Complete authorization on the original host; its callback may be host-local. Reload this receipt afterward.")
+            qa("mcp-completion",JSONObject().put("name","fixture-mcp").put("threadId",thread).put("loginId",loginId).put("success",true),origin=1)
+            tap("Reload sign-in receipt");authNotice("Native sign-in completed. Reload MCP status to inspect tool readiness.")
+            absent("https://auth.invalid/Beta/synthetic-sign-in")
+            assertEquals("Receipt reload repeated auth",1,qa("state").getJSONArray("nativeAuthStarts").length())
+            assertEquals("Beta retained draft",prefs.getString("environment:parity_beta:draft:$thread",null))
+            assertTrue("Authentication submitted the draft",calls("/api/threads/$thread/reply").isEmpty())
+            capture("06d-mcp-sign-in-completed")
+            tap("Close",inDialog=true);tap("Close",inDialog=true)
             navigate("workstation")
             assertEquals("Alpha edited draft\n\nAlpha original request",prefs.getString("draft:$thread",null))
         }
