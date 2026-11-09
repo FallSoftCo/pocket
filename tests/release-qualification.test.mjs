@@ -261,17 +261,17 @@ test('required footer capture matrix rejects missing, stale, incomplete and tamp
    const matrix={qaRunId:receipt.qaRunId,scenarios};
    // Header-only synthetic bytes exercise the artifact boundary, not visual rendering.
    const png=Buffer.alloc(33);Buffer.from('89504e470d0a1a0a','hex').copy(png);png.write('IHDR',12);png.writeUInt32BE(1080,16);png.writeUInt32BE(2400,20);
-   receipt.visualMatrix={schema:1,path:'matrix.json',artifacts:scenarios.map(row=>{writeFileSync(join(f.directory,row.screenshot),png);return {name:row.screenshot,path:row.screenshot,sha256:sha256(png)};})};
+   receipt.visualMatrix={schema:1,path:'visual-one-footer-matrix.json',artifacts:scenarios.map(row=>{writeFileSync(join(f.directory,row.screenshot),png);return {name:row.screenshot,path:row.screenshot,sha256:sha256(png)};})};
    if(mutation==='wrong-run')matrix.qaRunId='old-run';
    if(mutation==='missing-case')matrix.scenarios.pop();
    if(mutation==='unsafe-name')matrix.scenarios[0].screenshot='../escape.png';
    if(mutation==='wrong-metadata')matrix.scenarios[0].fontScale=2;
-   writeFileSync(join(f.directory,'matrix.json'),JSON.stringify(matrix));receipt.visualMatrix.sha256=sha256(readFileSync(join(f.directory,'matrix.json')));
+   writeFileSync(join(f.directory,'visual-one-footer-matrix.json'),JSON.stringify(matrix));receipt.visualMatrix.sha256=sha256(readFileSync(join(f.directory,'visual-one-footer-matrix.json')));
    if(mutation==='missing-matrix')delete receipt.visualMatrix;
    if(mutation==='missing-image')rmSync(join(f.directory,scenarios[0].screenshot));
    if(mutation==='changed-image')writeFileSync(join(f.directory,scenarios[0].screenshot),'changed');
-   if(mutation==='changed-matrix')writeFileSync(join(f.directory,'matrix.json'),'{}');
-   if(mutation==='none')assert.equal(validateReleaseQualification(f).nativeCases,1);
+   if(mutation==='changed-matrix')writeFileSync(join(f.directory,'visual-one-footer-matrix.json'),'{}');
+   if(mutation==='none'){assert.equal(validateReleaseQualification(f).nativeCases,1);f.save();assert.equal(publishQualifiedUpdate({...f,expectedVersion:1,checkOnly:true}).state,'qualified-not-published');}
    else assert.throws(()=>validateReleaseQualification(f),undefined,mutation);
   }finally{rmSync(f.root,{recursive:true,force:true});}
  }
