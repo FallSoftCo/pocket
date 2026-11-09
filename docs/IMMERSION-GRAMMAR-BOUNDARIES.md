@@ -83,3 +83,34 @@ and phraseSlots. Browser checks cover light/dark at mobile/desktop widths, four
 phases with exact fixed cell geometry, both-form reveal and honest identical
 pairs. This is not a live teacher, Android compilation, native rendering, handset
 performance, provider throughput or release qualification. Root owns those gates.
+
+## Actual teacher check — 2026-11-08
+
+One production-worker batch used five short synthetic inputs and the unchanged
+normal model-selection policy (`gpt-6-luna`, medium). It completed in **22.67s**,
+using **17,015 reported tokens** (16,019 input, 996 output), with no tools,
+automatic retry, live-cache change or second generation. All five plans passed
+structural validation. Original imperfect output was retained without correction.
+
+| Synthetic input | Actual Italian | Actual English scaffold |
+| --- | --- | --- |
+| The saved recordings and the new file are ready. | Le registrazioni salvate e il file nuovo sono pronte. | The recordings-saved and the file-new are ready |
+| You can send it to the station. | Puoi inviarlo alla stazione. | you can send it to the station |
+| Your latest message is in this conversation. | Il tuo ultimo messaggio è in questa conversazione. | The your latest message is in this conversation |
+| I have not yet finished the guide. | Non ho ancora finito la guida. | not I have yet finished the guide |
+| Open the read-only account settings. | Apri le impostazioni dell’account read-only. | Open the settings of the account read-only |
+
+The first example demonstrates useful `recordings-saved` and `file-new` links,
+but its mixed-gender coordinated subject received **pronte**, where **pronti**
+is expected. Structural validation therefore does not prove agreement correctness.
+The second example chose the fluent enclitic **inviarlo** and correctly kept
+`send it` together; it did **not** exercise the explicit preverbal
+`cliticPredicate` link. The third and fourth retain ordinary article, possessive,
+preposition and auxiliary spacing without duplicated meanings. The fifth retains
+the genuine `read-only` compound, although its Italian uses that English technical
+loanword rather than fully Italian vocabulary.
+
+This bounded check demonstrates useful new links and ordinary spacing in actual
+teacher output, **not universal linguistic correctness**. It adds no Android,
+physical-device, sustained-provider or release qualification. No prompt tuning,
+model change or rerun was performed after the imperfect agreement was observed.
