@@ -4004,7 +4004,7 @@
   "immersion_quiet_reading_highlights_20261109": {
     "requirement": "Hard immersion tile borders interrupt reading; consult Mobbin and improve Android/web phrase presentation.",
     "design": "Quiet inline highlights at rest; emphasis only on interaction/keyboard focus. Preserve grammatical groups, stable measured geometry, 0%/nearest 50% Italian phases, text contrast, links and original tap behavior. No animation or inference changes.",
-    "status": "candidate 183; real native/browser visual qualification pending",
-    "evidence": "Configured Mobbin MCP reader searches and actual 6 screens inspected; Matter and Duolingo ABC informed filled highlight pattern. Existing reading journeys extended for scale, focus and link interaction; no new unit suite."
+    "status": "web183 live; Android183 signed release qualification in progress",
+    "evidence": "Configured Mobbin MCP reader searches and six actual screens inspected; Matter and Duolingo ABC informed the filled highlight pattern. Browser light/dark narrow/wide normal/2x phases and source/link/keyboard checks passed; native34.408s reading journey passed after correcting enlarged placeholder conversion and exact focus-wrapper observation. Full Android release pending; handset not touched."
   }
 }

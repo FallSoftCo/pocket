@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "date": "2026-11-09",
+  "versionCode": 183,
+  "versionName": "0.5.0-alpha.165",
+  "state": "web-live-android-release-pending",
+  "changes": [
+    "Quiet 6% foreground phrase highlight replaces the 55% idle outline on Android and web",
+    "Control labels transparent; touch/hover feedback and keyboard-focus-only ring",
+    "Native measured phrase reserve uses correct PlaceholderSpan conversion at larger font scales; normal glyph accessibility scaling retained"
+  ],
+  "research": {
+    "provider": "configured Mobbin MCP",
+    "screensInspected": 6,
+    "references": [
+      "https://mobbin.com/screens/058e54c1-2c6e-4568-939e-72ca0bd6ef85",
+      "https://mobbin.com/screens/6a7afff6-1193-4511-91de-129f1cc52007"
+    ],
+    "limits": "Visual reading references, not a language-learning effectiveness study; no reference assets copied."
+  },
+  "evidence": {
+    "browser": "Eight actual theme/width/text-scale combinations; four stable phases; Enter/Space semantics and link action; real composed conversation/drawer journey",
+    "nativePreview": "34.408s existing reading journey: actual tap/link/Tab/Enter, normal+2x paragraph containment and stable measured phases",
+    "webDelivery": "Both private web gateways serve verified CSS SHA 646ca7a36f627c114f3efe24f8bf2160e3e9f66253acca9c92ed9d0a43c78f85; backend/native PIDs and state unchanged",
+    "androidRelease": "pending",
+    "phoneTouched": false
+  },
+  "limits": [
+    "Fixed reserve can still leave whitespace for the longer alternative; this change does not redesign phrase wrapping.",
+    "Browser focus interaction/computed ring validated; native focus ring visually inspected.",
+    "No handset install or physical performance claim."
+  ]
+}
