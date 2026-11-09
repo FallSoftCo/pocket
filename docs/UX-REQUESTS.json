@@ -4026,6 +4026,6 @@
     "cause": "SessionDiscovery mapped every turn/completed event to idle, including failed turns; this could override the preceding native systemError status.",
     "implementation": "Map failed terminal events to systemError; preserve normal idle after completion/interruption and clear error on the next turn start. No model polling or generic HTTP 400 auto-retry.",
     "verification": "17 focused discovery/real HTTP-native socket integration checks pass, including systemError followed by failed terminal event, stale idle index hydration, Needs you visibility and subsequent active/completed transitions.",
-    "status": "Qualified source; backend activation pending."
+    "status": "Deployed to workstation backend; Android/web185 consume unchanged attention contract. Native Codex process, pairing and outgoing receipts preserved. Mac backend propagation pending."
   }
 }
