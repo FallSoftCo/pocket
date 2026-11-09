@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "versionCode": 184,
+  "versionName": "0.5.0-alpha.166",
+  "state": "candidate-under-native-qualification",
+  "changes": [
+    "Direct Steer now on pending message cards when current native work is verified active; Send now only for verified idle",
+    "Original outgoing identity, text and source retained; duplicate promotion, sending and unknown delivery cannot be promoted",
+    "Promotion during queue metadata reads obtains bounded current-turn identity; promotion behind another dispatch wakes on lock release without a new polling timer",
+    "Android and web retain original acknowledged outgoing state while guarding navigation-specific presentation and drafts",
+    "Native Apps settings distinguish installed apps from discovery, support scoped pagination and explicit refresh where the installed Codex contract supports it",
+    "Existing native keyboard-focus visual check observes committed hardware frames and compares captured pixels"
+  ],
+  "evidence": {
+    "queueHttpNativeSocket": {"passed": 27, "failed": 0, "synthetic": true},
+    "requiredDomLane": {"passed": 7, "failed": 0},
+    "actualRenderedWebQueue": {"widths": [390, 1100], "singleOriginalPromotion": true, "draftRetained": true, "otherHeldQueueRetained": true, "visuallyInspected": true},
+    "android": "Pending final source build and native journeys",
+    "deployment": "Not published"
+  },
+  "retainedFailure": "The first integrated backend run exposed an outdated synthetic turn-controls fixture returning empty objects for paginated native reads. Its real page/header contract was restored without changing existing assertions; the previously failing checks passed.",
+  "limits": [
+    "Synthetic gateway/native socket and UI evidence does not certify live model execution",
+    "Physical-phone installation, hardware interaction and rendered FCM delivery are separate evidence",
+    "Unknown delivery remains explicit recovery; there is no exactly-once claim or automatic replay",
+    "Mac Codex 0.163 Apps remains installed-only and read-only; browsing and refresh require a qualified runtime contract"
+  ]
+}
