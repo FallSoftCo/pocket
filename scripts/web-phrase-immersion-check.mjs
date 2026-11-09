@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {mkdir,writeFile} from 'node:fs/promises';
+import {grammarBoundaryPlans} from '../tests/fixtures/immersion-grammar-boundaries.mjs';
 import {fixture} from '../tests/web-browser-fixture.mjs';
+if(process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1]).href){
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const directory=process.env.WEB_EVIDENCE_DIR;await mkdir(directory,{recursive:true});
 const f=await fixture();let browser;const result={state:'running',humanSubmissions:0,errors:[]};
@@ -52,3 +54,67 @@ try{
  assert.deepEqual(result.errors,[]);assert.equal(result.humanSubmissions,0);result.state='complete';
 }catch(e){result.state='failed';result.error=e.stack;process.exitCode=1;}
 finally{await browser?.close();await f.close();await writeFile(directory+'/receipt.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));}
+
+}
+
+// Existing browser qualification entrypoint, supplied the trusted main context.
+export async function grammarBoundaryJourney(context,{directory}={}){
+ const plans=grammarBoundaryPlans(),f=await fixture({port:18989});const page=await context.newPage();
+ const result={state:'running',modelCalls:0,humanSubmissions:0,errors:[],views:[]};
+ page.on('pageerror',e=>result.errors.push(e.message));
+ page.on('request',r=>{if(r.method()==='POST')result.humanSubmissions++;});
+ try{
+  await page.route('**/app.mjs',r=>r.fulfill({contentType:'text/javascript',body:''}));
+  await page.goto(f.url);
+  await page.evaluate(async plans=>{
+   const {ImmersionLayer}=await import('/immersion.mjs');document.body.replaceChildren();
+   const main=document.createElement('main');main.style.cssText='padding:24px;max-width:850px;margin:auto';document.body.append(main);
+   for(const plan of plans){const article=document.createElement('article');article.className='message';const p=document.createElement('div');p.className='body';p.dataset.immersionText=plan.original;p.dataset.immersionId=plan.id;p.textContent=plan.original;article.append(p);main.append(article);}
+   const layer=new ImmersionLayer(async()=>{throw Error('Synthetic plan requested inference');},location.origin+'/',()=>{});
+   layer.accept({enabled:true,planVersion:plans[0].planVersion,translations:plans});await layer.scan();clearTimeout(layer.timer);
+   window.grammarQA={layer};
+  },plans);
+  for(const width of [390,1100])for(const theme of ['light','dark']){
+   await page.setViewportSize({width,height:900});
+   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;},theme);
+   const observation=await page.evaluate(()=>{
+    const {layer}=window.grammarQA;const rects=()=>[...document.querySelectorAll('.immersion-phrase')].map(n=>{const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height];});
+    // The production stack hides its reserve parent while making the active
+    // child visible; Chromium innerText on that parent is empty. Inspect actual
+    // visible text nodes, excluding the hidden reserve language explicitly.
+    const visible=()=>[...document.querySelectorAll('.body')].map(n=>{const walker=document.createTreeWalker(n,NodeFilter.SHOW_TEXT);let value='';while(walker.nextNode())if(getComputedStyle(walker.currentNode.parentElement).visibility==='visible')value+=walker.currentNode.data;return value;});
+    const phases=[],geometry=[];
+    for(let phase=0;phase<4;phase++){
+     for(const entry of layer.nodes.values())entry.slots.setPhase(phase);
+     phases.push(visible());geometry.push(rects());
+    }
+    const pairs=[...document.querySelectorAll('.immersion-phrase')].map(box=>{
+     const en=box.querySelector('[lang=en]').textContent,it=box.querySelector('[lang=it]').textContent;
+     box.click();const first=box.dataset.language;box.click();const second=box.dataset.language;
+     return {en,it,revealsBoth:en===it||first!==second,interactive:box.getAttribute('role')==='button'};
+    });
+    for(const entry of layer.nodes.values())entry.slots.setPhase(0);
+    const cells=[...document.querySelectorAll('.immersion-phrase')];
+    const styles=cells.map(n=>{const s=getComputedStyle(n);return {color:s.color,background:s.backgroundColor,edge:s.boxShadow,radius:s.borderRadius,font:s.fontSize};});
+    return {phases,geometry,pairs,styles,overflow:document.documentElement.scrollWidth>innerWidth};
+   });
+   result.views.push({width,theme,...observation});
+   assert.deepEqual(observation.phases[0],observation.phases[2]);
+   for(const geometry of observation.geometry)assert.deepEqual(geometry,observation.geometry[0],'Phrase moved across phase');
+   for(const pair of observation.pairs){assert.ok(pair.revealsBoth);assert.equal(pair.interactive,pair.en!==pair.it);}
+   assert.equal(observation.overflow,false);
+   assert.ok(observation.phases[0].join(' ').includes('recordings-saved'));assert.ok(observation.phases[0].join(' ').includes('to the station'));
+   assert.ok(observation.phases[0].join(' ').includes('The your latest message'));
+   const neverChanged=observation.pairs.filter(p=>p.en===p.it);assert.deepEqual(neverChanged.map(p=>p.en),['Menu']);
+   result.views.at(-1).identicalPairs=neverChanged.length;
+   if(directory){
+    await page.screenshot({path:directory+'/grammar-'+theme+'-'+width+'.png',fullPage:true});
+    await page.evaluate(()=>{for(const entry of window.grammarQA.layer.nodes.values())entry.slots.setPhase(1);});
+    await page.screenshot({path:directory+'/grammar-mixed-'+theme+'-'+width+'.png',fullPage:true});
+   }
+  }
+  assert.deepEqual(result.errors,[]);assert.equal(result.humanSubmissions,0);result.state='complete';
+ }catch(error){result.state='failed';result.error=error.stack;if(directory)await page.screenshot({path:directory+'/failure.png',fullPage:true});}
+ finally{await page.evaluate(()=>{const layer=window.grammarQA?.layer;if(layer){layer.enabled=false;clearTimeout(layer.timer);}}).catch(()=>{});await page.close();await f.close();}
+ return result;
+}

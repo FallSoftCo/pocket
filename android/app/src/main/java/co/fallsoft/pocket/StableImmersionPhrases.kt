@@ -1,5 +1,6 @@
 package co.fallsoft.pocket
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -35,12 +36,13 @@ import androidx.compose.ui.unit.*
     LaunchedEffect(phase){overrides.clear()}
     BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,forms,style,maxLines,overflow))){
         val available=constraints.maxWidth.takeIf{it!=Constraints.Infinity}?:with(density){600.dp.roundToPx()}
-        val pad=with(density){3.dp.roundToPx()}
+        val pad=with(density){4.dp.roundToPx()}
+        val innerVertical=with(density){1.dp.roundToPx()}
         val gutter=if(phraseTaps)2.dp else 0.dp
         val gutterPixels=with(density){gutter.roundToPx()}
-        val dimensions=remember(runs,available,style,density,gutterPixels){runs.associate{run->
+        val dimensions=remember(runs,available,style,density,gutterPixels,innerVertical){runs.associate{run->
             val layouts=run.forms.map{measurer.measure(it,style=style,constraints=Constraints(maxWidth=(available-pad*2).coerceAtLeast(1)))}
-            run.id to (layouts.maxOf{it.size.width}.plus(pad*2).coerceAtMost(available).coerceAtLeast(1) to layouts.maxOf{it.size.height}.plus(gutterPixels*2).coerceAtLeast(1))
+            run.id to (layouts.maxOf{it.size.width}.plus(pad*2).coerceAtMost(available).coerceAtLeast(1) to layouts.maxOf{it.size.height}.plus((gutterPixels+innerVertical)*2).coerceAtLeast(1))
         }}
         val inline=mutableMapOf<String,InlineTextContent>()
         val text=buildAnnotatedString{
@@ -59,7 +61,7 @@ import androidx.compose.ui.unit.*
                     val interact=phraseTaps&&!linked&&run.forms.map{it.text}.distinct().size>1
                     val action=if(interact)Modifier.clickable{overrides[id]=(1..forms.size).map{(chosen+it)%forms.size}.first{run.forms[it].text!=shown.text}} else Modifier
                     DisableSelection{
-                        Box(Modifier.fillMaxSize().padding(vertical=gutter).background(Mint.copy(alpha=.10f),RoundedCornerShape(4.dp)).then(action).padding(horizontal=3.dp).semantics{
+                        Box(Modifier.fillMaxSize().padding(vertical=gutter).background(color.copy(alpha=.06f),RoundedCornerShape(3.dp)).border(1.dp,color.copy(alpha=.55f),RoundedCornerShape(3.dp)).then(action).padding(horizontal=4.dp,vertical=1.dp).semantics{
                             if(interact){role=Role.Button;contentDescription=shown.text}else if(!linked)hideFromAccessibility()
                         }){Text(shown,style=style,modifier=Modifier.fillMaxSize(),overflow=TextOverflow.Clip)}
                     }
