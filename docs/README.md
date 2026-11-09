@@ -4,6 +4,8 @@ NextComp provides Android and web control of vanilla Codex sessions and native s
 
 The [current supported snapshot](CAPABILITIES.md#current-supported-snapshot--2026-11-07) records the published version, deployed sources and last verified handset installation. [182 delivery and qualification evidence](qualification/native-parity-182.json) records the delivered Android, backend and web182 release on both hosts; physical-phone installation remains separately unverified. Publication, synthetic/emulator qualification and physical-phone observations are distinct.
 
+[183 reading update](qualification/immersion-reading-183.json) is published on both Android update channels, with the same soft immersion highlights live on web. It removes idle phrase outlines and corrects enlarged native phrase reserves. Backend182 remains in place; handset installation is separately unverified.
+
 The current controls include native session branching/context actions, configuration and installed-tool inspection, supported questions/approvals, retained command output and background terminals where the selected runtime supports them. The qualified Mac ARM64 0.163 runtime exposes read-only catalogs, terminal listing and retained command-output reads. Live backend 182 checks returned a 592-character output and an explicit unavailable response for a command without retained output; they made no model calls or mutations. Configuration changes and terminal termination remain unavailable on that runtime. [Capabilities and limits](CAPABILITIES.md) are method-specific; this is not a claim of complete Codex TUI parity.
 
 ## Understand and evaluate
