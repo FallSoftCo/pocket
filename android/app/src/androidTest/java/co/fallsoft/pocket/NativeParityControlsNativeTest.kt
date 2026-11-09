@@ -219,8 +219,11 @@ class NativeParityControlsNativeTest {
             assertEquals("replacement",replacementApproval.getJSONObject("result").getJSONObject("decision").getJSONObject("acceptWithExecpolicyAmendment").getJSONArray("execpolicy_amendment").getString(1))
             assertEquals("1",calls("/api/requests/same-native-request/answer").last().getJSONObject("input").s("actionId"))
             capture("01b-structured-approval-origin-and-replacement")
-            // Resolving the request keeps the review drawer open for inspection.
-            // Close its actual visible control before interacting with the footer.
+            // Automatic attention yields back to the conversation on resolution.
+            // Deliberate review is separate: it remains open for inspection even
+            // without pending questions, until its visible close control is used.
+            await{runCatching{compose.onNodeWithContentDescription("Close questions").assertIsNotDisplayed()}.isSuccess}
+            compose.onNodeWithContentDescription("Questions and results").assertIsDisplayed().performClick()
             visible("No unanswered questions")
             compose.onNodeWithContentDescription("Close questions").assertIsDisplayed().performClick()
             compose.waitForIdle()
