@@ -144,10 +144,13 @@ class NativeReadingParityNativeTest {
    capture("native-reading-slots-large-mixed.png")
    main{phase.intValue=0};Thread.sleep(250)
    // Tab navigation and Enter go through the actual native input path, not performClick semantics.
+   // Compose exposes focus on the clickable wrapper, while the exact phrase
+   // description is its child. Do not accept focus on the whole paragraph/gallery.
+   val firstPhraseFocus=By.clickable(true).focusable(true).focused(true).hasChild(By.desc("The correction"))
    var focused=false
    for(attempt in 0 until 6){
     device.pressKeyCode(KeyEvent.KEYCODE_TAB)
-    if(device.wait(Until.hasObject(By.desc("The correction").focused(true)),500)){focused=true;break}
+    if(device.wait(Until.hasObject(firstPhraseFocus),500)){focused=true;break}
    }
    assertTrue("Keyboard could not focus the first phrase",focused)
    capture("native-reading-slots-large-focused.png")
