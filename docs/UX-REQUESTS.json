@@ -4012,5 +4012,12 @@
     "behavior": "Steer now for active work; Send now for confirmed idle work. Retain the original outgoing identity, text, environment and receipt. Do not delete/recreate the message, replay unknown delivery, resume unrelated held messages, or send twice on repeated taps. Keep drafts and keyboard intact.",
     "status": "Delivered184: Android published to both channels; web and both backends live. Physical-phone installation unverified.",
     "verification": "27 focused real HTTP/native-socket checks, composed DOM/browser queue interactions,20 native journeys and exact optimized release review passed. Native queue test verifies direct promotion, repeated tap protection, same original identity, draft/IME retention and source-bound late ACK. See qualification/queued-steering-apps-184.json."
+  },
+  "needs_you_catalog_20261109": {
+    "requirement": "Replace redundant Work updates UX with useful actionable work, across Android and web.",
+    "design": "Needs you filters the existing source-bound session catalog; original session cards show current request/delivery reason. Count sessions, expose affected delegated children, retain ordinary list position/query, return to all sessions after resolution. No separate report feed, automatic resume/retry or model polling. Routine progress/results remain in conversations/cards.",
+    "evidenceContract": "Additive per-session attention v1 from current native pending requests, original failed/unknown delivery records, valid explicit input requests and verified runtime systemError. Missing/stale data is not all-clear; idle/interrupted work is not inferred broken.",
+    "preservation": "Retain stored reports, preferences, notification deep-link reader and source/delivery identities. Remove report-entry polling; questions and safe original delivery actions stay in conversation.",
+    "status": "Candidate185 implementation and integrated qualification in progress."
   }
 }

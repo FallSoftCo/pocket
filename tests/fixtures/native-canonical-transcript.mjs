@@ -9,6 +9,7 @@ let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads
 let archiveHold=false,archiveError=false,archiveOrigins=[];
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
+let attentionStudy=false,attentionResolved=false,reportReads=0;
 let queueStudy=false,queueRevision=1,queueHold=false;const queueCalls=[];let queueItems=[];
 const queueSnapshot=()=>({version:1,revision:queueRevision,items:structuredClone(queueItems)});
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:queueStudy?'active':'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
@@ -49,6 +50,22 @@ const server=http.createServer(async(req,res)=>{
  if(!String(req.headers.authorization||'').startsWith('Bearer synthetic-system76')){res.writeHead(401).end('{}');return;}
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
+ if(path==='/_qa/attention-setup'){
+  attentionStudy=true;attentionResolved=false;queueStudy=true;queueRevision=1;queueHold=false;queueCalls.length=0;
+  queueItems=[{id:'needs-review-original',threadId:'same-thread',text:'Delivery needs checking',state:'unknown',mode:'steer'}];
+  res.end(JSON.stringify({ok:true}));return;
+ }
+ if(path==='/_qa/attention-resolve'){
+  attentionResolved=true;queueItems=[];queueRevision++;
+  broadcast({type:'reply',threadId:'same-thread',id:'needs-review-original',state:'accepted',outbox:queueSnapshot()});
+  res.end(JSON.stringify({ok:true,reportReads,calls:queueCalls}));return;
+ }
+ if(path==='/_qa/attention-end'){attentionStudy=false;queueStudy=false;queueItems=[];res.end(JSON.stringify({ok:true,reportReads,calls:queueCalls}));return;}
+ if(path==='/api/coordinator/reports'){reportReads++;res.end(JSON.stringify({reports:[],unreadCount:0,hasEarlier:false}));return;}
+ if(attentionStudy&&path==='/api/threads'){
+  const evidence={version:1,verified:true,items:attentionResolved?[]:[{kind:'deliveryUnknown',id:'outgoing:needs-review-original',label:'Check message delivery'}]};
+  res.end(JSON.stringify({threads:[{...meta(),attention:evidence,preview:'Review this original message'},{...meta(),id:'ordinary-work',name:'Ordinary completed work',status:{type:'idle'},preview:'Completed result',attention:{version:1,verified:true,items:[]}}]}));return;
+ }
  if(path==='/_qa/queue-setup'){
   queueStudy=true;queueHold=true;queueRevision=1;queueCalls.length=0;
   queueItems=[{id:'queue-keep',threadId:'same-thread',text:'Keep this queue held',state:'held',mode:'queue'},{id:'queue-remove',threadId:'same-thread',text:'Remove only this queued message',state:'queued',mode:'queue'},{id:'queue-promote',threadId:'same-thread',text:'Original queued steering text',state:'held',mode:'queue'}];

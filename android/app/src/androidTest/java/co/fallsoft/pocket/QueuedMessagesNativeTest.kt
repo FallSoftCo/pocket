@@ -31,9 +31,28 @@ class QueuedMessagesNativeTest {
   main{Pocket.init(c);PocketImmersion.setEnabled(false)}
   val destination=requireNotNull(Pocket.captureEnvironment())
   fun qa(action:String)=kotlinx.coroutines.runBlocking{Pocket.apiEnvironment(destination,"/_qa/$action",org.json.JSONObject())}
-  assertTrue("Owned queue fixture setup missing",qa("queue-setup").optBoolean("ok"))
+  assertTrue(qa("attention-setup").optBoolean("ok"))
   try{
-   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open(tid)}
+   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+   await{Pocket.tasks.any{it.id==tid&&it.needsReview()}&&Pocket.tasks.any{it.id=="ordinary-work"}}
+   compose.onNodeWithText("Work updates",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithTag("needs-you-filter").performClick()
+   compose.onNodeWithText("Ordinary completed work",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText("All sessions",useUnmergedTree=true).assertIsDisplayed()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"needs-you-native-list.png")))
+   compose.onNodeWithContentDescription("Open Chat for Native canonical work").performClick()
+   await{Pocket.selected==tid&&PocketTranscript.currentHistoryVerified&&Pocket.detail?.optJSONArray("outgoing")?.length()==1}
+   compose.onNodeWithTag("outgoing-needs-review-original").assertIsDisplayed()
+   assertEquals("Review opened without resubmitting",0,qa("queue-state").getJSONArray("calls").length())
+   val resolved=qa("attention-resolve");assertEquals(0,resolved.optInt("reportReads"))
+   main{Pocket.closeTask();UnifiedWorkCatalog.refresh()}
+   await{Pocket.tasks.firstOrNull{it.id==tid}?.needsReview()==false}
+   compose.onNodeWithText("All sessions",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithTag("needs-you-filter").performClick()
+   await{compose.onAllNodesWithText("Ordinary completed work",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+   assertEquals(0,qa("attention-end").optInt("reportReads"))
+   assertTrue("Owned queue fixture setup missing",qa("queue-setup").optBoolean("ok"))
+   main{Pocket.open(tid)}
    await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==3}
    fun row(id:String)=compose.onNodeWithTag("outgoing-$id")
    fun action(id:String,label:String)=compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("outgoing-$id")))
