@@ -60,6 +60,7 @@ finally{await browser?.close();await f.close();await writeFile(directory+'/recei
 // Existing browser qualification entrypoint, supplied the trusted main context.
 export async function grammarBoundaryJourney(context,{directory}={}){
  const plans=grammarBoundaryPlans(),f=await fixture({port:18989});const page=await context.newPage();
+ await page.bringToFront();
  const result={state:'running',modelCalls:0,humanSubmissions:0,errors:[],views:[]};
  page.on('pageerror',e=>result.errors.push(e.message));
  page.on('request',r=>{if(r.method()==='POST')result.humanSubmissions++;});
@@ -72,11 +73,13 @@ export async function grammarBoundaryJourney(context,{directory}={}){
    for(const plan of plans){const article=document.createElement('article');article.className='message';const p=document.createElement('div');p.className='body';p.dataset.immersionText=plan.original;p.dataset.immersionId=plan.id;p.textContent=plan.original;article.append(p);main.append(article);}
    const layer=new ImmersionLayer(async()=>{throw Error('Synthetic plan requested inference');},location.origin+'/',()=>{});
    layer.accept({enabled:true,planVersion:plans[0].planVersion,translations:plans});await layer.scan();clearTimeout(layer.timer);
-   window.grammarQA={layer};
+   const link=document.createElement('a');link.href='#grammar-link';link.dataset.immersionText=plans[0].original;link.dataset.immersionId='link-check';link.textContent=plans[0].original;main.append(link);await layer.scan();clearTimeout(layer.timer);
+   window.grammarQA={layer,linkClicks:0};link.addEventListener('click',event=>{event.preventDefault();window.grammarQA.linkClicks++;});
   },plans);
-  for(const width of [390,1100])for(const theme of ['light','dark']){
+  for(const width of [390,1100])for(const theme of ['light','dark'])for(const textScale of [1,2]){
    await page.setViewportSize({width,height:900});
-   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;},theme);
+   await page.evaluate(({theme,textScale})=>{window.NextCompTheme.select(theme);document.querySelector('main').style.fontSize=(16*textScale)+'px';document.querySelectorAll('.body').forEach(n=>{n.style.fontSize=(15*textScale)+'px';});}, {theme,textScale});
+   await page.mouse.move(0,0);
    const observation=await page.evaluate(()=>{
     const {layer}=window.grammarQA;const rects=()=>[...document.querySelectorAll('.immersion-phrase')].map(n=>{const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height];});
     // The production stack hides its reserve parent while making the active
@@ -91,28 +94,37 @@ export async function grammarBoundaryJourney(context,{directory}={}){
     const pairs=[...document.querySelectorAll('.immersion-phrase')].map(box=>{
      const en=box.querySelector('[lang=en]').textContent,it=box.querySelector('[lang=it]').textContent;
      box.click();const first=box.dataset.language;box.click();const second=box.dataset.language;
-     return {en,it,revealsBoth:en===it||first!==second,interactive:box.getAttribute('role')==='button'};
+     return {en,it,revealsBoth:en===it||first!==second,interactive:box.getAttribute('role')==='button',link:!!box.closest('a')};
     });
     for(const entry of layer.nodes.values())entry.slots.setPhase(0);
     const cells=[...document.querySelectorAll('.immersion-phrase')];
     const styles=cells.map(n=>{const s=getComputedStyle(n);return {color:s.color,background:s.backgroundColor,edge:s.boxShadow,radius:s.borderRadius,font:s.fontSize};});
-    return {phases,geometry,pairs,styles,overflow:document.documentElement.scrollWidth>innerWidth};
+    const root=getComputedStyle(document.documentElement);const appearance={theme:document.documentElement.dataset.theme,preference:window.NextCompTheme.preference,paper:root.getPropertyValue('--paper').trim(),ink:root.getPropertyValue('--ink').trim(),colorScheme:root.colorScheme};
+    return {phases,geometry,pairs,styles,appearance,overflow:document.documentElement.scrollWidth>innerWidth};
    });
-   result.views.push({width,theme,...observation});
+   result.views.push({width,theme,textScale,...observation});
    assert.deepEqual(observation.phases[0],observation.phases[2]);
    for(const geometry of observation.geometry)assert.deepEqual(geometry,observation.geometry[0],'Phrase moved across phase');
-   for(const pair of observation.pairs){assert.ok(pair.revealsBoth);assert.equal(pair.interactive,pair.en!==pair.it);}
-   assert.equal(observation.overflow,false);
+   for(const pair of observation.pairs){assert.ok(pair.revealsBoth);assert.equal(pair.interactive,pair.en!==pair.it&&!pair.link);}
+   assert.equal(observation.overflow,false);assert.equal(observation.appearance.theme,theme);assert.equal(observation.appearance.preference,theme);assert.equal(observation.appearance.paper,theme==='dark'?'#000':'#f6f5f0');assert.equal(observation.styles[0].font,textScale===2?'30px':'15px');
    assert.ok(observation.phases[0].join(' ').includes('recordings-saved'));assert.ok(observation.phases[0].join(' ').includes('to the station'));
    assert.ok(observation.phases[0].join(' ').includes('The your latest message'));
    const neverChanged=observation.pairs.filter(p=>p.en===p.it);assert.deepEqual(neverChanged.map(p=>p.en),['Menu']);
    result.views.at(-1).identicalPairs=neverChanged.length;
+   assert.ok(observation.styles.every(s=>s.edge==='none'&&s.radius==='3px'));
+   const slot=page.locator('.immersion-phrase[role=button]').first();await slot.focus();
+   const before=await slot.getAttribute('data-language');await page.keyboard.press('Enter');assert.notEqual(await slot.getAttribute('data-language'),before);await page.keyboard.press('Space');assert.equal(await slot.getAttribute('data-language'),before);
+   const focused=await slot.evaluate(n=>({outline:getComputedStyle(n).outlineStyle,width:getComputedStyle(n).outlineWidth}));assert.equal(focused.outline,'solid');assert.equal(focused.width,'2px');
+   const label=page.locator('.phrase-label').filter({hasText:'Menu'}).first();const idle=await label.evaluate(n=>getComputedStyle(n).backgroundColor);await label.hover();assert.equal(await label.evaluate(n=>getComputedStyle(n).backgroundColor),idle);assert.equal(await label.getAttribute('role'),null);
+   const link=page.locator('a[href="#grammar-link"]');assert.equal(await link.locator('[role=button]').count(),0);const clicks=await page.evaluate(()=>window.grammarQA.linkClicks);await link.click();assert.equal(await page.evaluate(()=>window.grammarQA.linkClicks),clicks+1);
+   await slot.focus();
    if(directory){
-    await page.screenshot({path:directory+'/grammar-'+theme+'-'+width+'.png',fullPage:true});
+    await page.screenshot({path:directory+'/grammar-'+theme+'-'+width+'-text'+textScale+'.png',fullPage:true});
     await page.evaluate(()=>{for(const entry of window.grammarQA.layer.nodes.values())entry.slots.setPhase(1);});
-    await page.screenshot({path:directory+'/grammar-mixed-'+theme+'-'+width+'.png',fullPage:true});
+    await page.screenshot({path:directory+'/grammar-mixed-'+theme+'-'+width+'-text'+textScale+'.png',fullPage:true});
    }
   }
+  result.restored=await page.evaluate(async()=>{const {layer}=window.grammarQA;layer.accept({enabled:false,translations:[]});await layer.scan();return [...document.querySelectorAll('.body')].map(n=>n.textContent);});assert.deepEqual(result.restored,plans.map(p=>p.original));
   assert.deepEqual(result.errors,[]);assert.equal(result.humanSubmissions,0);result.state='complete';
  }catch(error){result.state='failed';result.error=error.stack;if(directory)await page.screenshot({path:directory+'/failure.png',fullPage:true});}
  finally{await page.evaluate(()=>{const layer=window.grammarQA?.layer;if(layer){layer.enabled=false;clearTimeout(layer.timer);}}).catch(()=>{});await page.close();await f.close();}
