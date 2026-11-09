@@ -1,7 +1,7 @@
 :root { --depth-top: color-mix(in srgb,var(--surface) 92%,white); --dot: color-mix(in srgb,var(--muted) 11%,transparent); }
 body { background:radial-gradient(circle at 1px 1px,var(--dot) .7px,transparent .85px) 0 0/12px 12px,var(--paper); }
 button { min-height:48px; padding:10px 14px; touch-action:manipulation; }
-#sidebar { padding:12px 12px max(12px,env(safe-area-inset-bottom)); background:color-mix(in srgb,var(--sidebar) 94%,transparent); }
+#sidebar { container:catalog / inline-size; padding:12px 12px max(12px,env(safe-area-inset-bottom)); background:color-mix(in srgb,var(--sidebar) 94%,transparent); }
 .brand { margin-bottom:10px; }.brand .alpha { display:none; }
 .nav-row { margin:4px 0 10px; }.work-heading { margin-bottom:8px; }
 .work-card { position:relative; border:1px solid var(--line); border-left-width:1px; border-radius:16px; padding:8px 12px; margin-bottom:8px; background:linear-gradient(135deg,var(--depth-top),var(--surface)); box-shadow:inset 0 1px 0 #ffffff09,0 3px 10px #0000000a; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:max(76px,5em) 2.9em 1.4em; row-gap:4px; font-size:14px; height:auto; overflow:hidden; }
@@ -161,6 +161,15 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .card-archive{flex:0 0 auto;min-height:44px;padding:8px 10px;color:var(--muted);font-size:12px;}
 .card-heading .card-title{flex:0 0 100%;min-width:0;width:100%;height:max(28px,1.4em);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .card-heading>button:not(.card-title){flex:0 0 auto;min-width:0;max-width:100%;min-height:44px;margin:0;padding:4px 6px;white-space:nowrap;overflow-wrap:normal;}
+/* Compact mouse/trackpad rows only when the sidebar has room relative to text.
+   Enlarged text and coarse touch pointers keep the full reserved action area. */
+@media (pointer:fine) and (hover:hover) {
+ @container catalog (min-width:15em) {
+  .work-card { grid-template-rows:calc(1.4em + 36px) 2.9em 1.4em; }
+  .work-card .card-heading .card-title { height:1.4em; min-height:1.4em; line-height:1.4; padding-block:0; }
+  .card-heading>button:not(.card-title) { min-height:32px; }
+ }
+}
 
 .message>header .message-time{margin-inline-start:auto;flex-shrink:0;font-size:10px;line-height:1.4;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;}
 
