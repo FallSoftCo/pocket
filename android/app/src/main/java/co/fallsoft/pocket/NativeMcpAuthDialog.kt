@@ -19,7 +19,10 @@ import java.util.UUID
     val scope=rememberCoroutineScope()
     var alive by remember{mutableStateOf(true)}
     DisposableEffect(Unit){onDispose{alive=false}}
-    fun current()=alive&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==threadId
+    val generation=remember{Pocket.nativeAuthGeneration}
+    LaunchedEffect(Pocket.nativeAuthGeneration){if(generation!=Pocket.nativeAuthGeneration)onDismiss()}
+    LaunchedEffect(Pocket.connected){if(!Pocket.connected)onDismiss()}
+    fun current()=alive&&Pocket.connected&&generation==Pocket.nativeAuthGeneration&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==threadId
     var view by remember{mutableStateOf<JSONObject?>(null)}
     var receipt by remember{mutableStateOf<JSONObject?>(null)}
     var busy by remember{mutableStateOf(false)}
@@ -48,7 +51,7 @@ import java.util.UUID
                 if(dismissing==r.s("attemptId")){
                     WorkflowText("This does not cancel the original flow. Starting again can duplicate an unfinished sign-in.")
                     OutlinedButton({if(current()&&!busy)scope.launch{
-                        busy=true
+                        busy=true;view=null;receipt=null
                         try{val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/configuration",JSONObject().put("section","mcp").put("action","oauthAcknowledge").put("threadId",r.opt("threadId")).put("name",name).put("attemptId",r.s("attemptId")).put("confirmInspected",true));if(current()){receipt=result;view=null;dismissing=null}}
                         catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Dismissal unconfirmed. Reload the original receipt."}finally{if(current())busy=false}
                     }},enabled=current()&&!busy){BilingualLabel("Dismiss inspected sign-in receipt")}

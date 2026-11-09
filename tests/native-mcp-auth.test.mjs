@@ -70,3 +70,16 @@ test('same-account cross-conversation blocker remains inspectable without leakin
  const inspected=await f.api('/api/native/configuration',{section:'mcp',action:'oauthAcknowledge',attemptId:body.attemptId,name:'fixture',threadId:'thread-one',confirmInspected:true},'other-phone');assert.equal(inspected.data.state,'acknowledged');
  assert.equal(f.db.prepare('SELECT device FROM native_mcp_auth').get().device,'phone');assert.match(f.db.prepare("SELECT principal FROM human_admission_actions WHERE action='inspected-uncertain-flow'").get().principal,/other-phone/);assert.equal(f.held.length,1);
 });
+
+test('temporary account refresh retains original login identity and reconciles exact completion on inspection',async t=>{
+ const f=await fixture(t),body=f.input((await f.detail()).data);
+ const start=f.api('/api/native/configuration',body);await until(()=>f.held.length===1);
+ f.setAccount(null);f.held[0]();const pending=(await start).data;
+ assert.equal(pending.state,'pending');assert.equal(pending.authorizationUrl,undefined);
+ assert.equal(f.db.prepare('SELECT login_id FROM native_mcp_auth').get().login_id,'login-one');
+ f.event({name:'fixture',threadId:'thread-one',loginId:'login-one',success:true});await until(()=>f.native.mcpAuth.events.has('login-one'));
+ assert.equal(f.db.prepare('SELECT state FROM native_mcp_auth').get().state,'pending');
+ f.setAccount('first-account');const inspected=(await f.detail()).data;
+ assert.equal(inspected.receipts[0].state,'completed');assert.equal(inspected.canStart,true);
+ assert.equal(inspected.receipts[0].authorizationUrl,undefined);assert.equal(f.held.length,1);
+});

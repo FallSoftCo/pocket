@@ -18,6 +18,7 @@ export class NativeSettingsPanel {
   const close=node('button','Close');close.onclick=()=>this.dialog.close();this.dialog.append(this.scroll,this.pluginFooter,close);document.body.append(this.dialog);
   for(const section of sections){const b=node('button',titles[section]);b.onclick=()=>this.load(section);this.tabs.append(b);}
  }
+ event(m){if(m.type==='nativeAuthBoundary'||m.type==='status'&&m.connected===false||m.type==='environmentStatus'&&(m.available??m.connected)===false)this.closeForNavigation();}
  closeForNavigation(){this.serial++;this.origin=null;if(this.dialog.open)this.dialog.close();}
  async open(){if(this.dialog.open)this.closeForNavigation();this.pluginView='installed';this.pluginQuery='';this.scope=this.getScope();this.threadId=this.scope==='coordinator'?null:this.scope;this.origin=Object.freeze({scope:this.scope,threadId:this.threadId});this.dialog.showModal();await this.load('settings');}
  // Object identity distinguishes close/reopen even in the same environment.

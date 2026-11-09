@@ -491,6 +491,7 @@ codex.on('event',m=>{
   if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
   if(m.method==="turn/completed")for(const item of p.turn?.items||[])conversationNotes.observe(threadId,p.turn.id,item);
   if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
+  if(['account/updated','account/login/completed'].includes(m.method))emit('nativeAuthBoundary',{});
   if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
   if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
   if(threadId){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);liveDelivery.timeline({...update,nativeMethod:m.method,nativeItemId:p.itemId||p.item?.id||null,historyHead:historyHeads.snapshot(threadId)});}}

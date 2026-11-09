@@ -34,7 +34,8 @@ export class NativeMcpAuth {
  receipt(row,device,threadId=row.thread||null){const notices={dispatching:'Waiting for the original native reply. Do not start another sign-in.',pending:'Sign-in started. Complete authorization on the original host; its callback may be host-local. Reload this receipt afterward.',unknown:'Sign-in outcome is unconfirmed. Inspect authentication on the original host. This attempt is never replayed.',acknowledged:'Uncertain sign-in inspected and dismissed. The original flow was not cancelled or replayed; it may still complete on the host.',completed:'Native sign-in completed. Reload MCP status to inspect tool readiness.',failed:'Native sign-in failed. Inspect the original host before starting another attempt.'};
   return {attemptId:row.id,name:row.name,threadId:row.thread||null,state:row.state,nativeOutcome:row.native_outcome||null,notice:notices[row.state]+(row.state==='acknowledged'&&row.native_outcome?' Native later reported '+row.native_outcome+'.':''),canAcknowledge:this.codex.ready&&['unknown','pending'].includes(row.state)&&row.binding===this.binding()&&this.codex.operationCapacityAvailable(),...(row.thread===(threadId||'')&&row.device===device&&row.epoch===this.epoch&&row.binding===this.binding()&&row.state==='pending'&&this.links.has(row.id)?{authorizationUrl:this.links.get(row.id)}:{})};
  }
- recent(name,threadId,device){return this.db.prepare(`SELECT * FROM native_mcp_auth WHERE name=? AND (binding=? OR (thread=? AND device=?)) ORDER BY ${unresolved} DESC,at DESC,rowid DESC LIMIT 20`).all(name,this.binding(),threadId||'',device).map(row=>this.receipt(row,device,threadId));}
+ reconcile(){for(const key of this.events.keys()){const row=this.db.prepare("SELECT * FROM native_mcp_auth WHERE login_id=? AND state IN ('pending','acknowledged')").get(key);if(row)this.finish(row);}}
+ recent(name,threadId,device){this.reconcile();return this.db.prepare(`SELECT * FROM native_mcp_auth WHERE name=? AND (binding=? OR (thread=? AND device=?)) ORDER BY ${unresolved} DESC,at DESC,rowid DESC LIMIT 20`).all(name,this.binding(),threadId||'',device).map(row=>this.receipt(row,device,threadId));}
  async detail(input,device){try{return await this.readDetail(input,device);}catch(error){if(error.mcpAuth)throw error;throw fail('Native MCP sign-in inspection unavailable. No sign-in was submitted.',503);}}
  async readDetail({name,threadId},device){
   if(!serverName(name)||threadId!=null&&!id(threadId))throw fail('Choose a configured MCP server.',400);
@@ -46,6 +47,7 @@ export class NativeMcpAuth {
   const origin={name,threadId:threadId||null,cwd:thread?.cwd||null,config:hash(config.config),binding:snapshot.binding,epoch:snapshot.epoch};
   const status=await this.codex.call('mcpServerStatus/list',{...(threadId?{threadId}:{}),detail:'toolsAndAuthOnly',limit:100});this.check(snapshot);
   const observed=status.data?.find(s=>s.name===name);
+  this.reconcile();
   const blocked=!!this.db.prepare(`SELECT 1 FROM native_mcp_auth WHERE name=? AND binding=? AND ${unresolved}`).get(name,snapshot.binding);
   return {name,threadId:threadId||null,observedAuthStatus:observed?.authStatus||'unknown',canStart:!blocked,reviewToken:this.token(origin),receipts:this.recent(name,threadId,device),notice:'Starting sign-in contacts this server’s authorization provider and may save credentials on the original host. Complete its host-local callback there. No tools or model tasks are started.',_snapshot:snapshot};
  }
@@ -71,7 +73,7 @@ export class NativeMcpAuth {
   const complete=({result,error,terminal})=>{
    const row=this.db.prepare('SELECT * FROM native_mcp_auth WHERE id=?').get(attemptId);
    try{
-    this.check(view._snapshot);if(error||!terminal||!loginId(result?.loginId))throw Error();
+    const freshBinding=this.binding();if(!this.codex.ready||view._snapshot.epoch!==this.epoch||view._snapshot.transport!==this.codex.transport||freshBinding&&freshBinding!==view._snapshot.binding)throw Error();if(error||!terminal||!loginId(result?.loginId))throw Error();
     let url;try{const parsed=new URL(result.authorizationUrl);if(parsed.protocol==='https:'&&!parsed.username&&!parsed.password)url=parsed.href;}catch{}
     this.db.prepare("UPDATE native_mcp_auth SET state='pending',login_id=? WHERE id=?").run(result.loginId,attemptId);if(url)this.links.set(attemptId,url);this.finish({...row,state:'pending',login_id:result.loginId});
    }catch{this.db.prepare("UPDATE native_mcp_auth SET state='unknown' WHERE id=?").run(attemptId);this.links.delete(attemptId);}
