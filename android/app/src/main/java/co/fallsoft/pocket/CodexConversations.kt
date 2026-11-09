@@ -56,10 +56,10 @@ internal object CodexConversations {
             outgoing.accept(key,value.optJSONObject("outbox"))
             detailValue=outgoing.overlay(key,value)
         }
-    internal fun outgoing(destination:EnvironmentRequest,thread:String,snapshot:JSONObject?){
+    internal fun outgoing(destination:EnvironmentRequest,thread:String,snapshot:JSONObject?,paint:Boolean=true){
         if(thread.isBlank())return
         val target=key(destination,thread)
-        if(outgoing.accept(target,snapshot)&&selectionKey==target)detailValue=outgoing.overlay(target,detailValue)
+        if(outgoing.accept(target,snapshot)&&paint&&selectionKey==target)detailValue=outgoing.overlay(target,detailValue)
     }
     private var session by mutableStateOf<Session?>(null,referentialEqualityPolicy())
     private var serial=0L

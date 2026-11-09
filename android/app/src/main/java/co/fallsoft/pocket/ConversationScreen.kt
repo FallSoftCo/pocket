@@ -104,6 +104,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val latestTurn=rows.lastOrNull{it.s("kind")=="turn"}
     val status=conversation.execution
     val active=status in listOf(ConversationRunState.WORKING,ConversationRunState.STARTING,ConversationRunState.NEEDS_YOU)
+    val queueAuthGeneration=Pocket.nativeAuthGeneration
+    val queueActive=conversation.workVerified&&(t?.optJSONObject("status")?.s("type")=="active"||d?.optJSONObject("nativeExecutionTurn")?.s("status")=="inProgress")
+    val queueIdle=conversation.workVerified&&!queueActive&&t?.optJSONObject("status")?.s("type")=="idle"
+    val queueActionLabel=if(queueActive)"Steer now" else if(queueIdle)"Send now" else "Checking status"
+    fun ownsQueue()=queueAuthGeneration==Pocket.nativeAuthGeneration&&conversation.key==CodexConversations.currentKey&&conversation.incarnation==CodexConversations.incarnation
+    fun queueAction(id:String,action:String){if(ownsQueue())Pocket.queuedReply(id,action)}
     val latestFailure=(if(PocketTranscript.canonicalMode)d?.optJSONObject("nativeExecutionTurn")else rows.lastOrNull{it.s("kind")=="turnEnd"})?.takeIf{it.s("status")=="failed"}
     val list=key(Pocket.environmentId,Pocket.selected){rememberLazyListState()};val scope=rememberCoroutineScope();val dragged by list.interactionSource.collectIsDraggedAsState()
     DisposableEffect(Pocket.environmentId,Pocket.selected,conversation.incarnation){
@@ -571,11 +577,12 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
                 if(important&&shownRows.isEmpty())item{BilingualLabel("No important updates yet",color=Muted)}
                 d?.optJSONArray("outgoing")?.objects()?.filter{it.s("state") !in listOf("accepted","cancelled")}?.forEach{r->item(key="outgoing-${r.s("id")}"){Column(Modifier.fillMaxWidth().semantics{testTagsAsResourceId=true}.testTag("outgoing-"+r.s("id")).background(Panel,RoundedCornerShape(6.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
-                    val recoverable=r.s("state") in listOf("failed","unknown");val busy=Pocket.isReplyActionBusy(r.s("id"))
-                    BilingualLabel(when(r.s("state")){"queued"->"Queued · next turn";"held"->"Queue paused";else->r.s("state")},color=if(recoverable)Coral else Muted);if(!transcriptContainsReply(rows,r.s("id")))ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
+                    val recoverable=r.s("state") in listOf("failed","unknown");val busy=Pocket.isReplyActionBusy(r.s("id"));val promoted=r.s("mode")=="steer"
+                    BilingualLabel(if(busy)"Updating message…" else if(promoted&&r.s("state")=="queued")"Sending to current work…" else when(r.s("state")){"queued"->"Queued · next turn";"held"->"Queue paused";else->r.s("state")},color=if(recoverable)Coral else Muted);if(!transcriptContainsReply(rows,r.s("id")))ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
                     if(r.s("state") in listOf("queued","held")){
-                        Row{TextButton({editingQueue=r;queuedText=r.s("text")},enabled=!busy){BilingualLabel("Edit")}
-                            TextButton({Pocket.queuedReply(r.s("id"),"remove")},enabled=!busy){BilingualLabel("Remove",color=Coral)}}
+                        FlowRow{TextButton({queueAction(r.s("id"),"send")},enabled=ownsQueue()&&!busy&&r.s("mode")=="queue"&&(queueActive||queueIdle)){BilingualLabel(if(promoted)"Sending…" else queueActionLabel)}
+                            TextButton({if(ownsQueue()){editingQueue=r;queuedText=r.s("text")}},enabled=!busy&&!promoted){BilingualLabel("Edit")}
+                            TextButton({queueAction(r.s("id"),"remove")},enabled=!busy&&!promoted){BilingualLabel("Remove",color=Coral)}}
                     }
                     if(recoverable){WorkflowText(ConnectionMessages.server(r.s("result")),fontSize=12.sp,color=Coral)
                         Row{TextButton({if(r.s("state")=="unknown")confirmRetry=r else Pocket.queuedReply(r.s("id"),"retry")},enabled=!busy){BilingualLabel("Retry")}
@@ -703,13 +710,14 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             LazyColumn(Modifier.heightIn(max=400.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
                 items(waiting,key={it.s("id")}){r->
                     var menu by remember(r.s("id")){mutableStateOf(false)}
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Ink.copy(alpha=.3f)).clickable{editingQueue=r;queuedText=r.s("text")}.padding(start=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
+                    val busy=Pocket.isReplyActionBusy(r.s("id"))||r.s("mode")=="steer"
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(Ink.copy(alpha=.3f)).clickable(enabled=!busy&&ownsQueue()){editingQueue=r;queuedText=r.s("text")}.padding(start=14.dp,top=8.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically){
                         ImmersionText("outgoing:"+r.s("id"),r.s("text"),rescue=false,fontSize=14.sp,lineHeight=21.sp,modifier=Modifier.weight(1f),maxLines=3,overflow=TextOverflow.Ellipsis)
-                        Box{IconButton({menu=true}){SymbolIcon(Icons.Rounded.MoreVert,"Queued message actions",tint=Muted)}
+                        Box{IconButton({menu=true},enabled=!busy&&ownsQueue()){SymbolIcon(Icons.Rounded.MoreVert,"Queued message actions",tint=Muted)}
                             DropdownMenu(menu,{menu=false}){
-                                DropdownMenuItem(text={BilingualLabel("Edit")},onClick={menu=false;editingQueue=r;queuedText=r.s("text")})
-                                DropdownMenuItem(text={BilingualLabel(if(active)"Steer now" else "Send now")},onClick={menu=false;Pocket.queuedReply(r.s("id"),"send")})
-                                DropdownMenuItem(text={BilingualLabel("Remove",color=Coral)},onClick={menu=false;Pocket.queuedReply(r.s("id"),"remove")})
+                                DropdownMenuItem(text={BilingualLabel("Edit")},enabled=!busy&&ownsQueue(),onClick={menu=false;if(ownsQueue()){editingQueue=r;queuedText=r.s("text")}})
+                                DropdownMenuItem(text={BilingualLabel(queueActionLabel)},enabled=!busy&&r.s("mode")=="queue"&&ownsQueue()&&(queueActive||queueIdle),onClick={menu=false;queueAction(r.s("id"),"send")})
+                                DropdownMenuItem(text={BilingualLabel("Remove",color=Coral)},enabled=!busy&&ownsQueue(),onClick={menu=false;queueAction(r.s("id"),"remove")})
                             }
                         }
                     }

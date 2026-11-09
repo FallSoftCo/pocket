@@ -20,6 +20,7 @@ for(const runtime of ['0.167.0','mac-0.163.0'])test(`paired HTTP native settings
   if(m.method==='initialize')result={userAgent:runtime==='0.167.0'?'codex_cli_rs/0.167.0 (fixture)':'codex_pocket/0.163.0 (Mac OS 26.6.0; arm64) unknown (nextcomp_compatibility_readonly; 1)',platformOs:'linux',platformFamily:'unix',codexHome:'/fake-private-home'};
   if(m.method==='thread/read')result={thread:{id:m.params.threadId,cwd,status:{type:'idle'},turns:[]}};
   if(m.method==='skills/list')result={data:[{skills:[{name:'fixture-skill',path:'/fake/skills/fixture/SKILL.md',enabled:true,scope:'user',description:'Synthetic fixture only'}],errors:[]}]};
+  if(m.method==='app/installed')result={apps:[]};
   if(m.method==='model/list')result={data:[{model:'fixture-model',displayName:'Fixture model',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium'}],serviceTiers:[{id:'priority',name:'Priority',description:'Fixture tier'}]}]};
   if(m.method.startsWith('plugin/')){try{const reply=await pluginReply(plugins,m.method,m.params);if(reply){if(reply.drop){ws.terminate();return;}ws.send(JSON.stringify({id:m.id,...reply}));plugins.sent?.(m);return;}}catch(error){ws.send(JSON.stringify({id:m.id,error:{code:-32603,message:error.message}}));return;}}
   ws.send(JSON.stringify({id:m.id,result}));

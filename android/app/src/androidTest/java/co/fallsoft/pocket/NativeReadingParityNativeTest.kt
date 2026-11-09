@@ -8,6 +8,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import android.view.KeyEvent
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -45,6 +48,8 @@ class NativeReadingParityNativeTest {
   fun qa(action:String)=runBlocking{Pocket.apiEnvironment(requireNotNull(Pocket.captureEnvironment()),"/_qa/$action",JSONObject())}
   c.getSharedPreferences("pocket",Context.MODE_PRIVATE).edit().clear().putString("server","http://127.0.0.1:18880").putString("token","synthetic-system76-reading").putString("deviceId","synthetic-device-a").putString("draft:same-thread","Native unsent draft").commit()
   main{Pocket.init(c);PocketImmersion.setEnabled(false);c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open("same-thread")}
+  val focusEvidence=JSONObject()
+  val inputMode=java.util.concurrent.atomic.AtomicReference<InputModeManager>(null)
   val phraseLayout=java.util.concurrent.atomic.AtomicReference<JSONObject>(null)
   val phraseWidth=java.util.concurrent.atomic.AtomicInteger(0)
   try {
@@ -88,6 +93,8 @@ class NativeReadingParityNativeTest {
    val fontScale=mutableFloatStateOf(1f)
    val phase=mutableIntStateOf(0);val boxes=java.util.concurrent.atomic.AtomicReference<List<androidx.compose.ui.geometry.Rect?>>(null)
    main{val activity=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single();activity.setContent{
+    val currentInputMode=LocalInputModeManager.current
+    SideEffect{inputMode.set(currentInputMode)}
     val density=LocalDensity.current
     CompositionLocalProvider(LocalDensity provides Density(density.density,fontScale.floatValue)){
     val actualDensity=LocalDensity.current;val renderedPhase=phase.intValue
@@ -147,19 +154,57 @@ class NativeReadingParityNativeTest {
    // Compose exposes focus on the clickable wrapper, while the exact phrase
    // description is its child. Do not accept focus on the whole paragraph/gallery.
    val firstPhraseFocus=By.clickable(true).focusable(true).focused(true).hasChild(By.desc("The correction"))
+   fun commitFocusFrames(){
+    val committed=java.util.concurrent.CountDownLatch(1)
+    main{
+     val activity=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single()
+     val view=activity.window.decorView
+     assertTrue("Focus capture requires hardware frame-commit observation",view.isHardwareAccelerated)
+     view.viewTreeObserver.registerFrameCommitCallback{
+      view.post{
+       view.viewTreeObserver.registerFrameCommitCallback{committed.countDown()}
+       view.postInvalidateOnAnimation()
+      }
+     }
+     view.postInvalidateOnAnimation()
+    }
+    assertTrue("Post-focus frames did not commit",committed.await(3,java.util.concurrent.TimeUnit.SECONDS))
+   }
+   assertFalse("First phrase already focused before keyboard navigation",device.hasObject(firstPhraseFocus))
+   commitFocusFrames()
+   capture("native-reading-slots-large-before-focus.png")
    var focused=false
    for(attempt in 0 until 6){
     device.pressKeyCode(KeyEvent.KEYCODE_TAB)
     if(device.wait(Until.hasObject(firstPhraseFocus),500)){focused=true;break}
    }
    assertTrue("Keyboard could not focus the first phrase",focused)
+   main{focusEvidence.put("inputMode",inputMode.get()?.inputMode.toString());assertEquals("Tab focus must enter keyboard input mode",InputMode.Keyboard,inputMode.get()?.inputMode)}
+   val focusedBounds=requireNotNull(device.findObject(firstPhraseFocus)).visibleBounds
+   focusEvidence.put("bounds",focusedBounds.toShortString()).put("postFocusFramesRequested",2)
+   commitFocusFrames()
+   assertTrue("Phrase lost focus before capture",device.hasObject(firstPhraseFocus))
    capture("native-reading-slots-large-focused.png")
+   assertTrue("Phrase lost focus during capture",device.hasObject(firstPhraseFocus))
+   assertEquals("Focus feedback changed phrase geometry",enlarged,boxes.get())
+   val baseline=requireNotNull(android.graphics.BitmapFactory.decodeFile(java.io.File(c.cacheDir,"native-reading-slots-large-before-focus.png").path)){"Baseline screenshot did not decode"}
+   val focusedImage=requireNotNull(android.graphics.BitmapFactory.decodeFile(java.io.File(c.cacheDir,"native-reading-slots-large-focused.png").path)){"Focused screenshot did not decode"}
+   try{
+    assertEquals(baseline.width,focusedImage.width);assertEquals(baseline.height,focusedImage.height)
+    assertTrue("Focused phrase bounds exceed screenshot",focusedBounds.left>=0&&focusedBounds.top>=0&&focusedBounds.right<=baseline.width&&focusedBounds.bottom<=baseline.height)
+    var changed=0
+    for(y in focusedBounds.top until focusedBounds.bottom)for(x in focusedBounds.left until focusedBounds.right)if(baseline.getPixel(x,y)!=focusedImage.getPixel(x,y))changed++
+    focusEvidence.put("committedFrames",2).put("changedPhrasePixels",changed).put("exactWrapperFocusedBeforeAndAfter",true)
+    java.io.File(c.cacheDir,"native-reading-focus-observation.json").writeText(focusEvidence.toString())
+    assertTrue("Keyboard focus produced no visible phrase feedback: $focusEvidence",changed>0)
+   }finally{baseline.recycle();focusedImage.recycle()}
    device.pressKeyCode(KeyEvent.KEYCODE_ENTER)
    assertTrue("Keyboard activation did not switch the focused phrase",device.wait(Until.hasObject(By.desc("La correzione")),2000))
    assertEquals("Keyboard activation changed phrase geometry",enlarged,boxes.get())
    assertEquals("Keyboard phrase activation fired the unrelated link",1,linkTaps.get())
    val state=qa("state");assertEquals(1,state.optInt("galleryMetadataReads"));assertTrue(state.optInt("galleryImageReads")>=1);assertEquals(0,state.optInt("galleryCredentialLeaks"));assertEquals(0,state.optInt("workSubmissions"))
   }catch(error:Throwable){
+   java.io.File(c.cacheDir,"native-reading-focus-observation.json").writeText(focusEvidence.put("failure",error.message).toString())
    phraseLayout.get()?.let{java.io.File(c.cacheDir,"native-reading-phrase-layout.json").writeText(it.put("containerWidth",phraseWidth.get()).toString())}
    device.takeScreenshot(java.io.File(c.cacheDir,"native-reading-failure.png"))
    device.dumpWindowHierarchy(java.io.File(c.cacheDir,"native-reading-failure.xml"))

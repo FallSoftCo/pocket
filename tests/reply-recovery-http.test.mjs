@@ -12,11 +12,19 @@ const waitFor=async fn=>{for(let i=0;i<180;i++){if(await fn())return;await new P
 async function fixture(t){
  const dir=await mkdtemp(join(tmpdir(),'pocket-reply-recovery-')),socket=join(dir,'codex.sock');
  const host=http.createServer(),wss=new WebSocketServer({server:host});await new Promise(r=>host.listen(socket,r));
- const calls=[];let rejectNext=false,holdNextAttach=false,heldAttach=null,snapshotTurns=[];
+ const calls=[];let rejectNext=false,holdNextAttach=false,heldAttach=null,snapshotTurns=[],threadStatus='idle',steerError=null,holdDelivery=false,heldDelivery=null;
+ const thread=params=>({id:'task-recovery',name:'Recovery fixture',cwd:dir,status:{type:threadStatus},...(params?.includeTurns===false?{}:{turns:snapshotTurns})});
  wss.on('connection',ws=>ws.on('message',raw=>{
   const m=JSON.parse(raw);if(!m.id)return;calls.push(m);let result={};
-  if(m.method==='thread/read'&&holdNextAttach){holdNextAttach=false;heldAttach={ws,id:m.id};return;}
-  if(m.method==='thread/read'||m.method==='thread/resume')result={thread:{id:'task-recovery',name:'Recovery fixture',cwd:dir,status:{type:'idle'},turns:snapshotTurns}};
+  if(m.method==='thread/read'&&holdNextAttach){holdNextAttach=false;heldAttach={ws,id:m.id,params:m.params};return;}
+  if(m.method==='thread/read'||m.method==='thread/resume')result={thread:thread(m.params)};
+  if(m.method==='thread/turns/list')result={data:snapshotTurns.slice(-1).map(turn=>({...turn,items:[]})),nextCursor:snapshotTurns.length?'older-do-not-follow':null,backwardsCursor:'current-anchor'};
+  if(m.method==='thread/items/list')result={data:[],nextCursor:null};
+  if(m.method==='turn/steer'){
+   if(steerError){const error=steerError;steerError=null;if(error.idleAfter)threadStatus='idle';if(error.disconnect){ws.terminate();return;}ws.send(JSON.stringify({id:m.id,error:{code:-32602,message:error.message}}));return;}
+   if(holdDelivery){holdDelivery=false;heldDelivery={ws,id:m.id};return;}
+   result={turnId:snapshotTurns.at(-1)?.id};
+  }
   if(m.method==='turn/start'){
    if(rejectNext){rejectNext=false;ws.send(JSON.stringify({id:m.id,error:{code:-32602,message:'Synthetic definite rejection'}}));return;}
    result={turn:{id:'accepted-turn',status:'inProgress'}};
@@ -32,8 +40,8 @@ async function fixture(t){
  const api=async(path,body,asOwner=false)=>{const ownerRoute=asOwner||/\/(?:continuation|catalog-context|recovery)(?:\/|$)/.test(path);const authorization=ownerRoute?adminToken:deviceToken;const response=await fetch(url+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${authorization}`,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:response.status,data:await response.json()};};
  await api('/api/threads/task-recovery');
  const status=async id=>(await api('/api/replies/'+id)).data.state;
- const seed=(id,state)=>db.prepare('INSERT INTO outgoing(id,thread_id,text,state,result,created_at,updated_at,mode) VALUES(?,?,?,?,?,?,?,?)').run(id,'task-recovery','Preserved '+id,state,'Persisted delivery outcome',Date.now(),Date.now(),'steer');
- return {api,adminApi:(path,body)=>api(path,body,true),status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
+ const seed=(id,state,mode='steer')=>db.prepare('INSERT INTO outgoing(id,thread_id,text,state,result,created_at,updated_at,mode) VALUES(?,?,?,?,?,?,?,?)').run(id,'task-recovery','Preserved '+id,state,'Persisted delivery outcome',Date.now(),Date.now(),mode);
+ return {api,setStatus:value=>threadStatus=value,steerError:value=>steerError=value,holdDelivery:()=>holdDelivery=true,deliveryBlocked:()=>!!heldDelivery,releaseDelivery:()=>{const held=heldDelivery;heldDelivery=null;held.ws.send(JSON.stringify({id:held.id,result:{turnId:snapshotTurns.at(-1)?.id}}));},releaseAttach:()=>{const held=heldAttach;heldAttach=null;held.ws.send(JSON.stringify({id:held.id,result:{thread:thread(held.params)}}));},adminApi:(path,body)=>api(path,body,true),status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
 }
 
 test('HTTP checkpoints save progress on unregistered/stopped work without rearming recovery or starting a model',async t=>{
@@ -126,4 +134,36 @@ test('real gateway rejects shared-admin human ingress while paired admission/ret
  const accepted=f.db.prepare("SELECT * FROM outgoing WHERE id='human-provenance'").get();
  assert.equal((await f.adminApi('/api/threads/task-recovery/reply',{id:'human-provenance',text:'Real paired request',mode:'steer'})).status,403);
  assert.deepEqual(f.db.prepare("SELECT * FROM outgoing WHERE id='human-provenance'").get(),accepted);
+});
+
+
+test('HTTP promotion keeps original queued identity through blocked drain, duplicate taps and later idle dispatch',async t=>{
+ const f=await fixture(t);f.setStatus('active');f.snapshotTurn({id:'active-original',status:'inProgress',items:[]});f.blockAttach();
+ const id='queued-promote',path='/api/threads/task-recovery/replies/'+id;
+ assert.equal((await f.api('/api/threads/task-recovery/reply',{id,text:'Original queued guidance',mode:'queue'})).status,202);
+ await waitFor(()=>f.attachBlocked());const original=f.db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);const admitted=f.db.prepare("SELECT principal FROM human_admissions WHERE request_id=? AND kind='reply'").get(id).principal;
+ const promoted=await f.api(path,{action:'send'});assert.equal(promoted.status,200);assert.equal(promoted.data.id,id);assert.equal(promoted.data.mode,'steer');
+ assert.equal((await f.api(path,{action:'send'})).status,409);assert.equal(f.turns().length,0);f.holdDelivery();const releasedAt=Date.now();f.releaseAttach();await waitFor(()=>f.deliveryBlocked());assert.ok(Date.now()-releasedAt<2000,'explicit promotion wakes on drain release, not five-second periodic flush');
+ assert.equal((await f.api(path,{action:'send'})).status,409);assert.equal(f.turns().length,1);assert.equal(f.turns()[0].method,'turn/steer');assert.equal(f.turns()[0].params.expectedTurnId,'active-original');assert.equal(f.turns()[0].params.clientUserMessageId,id);assert.deepEqual(f.turns()[0].params.input,[{type:'text',text:original.text}]);
+ const pending=await f.api('/api/replies/'+id);assert.equal(pending.data.mode,'steer');assert.equal(pending.data.state,'sending');f.releaseDelivery();await waitFor(async()=>await f.status(id)==='accepted');
+ assert.equal((await f.api(path,{action:'send'})).status,409);assert.equal(f.db.prepare('SELECT text,created_at FROM outgoing WHERE id=?').get(id).text,original.text);assert.equal(f.db.prepare('SELECT created_at FROM outgoing WHERE id=?').get(id).created_at,original.created_at);assert.equal(f.db.prepare("SELECT principal FROM human_admissions WHERE request_id=? AND kind='reply'").get(id).principal,admitted);assert.equal(f.db.prepare("SELECT count(*) n FROM human_admission_actions WHERE request_id=? AND action='send'").get(id).n,1);
+ assert.equal((await f.api('/api/threads/task-recovery/reply',{id,text:original.text,mode:'queue'})).status,409,'stale original queue POST cannot replace promoted identity');
+ // A different older queue row owns the lock: promotion must wake immediately
+ // after that harmless active-metadata check, not wait for periodic queue polling.
+ f.blockAttach();await f.api('/api/threads/task-recovery/reply',{id:'older-queued',text:'Wait for next turn',mode:'queue'});await waitFor(()=>f.attachBlocked());
+ await f.api('/api/threads/task-recovery/reply',{id:'promote-behind-drain',text:'Steer this current turn',mode:'queue'});assert.equal((await f.api('/api/threads/task-recovery/replies/promote-behind-drain',{action:'send'})).status,200);
+ const drainReleaseAt=Date.now();f.releaseAttach();await waitFor(async()=>await f.status('promote-behind-drain')==='accepted');assert.ok(Date.now()-drainReleaseAt<2000);assert.equal(f.turns().filter(c=>c.params.clientUserMessageId==='promote-behind-drain').length,1);assert.equal(f.turns().at(-1).method,'turn/steer');assert.equal(await f.status('older-queued'),'queued');
+ assert.equal((await f.api('/api/threads/task-recovery/replies/older-queued',{action:'remove'})).status,200);
+ f.setStatus('idle');f.snapshotTurn({id:'active-original',status:'completed',items:[]});f.seed('held-idle','held','queue');assert.equal((await f.api('/api/threads/task-recovery/replies/held-idle',{action:'send'})).status,200);await waitFor(async()=>await f.status('held-idle')==='accepted');assert.equal(f.turns().at(-1).method,'turn/start');assert.equal(f.turns().at(-1).params.clientUserMessageId,'held-idle');
+ assert.ok(!f.calls.some(c=>['thread/turns/list','thread/items/list','thread/timeline/list'].includes(c.method)&&c.params.cursor),'promotion never scans older history');
+});
+
+test('HTTP promotion cannot reinterpret unknown delivery or start a turn without positive idle evidence',async t=>{
+ const f=await fixture(t);const action=id=>f.api('/api/threads/task-recovery/replies/'+id,{action:'send',confirmUnknown:true});
+ for(const state of ['failed','unknown','sending','accepted']){f.seed('blocked-'+state,state,'queue');assert.equal((await action('blocked-'+state)).status,409);}assert.equal(f.turns().length,0);
+ for(const [id,message,idleAfter]of [['mismatch','expectedTurnId does not match current active turn',false],['still-active','no active turn',false],['finished','no active turn',true]]){
+  f.setStatus('active');f.snapshotTurn({id:'turn-'+id,status:'inProgress',items:[]});f.seed(id,'held','queue');f.steerError({message,idleAfter});assert.equal((await action(id)).status,200);await waitFor(async()=>['accepted','failed'].includes(await f.status(id)));
+  const deliveries=f.turns().filter(c=>c.params.clientUserMessageId===id);assert.deepEqual(deliveries.map(c=>c.method),idleAfter?['turn/steer','turn/start']:['turn/steer']);assert.equal(await f.status(id),idleAfter?'accepted':'failed');
+ }
+ f.setStatus('active');f.snapshotTurn({id:'uncertain-active',status:'inProgress',items:[]});f.seed('lost-steer','held','queue');f.steerError({disconnect:true});assert.equal((await action('lost-steer')).status,200);await waitFor(async()=>await f.status('lost-steer')==='unknown');const before=f.turns().length;assert.equal((await action('lost-steer')).status,409);await f.api('/api/replies/lost-steer');assert.equal(f.turns().length,before);
 });

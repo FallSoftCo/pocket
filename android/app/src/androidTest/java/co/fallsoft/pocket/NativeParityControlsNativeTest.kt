@@ -364,6 +364,21 @@ class NativeParityControlsNativeTest {
             tap("Skills");visible("Synthetic skill")
             assertTrue("Settings did not request the selected host",calls("/api/native/configuration","GET").any{it.s("origin")=="Alpha"&&it.s("query").contains("section=skills")})
             capture("06-native-settings")
+            // Apps are read-only discovery here; installed, enabled and callable stay distinct.
+            tap("Apps");visible("Alpha app 0")
+            visible("Installed: Yes · Enabled: Yes · Callable: No")
+            tap("Browse apps");visible("Available apps · discovery is not installation")
+            tap("App details");compose.onNodeWithText("Synthetic app detail 0").performScrollTo().assertIsDisplayed();compose.onNodeWithText("Authentication: unverified").performScrollTo().assertIsDisplayed()
+            tap("Next apps page");visible("Alpha app 30");absent("Alpha app 0")
+            tap("Refresh apps");visible("Alpha app 0")
+            qa("apps-hold");val appsBefore=calls("/api/native/configuration","GET").size
+            tap("Next apps page")
+            await{calls("/api/native/configuration","GET").size>appsBefore}
+            navigate("parity_beta");qa("apps-release",origin=0)
+            absent("Alpha app 30");absent("Codex settings & agents")
+            assertTrue("App discovery wrote configuration",calls("/api/native/configuration").isEmpty())
+            assertEquals("App discovery changed draft","Alpha edited draft\n\nAlpha original request",prefs.getString("draft:$thread",null))
+            navigate("workstation");menu("Codex settings & agents")
             tap("Plugins");visible("Installed plugins · 0–0 of 0")
             tap("Browse catalog");visible("Catalog · 1–30 of 10074")
             tap("Next plugin page");visible("Catalog · 31–60 of 10074")
@@ -454,14 +469,20 @@ class NativeParityControlsNativeTest {
             assertEquals(originalReloadId,qa("state",origin=1).getJSONArray("reloadReceipts").getJSONObject(0).s("id"))
             // A different account cannot bypass the original host-wide unknown effect.
             qa("mcp-account",JSONObject().put("account","secondary"),origin=1)
-            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()&&compose.onAllNodesWithText("Codex settings & agents",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            // Account replacement closes the whole source-bound settings surface.
+            // Re-enter through the actual footer before inspecting the same receipt.
+            menu("Codex settings & agents");tap("MCP")
             tap("Review host MCP reload");reloadNotice("Return to that original account")
             absent("Reload MCP across this host");absent("I inspected the host; review dismissal")
             assertEquals(1,qa("state").getJSONArray("nativeReloadStarts").length())
             assertEquals("unknown",qa("state",origin=1).getJSONArray("reloadReceipts").getJSONObject(0).s("state"))
             capture("06f-mcp-reload-account-blocked")
             qa("mcp-account",JSONObject().put("account","original"),origin=1)
-            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()&&compose.onAllNodesWithText("Codex settings & agents",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            // Account replacement closes the whole source-bound settings surface.
+            // Re-enter through the actual footer before inspecting the same receipt.
+            menu("Codex settings & agents");tap("MCP")
             tap("Review host MCP reload");reloadNotice("Reload outcome unconfirmed")
             tap("I inspected the host; review dismissal");reloadNotice("does not cancel the reload")
             tap("Dismiss inspected reload receipt");reloadNotice("Uncertain reload inspected and dismissed")

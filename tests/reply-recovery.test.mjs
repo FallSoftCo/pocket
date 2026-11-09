@@ -39,7 +39,7 @@ function store(t,state,mode='steer'){
 test('a failed reply can be edited then retried with its stable identity and mode',t=>{
  const db=store(t,'failed','queue');
  assert.equal(recoverReply(db,'thread','reply',{action:'edit',text:'Corrected input'},2).state,'failed');
- assert.deepEqual(recoverReply(db,'thread','reply',{action:'retry'},3),{status:200,id:'reply',state:'queued',dispatch:true});
+ assert.deepEqual(recoverReply(db,'thread','reply',{action:'retry'},3),{status:200,id:'reply',state:'queued',mode:'queue',dispatch:true});
  const row=db.prepare('SELECT * FROM outgoing').get();
  assert.equal(row.text,'Corrected input');assert.equal(row.mode,'queue');assert.equal(row.result,null);
  assert.equal(recoverReply(db,'thread','reply',{action:'retry'},4).status,409,'repeated retry does not create a second delivery');

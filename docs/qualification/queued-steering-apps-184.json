@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "versionCode": 184,
+  "versionName": "0.5.0-alpha.166",
+  "state": "published-android-both-channels-web-and-backends-live",
+  "changes": [
+    "Direct Steer now on pending message cards when current native work is verified active; Send now only for verified idle",
+    "Original outgoing identity, text and source retained; duplicate promotion, sending and unknown delivery cannot be promoted",
+    "Promotion during queue metadata reads obtains bounded current-turn identity; promotion behind another dispatch wakes on lock release without a new polling timer",
+    "Android and web retain original acknowledged outgoing state while guarding navigation-specific presentation and drafts",
+    "Native Apps settings distinguish installed apps from discovery, support scoped pagination and explicit refresh where the installed Codex contract supports it",
+    "Existing native keyboard-focus visual check observes committed hardware frames and compares captured pixels"
+  ],
+  "evidence": {
+    "queueHttpNativeSocket": {
+      "passed": 27,
+      "failed": 0,
+      "synthetic": true
+    },
+    "requiredDomLane": {
+      "passed": 7,
+      "failed": 0
+    },
+    "actualRenderedWebQueue": {
+      "widths": [
+        390,
+        1100
+      ],
+      "singleOriginalPromotion": true,
+      "draftRetained": true,
+      "otherHeldQueueRetained": true,
+      "visuallyInspected": true
+    },
+    "android": {
+      "nativeJourneys": 20,
+      "failed": 0,
+      "unitTestsPerVariant": 485,
+      "unitSkippedPerVariant": 2,
+      "debugReleaseLint": "passed",
+      "optimizedNativeJourney": "passed; original pair retained once across reconnect; question skip once; catalog and history visually inspected",
+      "keyboardFocus": "R02 hardware frames committed; visible outline inspected; 67400 changed pixels"
+    },
+    "deployment": {
+      "androidVersion": 184,
+      "versionName": "0.5.0-alpha.166",
+      "channels": [
+        "system76",
+        "macbook-pro"
+      ],
+      "backendClosure": "a5dc865a38871c5d661eb606d618b6d8c5dff80388bff1f4b8b2efd9aa893318",
+      "backendRuntimeSource": "0370d355726a691eaa86a88521c43bf5804def73",
+      "qualifiedSource": "19065aad5ef6da362fc5d3fc0b0e9831bf1396e4",
+      "webAssets": "both entry points match immutable closure",
+      "nativeCodexProcesses": "unchanged on both hosts",
+      "pairingQueueAndUnknownReceipts": "preserved",
+      "updateAnnouncement": "one workstation announcement; no Mac duplicate",
+      "phoneInstalled": "unverified"
+    },
+    "backend": {
+      "passed": 784,
+      "failed": 0,
+      "skipped": 2
+    }
+  },
+  "retainedFailure": "The first integrated backend run exposed an outdated synthetic turn-controls fixture returning empty objects for paginated native reads. Its real page/header contract was restored without changing existing assertions; the previously failing checks passed.",
+  "limits": [
+    "Synthetic gateway/native socket and UI evidence does not certify live model execution",
+    "Physical-phone installation, hardware interaction and rendered FCM delivery are separate evidence",
+    "Unknown delivery remains explicit recovery; there is no exactly-once claim or automatic replay",
+    "Mac Codex 0.163 Apps remains installed-only and read-only; browsing and refresh require a qualified runtime contract"
+  ],
+  "apk": {
+    "compatibleSha256": "b1339247b911b237ceb5266e909cbcf588fd370ab218ef8058cbf8f60378e74f",
+    "publicSha256": "bbe350960c63792ff2962738de0e858730fe0716ccb50a8bc47ef1894ab2d232",
+    "bytesEach": 52698047
+  },
+  "retainedNativeFailure": "R01 account-switch test attempted to inspect a correctly dismissed settings panel. R02 explicitly asserted parent/child dismissal, reopened the real footer settings path, and retained original receipt assertions; product APKs stayed byte-identical. R02 full current-input native run passed."
+}

@@ -20,7 +20,8 @@
     "co.fallsoft.pocket.NativeParityControlsNativeTest#requestsKeepOriginalIdentityAndReturnToCommandOutput",
     "co.fallsoft.pocket.NativeParityControlsNativeTest#executionInspectionAndTerminationStaySourceBound",
     "co.fallsoft.pocket.NativeParityControlsNativeTest#contextRecoveryRevertAndSettingsPreserveDrafts",
-    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#backgroundHistoryEligibilityPreservesExplicitReadsAndRecovery"
+    "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#backgroundHistoryEligibilityPreservesExplicitReadsAndRecovery",
+    "co.fallsoft.pocket.QueuedMessagesNativeTest#queuedMessagesStayVisibleAndRemoveWithoutHistory"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",
@@ -47,7 +48,8 @@
     "168 retires room product journeys. Existing stock history, reading, capture and actual account audio remain required, plus a saved-room-selection upgrade. Optimized stock catalog/history review replaces retired room snapshots. Physical handset and FCM remain separate evidence.",
     "173 additionally requires one composed native MainActivity journey for secret request replacement, native forms, source-bound terminal and conversation confirmations, unknown operation receipts, restored drafts and native settings. Its authority is a disposable two-origin fixture; it does not prove provider model execution or physical phone behavior.",
     "177 qualifies retained dirty-cache activation separately from background history eligibility, source-bound typed refusal and bounded recovery, and explicit archived history with preserved drafts/cursors. Seeded SQLite restoration is not proof of an OS process restart; physical phone behavior remains separate. No historical task resumption or unknown-delivery replay is part of this repair.",
-    "178 extends the existing context/settings native journey with source-bound plugin details, required installation notice, explicit confirmation and authentication-pending readback. HTTP/socket and DOM fixtures additionally cover original late replies, stale concurrent preflight and environment/account changes. No live plugin installation, provider authentication or readiness is certified by synthetic qualification."
+    "178 extends the existing context/settings native journey with source-bound plugin details, required installation notice, explicit confirmation and authentication-pending readback. HTTP/socket and DOM fixtures additionally cover original late replies, stale concurrent preflight and environment/account changes. No live plugin installation, provider authentication or readiness is certified by synthetic qualification.",
+    "184 additionally requires the original queued-message MainActivity journey: visible direct promotion using the original request identity, duplicate suppression, authoritative accepted outbox, preserved remaining queue and draft. Native Apps discovery is exercised in the existing context/settings journey, with exact source and account boundaries. Synthetic gateway/provider checks do not claim live model steering or physical-phone behavior."
   ],
   "requiredOptimizedReview": "native-codex-catalog-and-history",
   "captureInteraction": "volume-buttons",

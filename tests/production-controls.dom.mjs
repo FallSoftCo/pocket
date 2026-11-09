@@ -56,14 +56,35 @@ test('real conversation pane recovers an unknown operation after backend restart
 
 test('settings plugin journey binds review to source and retains uncertain native effects across restart',{timeout:25000},async t=>{
  const ui=documentFixture(t),f=await productionFixture(t),{pluginState}=await import('./helpers/native-plugin-fixture.mjs'),{NativeSettingsPanel}=await import('../web/native-settings.mjs');
- f.plugins={...pluginState(),catalogSize:10074};f.configuration={id:'fixture-app',name:'Fixture app',enabled:true,version:1};const origin=scopedId('remote',f.thread.id);let selected=origin,loseHttpAck=false,holdDetail=null,holdPage=null;const calls=[];
+ f.plugins={...pluginState(),catalogSize:10074};f.configuration={id:'fixture-app',name:'Fixture app',enabled:true,version:1};const origin=scopedId('remote',f.thread.id);let selected=origin,loseHttpAck=false,holdDetail=null,holdPage=null,holdApps=null;const calls=[];
  const panel=new NativeSettingsPanel({getScope:()=>selected,openThread:()=>assert.fail('Plugin controls never navigate or submit work'),api:async(path,body,options)=>{
   calls.push({path,body,scope:options.scope});assert.equal(options.scope,origin,'every read/write remains on the captured source');
   const routed=environmentRoute(environmentPath(path,options.scope));assert.equal(routed.environmentId,'remote');
-  const isPage=path.startsWith('/api/native/configuration?section=plugins')&&path.includes('&cursor=');const hold=isPage?holdPage:path.startsWith('/api/native/plugins/detail')?holdDetail:null;if(hold){if(isPage)holdPage=null;else holdDetail=null;}
+  const isPage=path.startsWith('/api/native/configuration?section=plugins')&&path.includes('&cursor=');const isApps=path.startsWith('/api/native/configuration?section=apps');const hold=isApps?holdApps:isPage?holdPage:path.startsWith('/api/native/plugins/detail')?holdDetail:null;if(hold){if(isApps)holdApps=null;else if(isPage)holdPage=null;else holdDetail=null;}
   const result=qualifyPayload(await f.api(routed.path,body?unqualifyPayload(body,'remote'):undefined),'remote');if(hold){hold.started();await hold.wait;if(hold.fail)throw Error('Older reload failed');}if(body&&loseHttpAck){loseHttpAck=false;throw Error('Synthetic HTTP acknowledgement loss');}return result;
  }});
  const waitText=text=>until(()=>panel.dialog.textContent,s=>s.includes(text),text);
+ // Existing settings journey also qualifies Apps through the real HTTP/native boundary.
+ f.appsBrowse=true;await panel.open();await panel.load('apps');
+ assert.equal(f.calls.filter(c=>c.method==='app/list').length,0,'installed inspection must not discover apps');
+ assert.match(panel.body.textContent,/Installed: Yes · Enabled: Yes · Callable: No/);
+ const appAction=label=>[...panel.dialog.querySelectorAll('button')].find(b=>b.textContent===label).onclick();
+ await appAction('Browse apps');assert.equal(panel.body.querySelectorAll('[data-app-row]').length,30);
+ assert.match(panel.body.textContent,/Installed: No · Enabled: Unknown · Callable: Unknown/);
+ const appDetails=panel.body.querySelector('[data-app-row] details');appDetails.open=true;assert.match(appDetails.textContent,/Authentication: unverified/);
+ assert.equal(panel.body.querySelectorAll('[data-app-row] button').length,1,'only installed app may offer configuration');
+ await appAction('Next apps page');assert.equal(panel.body.querySelectorAll('[data-app-row]').length,1);assert.ok(!panel.body.textContent.includes('Available app 0'));
+ await appAction('Refresh apps');assert.equal(panel.body.querySelectorAll('[data-app-row]').length,30);
+ assert.ok(f.calls.some(c=>c.method==='app/list'&&c.params.forceRefetch===true));assert.ok(f.calls.some(c=>c.method==='app/installed'&&c.params.forceRefresh===true));
+ let appsStarted,appsRelease;const appsReading=new Promise(r=>appsStarted=r);holdApps={started:appsStarted,wait:new Promise(r=>appsRelease=r)};
+ const oldApps=appAction('Next apps page');await appsReading;panel.closeForNavigation();selected=f.thread.id;appsRelease();await oldApps;
+ assert.equal(panel.dialog.open,false);assert.equal(panel.body.querySelectorAll('[data-app-row]').length,0,'held Apps page must not paint after source switch');
+ selected=origin;await panel.open();await panel.load('apps');panel.event({type:'nativeAuthBoundary'});assert.equal(panel.dialog.open,false,'account boundary closes app inspection');
+ assert.equal(calls.filter(c=>c.body).length,0,'Apps browsing cannot mutate configuration or submit work');
+ f.userAgent='codex_pocket/0.163.0 (Mac OS 26.6; arm64)';await f.restart();await panel.open();await panel.load('apps');
+ assert.match(panel.body.textContent,/Installed: Yes · Enabled: Yes · Callable: No/);
+ assert.ok(![...panel.dialog.querySelectorAll('button')].some(b=>['Browse apps','Refresh apps','Disable for this environment'].includes(b.textContent)),'Mac installed inspection must not advertise discovery, refresh or writes');
+ panel.closeForNavigation();f.userAgent='codex/0.167.0';await f.restart();
  const plugins=async()=>{await panel.open();await panel.load('plugins');await panel.load('plugins',undefined,{view:'browse',query:'fixture'});};
  await panel.open();await panel.load('plugins');assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,0);assert.equal(f.calls.some(c=>c.method==='plugin/list'),false,'opening installed view does not discover 10k entries');
  await [...panel.body.querySelectorAll('button')].find(b=>b.textContent==='Browse catalog').onclick();assert.equal(panel.body.querySelectorAll('[data-plugin-row]').length,30);assert.ok(panel.body.textContent.includes('1–30 of 10074'));

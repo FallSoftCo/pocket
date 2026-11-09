@@ -17,6 +17,9 @@ async function fixture(t){
  wss.on('connection',ws=>{state.peer=ws;ws.on('message',raw=>{
   const m=JSON.parse(raw);if(!m.id)return;state.calls.push(m);let result={};
   if(m.method==='thread/read'||m.method==='thread/resume')result={thread:thread()};
+  // Recent attachment reads the current turn through the native paginated contract.
+  if(m.method==='thread/turns/list')result={data:thread().turns,nextCursor:null,backwardsCursor:null};
+  if(m.method==='thread/items/list')result={data:[],nextCursor:null};
   if(m.method==='turn/steer')result={turnId:state.turnId};
   if(m.method==='model/list')result={data:[{model:'test-model',displayName:'Test model',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium',description:'Standard'},{reasoningEffort:'high',description:'More reasoning'}]}]};
   if(m.method==='turn/start'){

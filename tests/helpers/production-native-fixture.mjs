@@ -54,7 +54,7 @@ export async function productionFixture(t,{name='Source A'}={}){
   try{
    const paramsSchema={initialize:'InitializeParams','thread/list':'ThreadListParams','thread/read':'ThreadReadParams','thread/timeline/list':'ThreadTimelineListParams','thread/turns/list':'ThreadTurnsListParams','thread/resume':'ThreadResumeParams','thread/items/list':'ThreadItemsListParams'}[m.method];if(paramsSchema)wireCheck(paramsSchema,m.params);
    if(m.method==='account/rateLimits/read')return send(ws,m.id,pluginAccountReply(m.params));
-   if(m.method==='initialize')return send(ws,m.id,{userAgent:'codex/0.167.0',codexHome:join(dir,'home'),platformFamily:'unix',platformOs:'linux'},'InitializeResponse');
+   if(m.method==='initialize')return send(ws,m.id,{userAgent:f.userAgent||'codex/0.167.0',codexHome:join(dir,'home'),platformFamily:'unix',platformOs:'linux'},'InitializeResponse');
    if(m.method==='thread/list')return send(ws,m.id,{data:[f.thread],nextCursor:null},'ThreadListResponse');
    if(m.method==='thread/read')return send(ws,m.id,{thread:f.thread},'ThreadReadResponse');
    if(m.method==='thread/timeline/list'){
@@ -86,12 +86,17 @@ export async function productionFixture(t,{name='Source A'}={}){
    }
    // Opt-in synthetic configuration state. Validate both directions against
    // the generated protocol; never write a real config or refresh connectors.
-   if(f.configuration&&['config/read','app/installed','config/value/write'].includes(m.method)){
+   if(f.configuration&&['config/read','app/installed','app/list','config/value/write'].includes(m.method)){
     const state=f.configuration,version=()=>`fixture-config-${state.version}`,filePath=join(dir,'home','config.toml');
-    wireCheck({'config/read':'ConfigReadParams','app/installed':'AppsInstalledParams','config/value/write':'ConfigValueWriteParams'}[m.method],m.params);
+    wireCheck({'config/read':'ConfigReadParams','app/installed':'AppsInstalledParams','app/list':'AppsListParams','config/value/write':'ConfigValueWriteParams'}[m.method],m.params);
     if(m.method==='app/installed'){
-     assert.equal(m.params.forceRefresh,false);assert.equal(m.params.threadId,f.thread.id);
+     assert.equal(m.params.forceRefresh,f.appsBrowse===true&&m.params.forceRefresh===true);assert.equal(m.params.threadId,f.thread.id);
      return send(ws,m.id,{apps:[{id:state.id,runtimeName:state.name,enabled:state.enabled,callable:false}]},'AppsInstalledResponse');
+    }
+    if(m.method==='app/list'){
+     assert.equal(f.appsBrowse,true,'App discovery requires the explicit synthetic journey');assert.equal(m.params.limit,30);assert.equal(m.params.threadId,f.thread.id);
+     const offset=m.params.cursor==='apps-next'?30:0;
+     return send(ws,m.id,{data:Array.from({length:offset?1:30},(_,n)=>({id:n===0&&offset===0?state.id:'discovered-'+(offset+n),name:'Available app '+(offset+n),description:'Synthetic app description '+(offset+n),isAccessible:true,isEnabled:true,pluginDisplayNames:[]})),nextCursor:offset?null:'apps-next'},'AppsListResponse');
     }
     const config={model:'fixture-no-model',apps:{[state.id]:{enabled:state.enabled}}};
     if(m.method==='config/read')return send(ws,m.id,{config,origins:{},layers:m.params.includeLayers?[{name:{type:'user',file:filePath,profile:null},version:version(),config,disabledReason:null}]:null},'ConfigReadResponse');

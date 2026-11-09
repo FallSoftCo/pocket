@@ -30,6 +30,7 @@ import {panelFrame,anchoredPanelPlacement} from './anchored-panel.mjs';
 const base=clientBase(import.meta.url);
 const ux=new UxMeasurements();
 let uxOpen=0,uxFresh=0,uxSend=0,uxFrame=0;
+let queueNavigation=0,queueAuthority=0,queueVerifiedNavigation=-1;const queueActions=new Map();
 function measureContentLayout(){
  const token=uxOpen;if(!ux.active(token)||uxFrame===token)return;uxFrame=token;
  requestAnimationFrame(()=>{
@@ -73,7 +74,7 @@ async function api(path,body,options={}){
  const method=options.method||(body===undefined?'GET':'POST'),binary=body instanceof Blob||body instanceof ArrayBuffer;
  const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),priority:options.priority||'high',...(method==='GET'?{signal:AbortSignal.any([AbortSignal.timeout(options.timeout||20000),...(options.signal?[options.signal]:[])])}:{})});
  let data;try{data=await r.json();}catch{data={error:`Backend returned HTTP ${r.status}.`};}
- if(!r.ok){if(r.status===401&&authenticated){authenticated=false;ux.foreground(false);ws?.close();$('app').hidden=true;$('pairing').hidden=false;}throw Object.assign(Error(data.error||`Request failed (${r.status}).`),{status:r.status,code:data.code,readAvailability:data.readAvailability});}if(outgoingThread&&data.outbox)observeOutbox(outgoingThread,data.outbox);return data;
+ if(!r.ok){if(r.status===401&&authenticated){authenticated=false;queueAuthority++;queueVerifiedNavigation=-1;ux.foreground(false);ws?.close();$('app').hidden=true;$('pairing').hidden=false;}throw Object.assign(Error(data.error||`Request failed (${r.status}).`),{status:r.status,code:data.code,readAvailability:data.readAvailability});}if(outgoingThread&&data.outbox&&(!options.acceptOutbox||options.acceptOutbox(data)))observeOutbox(outgoingThread,data.outbox,!options.paintOutbox||options.paintOutbox());return data;
 }
 const error=e=>{if($('startup')){$('startup').hidden=true;if($('app').hidden&&$('pairing').hidden)$('pairing').hidden=false;}$('error').textContent=e.message||String(e);$('error').hidden=false;};
 const run=fn=>async(...args)=>{try{$('error').hidden=true;await fn(...args);}catch(e){error(e);}};
@@ -162,16 +163,46 @@ function renderTranscript(){const data=cache.get(scope);if(!data)return;const li
  for(const n of old.values())n.remove();if(!rows.length){const empty=el('p','muted','No messages yet.');empty.dataset.id='empty';list.append(empty);}$('earlier').hidden=!data.hasEarlier;if(follow&&bottom)list.scrollTop=list.scrollHeight;else{const retained=anchorId&&[...list.children].find(n=>n.dataset.id===anchorId);if(retained)list.scrollTop+=retained.getBoundingClientRect().top-list.getBoundingClientRect().top-anchorOffset;else list.scrollTop=previousTop;}renderNotes();requestAnimationFrame(ackVisible);measureContentLayout();
 }
 function renderRequests(){if(isRoom(scope)){requestList.update(scope,[]);if(rooms.entries.has(scope))renderRoomAttention();return;}requestList.update(scope,scope==='coordinator'?[]:current?.pending||[]);}
-function observeOutbox(thread,snapshot){
+function observeOutbox(thread,snapshot,paint=true){
  if(!cache.outbox(thread,snapshot))return;
- if(thread===scope){if(current)Object.assign(current,{outbox:cache.entity(thread).outbox,outgoing:cache.entity(thread).outbox.items});renderOutbox();}
+ if(paint&&thread===scope){if(current)Object.assign(current,{outbox:cache.entity(thread).outbox,outgoing:cache.entity(thread).outbox.items});renderOutbox();}
 }
-function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const outgoing=cache.entity(scope).outbox?.items??current?.outgoing??[];if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send · ${pending.text.slice(0,90)} — checking delivery`);row.append(button('Check delivery',reconcilePending));holder.append(row);}for(const o of outgoing){if(['accepted','cancelled'].includes(o.state))continue;const row=el('div','outbox-row',`${o.state} · ${o.text?.slice(0,100)||'Message'}`);if(['failed','unknown','held','queued'].includes(o.state)){row.append(button('Remove',async()=>{const result=await api(`/api/threads/${scope}/replies/${o.id}`,{action:'remove'});if(!result.outbox)await refreshConversation();}));if(['queued','held','failed'].includes(o.state))row.append(button('Edit',async()=>{const text=prompt(o.state==='failed'?'Edit failed message':'Edit queued message',o.text);if(text){const result=await api(`/api/threads/${scope}/replies/${o.id}`,{action:'edit',text});if(!result.outbox)await refreshConversation();}}));if(['queued','held'].includes(o.state))row.append(button('Send now',async()=>{const result=await api(`/api/threads/${scope}/replies/${o.id}`,{action:'send'});if(!result.outbox)await refreshConversation();}));if(['failed','unknown'].includes(o.state))row.append(button('Retry',async()=>{if(o.state==='unknown'&&!confirm('Delivery is uncertain. Retrying can duplicate work. Check the conversation first. Retry anyway?'))return;const result=await api(`/api/threads/${scope}/replies/${o.id}`,{action:'retry',confirmUnknown:o.state==='unknown'});if(!result.outbox)await refreshConversation();}));}holder.append(row);}}
+function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const outgoing=cache.entity(scope).outbox?.items??current?.outgoing??[];if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send · ${pending.text.slice(0,90)} — checking delivery`);row.append(button('Check delivery',reconcilePending));holder.append(row);}for(const o of outgoing){
+ if(['accepted','cancelled'].includes(o.state))continue;
+ const origin={thread:scope,device:deviceId,navigation:queueNavigation,authority:queueAuthority};
+ const sourceCurrent=()=>authenticated&&deviceId===origin.device&&queueAuthority===origin.authority;
+ const uiCurrent=()=>sourceCurrent()&&scope===origin.thread&&queueNavigation===origin.navigation;
+ const key=JSON.stringify([origin.device,origin.thread,o.id]),flight=queueActions.get(key),promoted=o.mode==='steer'&&['queued','held'].includes(o.state);
+ const verified=queueVerifiedNavigation===queueNavigation&&!current?.detailError;
+ const active=verified&&(current?.thread?.status?.type==='active'||current?.nativeExecutionTurn?.status==='inProgress');
+ const idle=verified&&!active&&current?.thread?.status?.type==='idle';
+ const label=active?'Steer now':idle?'Send now':'Checking status';
+ const row=el('div','outbox-row',`${flight?.label||(promoted&&o.state==='queued'?'Sending to current work…':o.state)} · ${o.text?.slice(0,100)||'Message'}`);row.dataset.outgoingId=o.id;
+ const act=async(action,extra={})=>{
+  if(!uiCurrent()||queueActions.has(key))return;
+  const label=action==='send'?(active?'Steering…':'Sending…'):'Updating message…';queueActions.set(key,{label});renderOutbox();
+  try{
+   const result=await api(`/api/threads/${origin.thread}/replies/${o.id}`,{action,...extra},{scope:origin.thread,acceptOutbox:data=>sourceCurrent()&&data.id===o.id&&typeof data.state==='string',paintOutbox:uiCurrent});
+   if(result.id!==o.id||typeof result.state!=='string')throw Error('Message update was not acknowledged. Check its original delivery before trying again.');
+   if(uiCurrent()&&!result.outbox)await refreshConversation();
+  }catch(e){if(uiCurrent())error(e);}finally{queueActions.delete(key);if(uiCurrent())renderOutbox();}
+ };
+ const control=(text,fn,disabled=false)=>{const b=button(text,fn);b.disabled=!!flight||disabled;b.onpointerdown=e=>{if(document.activeElement===$('draft'))e.preventDefault();};row.append(b);};
+ if(['failed','unknown','held','queued'].includes(o.state)){
+  if(['queued','held'].includes(o.state))control(promoted?'Sending…':label,()=>act('send'),o.mode!=='queue'||!active&&!idle);
+  if(['queued','held','failed'].includes(o.state))control('Edit',()=>{if(!uiCurrent()||queueActions.has(key))return;const text=prompt(o.state==='failed'?'Edit failed message':'Edit queued message',o.text);if(text&&uiCurrent())return act('edit',{text});},promoted);
+  control('Remove',()=>act('remove'),promoted);
+  if(['failed','unknown'].includes(o.state))control('Retry',()=>{if(!uiCurrent()||queueActions.has(key))return;if(o.state==='unknown'&&!confirm('Delivery is uncertain. Retrying can duplicate work. Check the conversation first. Retry anyway?'))return;return act('retry',{confirmUnknown:o.state==='unknown'});});
+ }
+ holder.append(row);
+}}
+
 async function ackVisible(){if(isRoom(scope)||document.visibilityState!=='visible'||!authenticated||document.querySelector('dialog[open]')||$('main').getBoundingClientRect().width===0)return;const data=cache.get(scope),root=$('transcript').getBoundingClientRect();if(!data)return;const rendered=[...$('transcript').children];const visible=n=>{const r=n.getBoundingClientRect();return r.top>=root.top&&r.bottom<=root.bottom;};if(scope==='coordinator'){for(const t of data.turns||[]){const n=rendered.find(n=>n.dataset.id===t.id+'/response'),key=deviceId+':'+t.id;if(t.state==='completed'&&n&&visible(n)&&!receipts.has(key)){receipts.add(key);api(`/api/voice/turns/${t.id}/presented`,{}).catch(()=>receipts.delete(key));}}}else if(data.catchup?.token&&rendered.length&&rendered.every(visible)){const key=data.catchup.token;if(!receipts.has(key)){receipts.add(key);api(`/api/threads/${scope}/catchup/read`,{token:key}).catch(()=>receipts.delete(key));}}}
 function currentReadAnchor(id){if(id!==scope||follow)return null;const list=$('transcript'),first=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top);return first?._row?.rows?.[0]?.id||first?._row?.id||readerViews.get(id)?.anchor||null;}
 function saveView(){if(!openedScope)return;const list=$('transcript'),first=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top);readerViews.set(readerKey(openedScope),{follow,anchor:first?.dataset.id,offset:first?first.getBoundingClientRect().top-list.getBoundingClientRect().top:0,top:list.scrollTop});}
 function restoreView(view){if(!view||view.follow)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.dataset.id===view.anchor);if(anchor)list.scrollTop+=anchor.getBoundingClientRect().top-list.getBoundingClientRect().top-view.offset;else list.scrollTop=view.top;}
 async function open(id){
+ queueNavigation++;queueVerifiedNavigation=-1;
  nativeSettingsPanel.closeForNavigation();
  ux.end(uxOpen,'superseded');ux.end(uxSend,'superseded');uxFresh=0;
  uxOpen=id!=='coordinator'&&!isRoom(id)?ux.begin('open'):0;
@@ -182,7 +213,7 @@ async function open(id){
  renderUsage();void refreshAccountUsage();await refreshConversation();if(scope===id){if(follow)$('transcript').scrollTop=$('transcript').scrollHeight;else restoreView(view);}
 }
 async function refreshConversation(before=null){
- const measurement=uxOpen;
+ const measurement=uxOpen,queueReadNavigation=queueNavigation,queueReadAuthority=queueAuthority;
  const selected=scope,selectedView=roomView,hasSnapshot=cache.has(selected);const request=lanes.run(readerKey(selected),before!==null,async()=>{
    if(isRoom(selected)){
     const view=selectedView,page=await rooms.read(selected,view,before);let detail=cache.get(selected)?.snapshot||null;
@@ -210,7 +241,7 @@ async function refreshConversation(before=null){
     const old=cache.get(selected)||{};
     if(!before&&notesVersion!==(notesVersions.get(selected)||0))data.notes=old.snapshot?.notes||[];
     const page=cache.head(selected,data,{older:!!before,ticket:metadataTicket,cursor:before,anchor:!follow?currentReadAnchor(selected):null});
-    if(scope===selected){current=page.snapshot;if(!before&&uxOpen===measurement)uxFresh=measurement;}
+    if(scope===selected){current=page.snapshot;if(!before&&queueNavigation===queueReadNavigation&&queueAuthority===queueReadAuthority)queueVerifiedNavigation=queueReadNavigation;if(!before&&uxOpen===measurement)uxFresh=measurement;}
    }
    if(scope===selected){renderHeader();renderTranscript();renderRequests();renderOutbox();renderNotes();}
  });
@@ -310,6 +341,7 @@ async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pe
 }
 let runtimeConnected=null;const unavailableEnvironments=new Set();
 function handleEvent(m){
+ if(m.type==='nativeAuthBoundary'||m.type==='status'&&m.connected===false||m.type==='environmentStatus'&&(m.available??m.connected)===false){queueAuthority++;queueVerifiedNavigation=-1;renderOutbox();}
  nativeSettingsPanel.event(m);
  conversationToolsPane.event(m);
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
@@ -394,7 +426,7 @@ $('composer').onsubmit=run(async e=>{e.preventDefault();await send();});$('draft
 $('send').onpointerdown=e=>{if(document.activeElement===$('draft'))e.preventDefault();};
 $('coordinator').onclick=run(()=>open('coordinator'));$('refresh').onclick=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});let catalogSearchTimer;$('search').oninput=()=>{renderList();clearTimeout(catalogSearchTimer);catalogSearchTimer=setTimeout(()=>void run(()=>refreshList({invalidate:true}))(),250);};$('filter').onchange=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});$('back').onclick=()=>{saveDraft();saveView();document.body.classList.remove('chat-open');seatOrder=[];renderList();};$('earlier').onclick=run(async()=>{demandOlder();await loadEarlier();});$('latest').onclick=()=>{follow=true;cache.followLatest(scope);renderTranscript();$('transcript').scrollTop=$('transcript').scrollHeight;};$('transcript').onscroll=()=>{follow=$('transcript').scrollHeight-$('transcript').scrollTop-$('transcript').clientHeight<90;void ackVisible();scheduleEdge();};
 $('attention-toggle').onclick=run(async()=>{await refreshAttention();$('attention-panel').hidden=!$('attention-panel').hidden;document.body.classList.add('chat-open');});$('reports-toggle').onclick=run(()=>showReports());$('settings').onclick=run(async()=>{$('settings-dialog').showModal();renderUsage();const prefs=await api('/api/coordinator/reporting');$('report-enabled').checked=prefs.enabled;$('report-interval').value=prefs.intervalMinutes;$('report-stale').value=prefs.staleAfterMinutes;});$('save-reporting').onclick=run(async()=>{await api('/api/coordinator/reporting',{enabled:$('report-enabled').checked,intervalMinutes:Number($('report-interval').value),staleAfterMinutes:Number($('report-stale').value)});$('settings-dialog').hidePopover?.();$('settings-dialog').close();});$('notifications').onclick=run(async()=>{if(!('Notification' in window))throw Error('Browser notifications are unavailable.');const permission=await Notification.requestPermission();$('notifications').textContent=permission==='granted'?'Notifications enabled while connected':`Notifications ${permission}`;});
-$('logout').onclick=run(async()=>{saveDraft();await voice.close();await api('/web/logout',{});authenticated=false;ux.foreground(false);ws?.close();clear();location.reload();});$('mic').onclick=run(()=>voice.capture(scope,voice.recording?{}:roomVoiceOptions()));$('voice-send').onclick=run(async()=>{await voice.send(scope);await refreshConversation();});$('voice-clear').onclick=run(()=>voice.discard());
+$('logout').onclick=run(async()=>{saveDraft();await voice.close();await api('/web/logout',{});authenticated=false;queueAuthority++;queueVerifiedNavigation=-1;ux.foreground(false);ws?.close();clear();location.reload();});$('mic').onclick=run(()=>voice.capture(scope,voice.recording?{}:roomVoiceOptions()));$('voice-send').onclick=run(async()=>{await voice.send(scope);await refreshConversation();});$('voice-clear').onclick=run(()=>voice.discard());
 $('new-task').onclick=run(async()=>{if(newPending){await reconcileStart();return;}$('new-prompt').value=read('newDraft','');$('new-dialog').showModal();const data=await api('/api/projects');$('projects').replaceChildren(...data.projects.map(p=>{const n=el('option');n.value=p.cwd;return n;}));});$('new-prompt').oninput=()=>write('newDraft',$('new-prompt').value);$('cancel-new').onclick=()=>$('new-dialog').close();
 async function reconcileStart(){if(startFlight)return startFlight;startFlight=performStart();try{return await startFlight;}finally{startFlight=null;}}
 async function performStart(){if(!newPending)return;const p=newPending;let result;try{result=await api(`/api/session-starts/${p.id}`);}catch(e){if(e.status!==404)throw e;try{result=await api('/api/threads',p);}catch(e){if(e.status&&e.status<500){newPending=null;write('newPending',null);}throw e;}}newPending={...p,state:result.state};write('newPending',newPending);renderOutbox();if(result.state==='started'){newPending=null;write('newPending',null);write('newDraft','');$('new-dialog').close();await refreshList({invalidate:true});await open(result.thread_id);}else if(['failed','unknown'].includes(result.state)){if(result.state==='failed'){newPending=null;write('newPending',null);}throw Error(result.error||'Task creation uncertain. Check recent work before starting again.');}else $('new-error').textContent='Task accepted. Waiting for the backend to create it…';}
