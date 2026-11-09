@@ -6,7 +6,7 @@
   "delivery": {
     "backend": "live on workstation and Mac; original native Codex processes and state preserved",
     "web": "live on both private routes; actual serving asset hashes verified",
-    "android": "candidate;181 remains published; no182 announcement or phone install"
+    "android": "Published to workstation and Mac channels; both authenticated compatible-signer update routes offer182; one announcement accepted by FCM on attempt1. Phone installation remains unverified."
   },
   "changes": [
     "Explicit source-bound host-wide native MCP reload review and original uncertain receipt inspection",
@@ -35,17 +35,41 @@
       "absentMs": 12,
       "modelCalls": 0
     },
-    "android": "Signed r05 candidate passed16required native cases before same-ID form attention failure. Revision fix then passed the original request/approval/source-routing and command-output journey in39183ms; final signed release qualification remains pending.",
-    "diagnosis": "Retained original settings failures, HTTP completion tracing and source review. Temporary tracing removed. Original native context/settings journey passed137036ms after UI-lifetime changes; final release qualification remains separate."
+    "android": {
+      "unitPerVariant": {
+        "tests": 485,
+        "skipped": 2,
+        "failures": 0
+      },
+      "lints": [
+        "debug",
+        "release"
+      ],
+      "nativeJourneys": 19,
+      "nativeFailed": 0,
+      "footerCaptures": 16,
+      "footerVisualReview": "All16actual captures reviewed; no clipped borders, text or controls in narrow/large-text/IME component fixtures.",
+      "optimized": "Exact phone-compatible APK: stable catalog, ordered pairs, one question response, reconnect/reopen with original pair exactly once. Root reviewed both actual screenshots.",
+      "phoneTouched": false
+    },
+    "diagnosis": "Retained original settings failures, HTTP completion tracing and source review. Temporary tracing removed. Original native context/settings journey passed137036ms after UI-lifetime changes; final signed release independently passed the complete134561ms context/settings journey.",
+    "ci": "Android job succeeded. GitHub run42673492966 failed before a backend job materialized due an internal service error; failed-only retry refused. Local backend evidence and both signed build variants remain independent. This is not a full CI pass."
   },
   "limits": [
     "No live plugin install or provider OAuth sign-in was submitted. Synthetic native operations do not establish provider readiness.",
     "Mac runtime mutations not independently qualified remain blocked.",
-    "No182 phone installation, physical handset latency or rendered FCM claim.",
+    "No independently verified182 phone installation, physical handset latency or rendered FCM claim.",
     "Original spinner failure cause is not asserted proven: fast server responses and off-main test continuations were observed separately. Failed StandardTestDispatcher experiment was reverted because installed Compose1.9.3 lacks complete1.10 scheduler support.",
     "No historical task restart, model change or unknown human delivery replay."
   ],
   "references": {
     "composeDispatcherSupport": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.10.0-alpha02"
+  },
+  "artifacts": {
+    "sizePerVariant": 52681663,
+    "publicSha256": "8b279178819b4920d8934fbfe51c736f71644b1a6af60df333212d1844341ab5",
+    "phoneCompatibleSha256": "88f50885f5d1b9bd9c77c4bfb250da7dcd5c94a577ac50aff5d8c7f4247de72a",
+    "productionSourceSha": "7e62f095ce4031c9ef8cba709dbb697876585f7078f4764ec051d4156a02310e",
+    "qualificationInputSha": "0f273344a64d48c616d86bef78d8f664d58607c64edd5221f54a6820e09695d3"
   }
 }

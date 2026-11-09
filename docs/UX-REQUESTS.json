@@ -3991,13 +3991,14 @@
     "requirement": "Closing and reopening the same session must show current messages, not a retained transient questions/settings panel. Background reconnect must preserve reading and drafts.",
     "cause": "Compose may coalesce close/reopen or A-to-B-to-A into the same final source key, preserving a previous screen despite explicit navigation.",
     "implementation": "Separate explicit navigation generation from runtime incarnation and same-source history replacement. Questions panel has CLOSED/MANUAL/ATTENTION ownership: cached pending metadata cannot interrupt reading; verified resolution closes automatic attention while manual result browsing stays open. Attention uses the same revision fingerprint as request drafts, not only a reusable native request ID, and forgets revisions once no longer pending.",
-    "evidence": "Retained native failures exposed coalesced navigation, same-source forced reset, cached answered-question attention and reused request-ID suppression. Revision-aware native request journey passed with original action identities/counts/drafts and command-output transition; the obsolete expectation that automatic attention remains open was replaced by explicit auto-close and manual-reopen checks. Final signed182 remains pending.",
+    "evidence": "Retained native failures exposed coalesced navigation, same-source forced reset, cached answered-question attention and reused request-ID suppression. Revision-aware native request journey passed with original action identities/counts/drafts and command-output transition; the obsolete expectation that automatic attention remains open was replaced by explicit auto-close and manual-reopen checks. Final signed182 remains pending. Final182r06 passed all19required native journeys, exact optimized catalog/history review and16footer visual captures; published both channels.",
     "state": "candidate; native qualification pending"
   },
   "native_review_request_ownership_20261109": {
     "requirement": "Native settings, plugin and MCP reviews must complete visibly without cross-environment result application or duplicate actions. Diagnose real integration failures before release.",
     "implementation": "Explicit Main.immediate ownership for review-state effects/actions, with IO-only transport; captured environment/account guards remain on responses and mutations. Request completion releases local loading independently of source validity. Reload reserves loading synchronously so stale enabled UI cannot overlap revisions.",
     "evidence": "Original real-HTTP native journey retained: request responses completed in1–3ms while a dialog stayed loading. Temporary traces on a later passing run showed off-main effect continuations with all validity predicates true, so the original failure cause is not claimed proven. Test-only StandardTestDispatcher experiment reverted: installed Compose1.9.3 lacks full1.10 scheduler support. Original assertions/timeouts unchanged.",
-    "state": "candidate; native and optimized qualification pending; no182 Android publication"
+    "state": "candidate; native and optimized qualification pending; no182 Android publication",
+    "status": "delivered182; synthetic native and exact optimized qualification passed; physical phone/provider authentication separate"
   }
 }
