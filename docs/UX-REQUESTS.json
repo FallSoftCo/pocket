@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-08",
+  "updated": "2026-11-09",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,25 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "local-ux-measurement-visual-native-parity-20261109",
+      "request": "Instrument UX locally, visually check borders/clipping and continue meaningful Codex TUI parity with Astra medium team.",
+      "status": "181 published both Androidchannels and backend/web live;182 followup candidate in preparation, not delivered.",
+      "delivered": [
+        "Bounded foreground cached/fresh/history/send latency and original failed/unknown outcomes without content telemetry",
+        "Release-bound native footer screenshot matrix and exact optimized visual review",
+        "Shared card border/clip shape; enlarged web footer overflow correction",
+        "Explicit source-bound native MCP OAuth sign-in and stable original completion",
+        "Account/native-connection guarded settings-write preflight; scoped Firebase OAuth networking"
+      ],
+      "followup": [
+        "Explicit host-wide native MCP reload with durable source-bound original receipts and account-wide unresolved guard",
+        "Required CI composed sign-in/reload DOM journeys",
+        "More compact web cards retaining full title width, meaningful preview and accessible controls"
+      ],
+      "validation": "18119nativejourneys and optimized review; current182 source/HTTP/DOM checks do not yet prove native UI; physical-phone rendering/performance remains separate.",
+      "deployment": "Owner readiness confirmed Nov9; both gateways updated without restarting nativeCodex or changing pairing/queues/unknown receipts."
+    },
     {
       "id": "codex-plugin-lifecycle-parity-20261108",
       "request": "Complete accepted Codex parity work while continuously monitoring delivery and independently reviewing meaningful integration evidence.",
