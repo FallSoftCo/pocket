@@ -4020,5 +4020,12 @@
     "preservation": "Retain stored reports, preferences, notification deep-link reader and source/delivery identities. Remove report-entry polling; questions and safe original delivery actions stay in conversation.",
     "status": "Delivered185: both Android channels published, web and both backends live; phone installation unverified.",
     "verification": "Real HTTP/native socket projection, browser DOM and narrow/wide rendered journeys,20 native journeys and exact optimized APK review passed. Qualification caught and fixed a native-preview/catalog feedback read using forced overlap. No worker submission or original uncertain delivery replay. See qualification/needs-you-185.json."
+  },
+  "failed_turn_catalog_20261109": {
+    "requirement": "A failed Codex turn must stay visible as a runtime error in the session list and Needs you, rather than silently becoming idle.",
+    "cause": "SessionDiscovery mapped every turn/completed event to idle, including failed turns; this could override the preceding native systemError status.",
+    "implementation": "Map failed terminal events to systemError; preserve normal idle after completion/interruption and clear error on the next turn start. No model polling or generic HTTP 400 auto-retry.",
+    "verification": "17 focused discovery/real HTTP-native socket integration checks pass, including systemError followed by failed terminal event, stale idle index hydration, Needs you visibility and subsequent active/completed transitions.",
+    "status": "Qualified source; backend activation pending."
   }
 }

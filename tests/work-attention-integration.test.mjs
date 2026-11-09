@@ -67,4 +67,18 @@ test('catalog Needs you follows original request and delivery identities without
  assert.equal(coordinator.status,200);assert.equal(coordinator.data.threads.find(t=>t.id==='child').attention.items[0].id,'outgoing:failed-original');
  assert.ok(!calls.some(c=>['turn/start','turn/steer','thread/resume','thread/turns/list','thread/items/list'].includes(c.method)));
  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>c.params.includeTurns!==true),JSON.stringify(calls.filter(c=>c.method==='thread/read')));
+ // Real native ordering: systemError arrives before the failed terminal event.
+ // Indexed metadata may still say idle; the event projection must retain failure.
+ event('thread/status/changed',{threadId:'future',status:{type:'systemError'}});
+ event('turn/completed',{threadId:'future',turn:{id:'failed-turn',status:'failed',items:[],error:{message:'Bad Request',codexErrorInfo:'other'}}});
+ rows=await until(async()=>{const r=await catalog();return r.get('future').status.type==='systemError'&&r.get('future').attention.items.some(i=>i.kind==='runtimeError')&&r;});
+ assert.equal(rows.get('future').attention.verified,true);
+ event('turn/started',{threadId:'future',turn:{id:'next-turn',status:'inProgress'}});
+ rows=await until(async()=>{const r=await catalog();return r.get('future').status.type==='active'&&r;});
+ assert.ok(!rows.get('future').attention.items.some(i=>i.kind==='runtimeError'));
+ event('turn/completed',{threadId:'future',turn:{id:'next-turn',status:'completed',items:[]}});
+ await until(async()=>{const r=await catalog();return r.get('future').status.type==='idle';});
+ event('thread/status/changed',{threadId:'future',status:{type:'futureNativeStatus'}});
+ assert.ok(!calls.some(c=>['turn/start','turn/steer','thread/resume'].includes(c.method)));
+
 });
