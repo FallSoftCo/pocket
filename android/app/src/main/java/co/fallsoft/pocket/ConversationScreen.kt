@@ -277,14 +277,18 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
     val seenQuestions=remember(Pocket.environmentId,Pocket.selected){mutableSetOf<String>()}
-    LaunchedEffect(reviewRequests.map{it.s("id")},conversation.workVerified){
+    val requestRevisions=remember(reviewRequests.map{it.toString()}){reviewRequests.map{it.s("id")+":"+nativeRequestFingerprint(it.toString())}}
+    LaunchedEffect(requestRevisions,conversation.workVerified){
         // Cached questions can already be answered. Only current metadata may
         // interrupt reading; resolving automatic attention returns to the chat.
         // A deliberately opened results panel belongs to the reader instead.
         if(!conversation.workVerified)return@LaunchedEffect
         if(reviewMode==ConversationReviewMode.ATTENTION&&reviewRequests.isEmpty())reviewMode=ConversationReviewMode.CLOSED
-        val fresh=reviewRequests.any{it.s("id") !in seenQuestions}
-        seenQuestions.addAll(reviewRequests.map{it.s("id")})
+        val fresh=requestRevisions.any{it !in seenQuestions}
+        // Only currently pending revisions are seen. A resolved ID must not
+        // suppress a later form/approval that reuses that ID.
+        seenQuestions.retainAll(requestRevisions.toSet())
+        seenQuestions.addAll(requestRevisions)
         if(fresh&&!reviewOpen&&!keyboardInput&&!PocketVoice.captureBusy&&!BlackoutVisibility.active)reviewMode=ConversationReviewMode.ATTENTION
     }
     LaunchedEffect(keyboardInput,conversation.incarnation){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
