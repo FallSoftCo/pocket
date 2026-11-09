@@ -88,7 +88,7 @@ for(const origin of origins){
   const url=new URL(req.url,'http://localhost'),path=url.pathname;
   // Retain transport completion separately from request admission. A received
   // GET alone cannot explain a native dialog that remains in its loading state.
-  if(process.env.NEXTCOMP_QA_LOG&&path==='/api/native/plugins/detail'){
+  if(process.env.NEXTCOMP_QA_LOG&&(path==='/api/native/plugins/detail'||req.method==='GET'&&path==='/api/native/mcp-auth')){
    const requestId=crypto.randomUUID(),startedAt=Date.now();
    const trace=phase=>fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished})+'\n',{mode:0o600});
    trace('request');res.once('finish',()=>trace('finish'));res.once('close',()=>trace('close'));
