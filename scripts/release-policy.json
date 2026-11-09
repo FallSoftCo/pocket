@@ -2,6 +2,7 @@
   "schema": 1,
   "qualification": "codex-only-upgrade-canonical-history-and-native-voice",
   "requiredNativeCases": [
+    "co.fallsoft.pocket.ClientReplyRecoveryNativeTest#matchingUnknownReceiptRequiresExplicitRecovery",
     "co.fallsoft.pocket.CoordinatorNativeAudioLiveTest#liveInputFinalizesAndOutputPlaysBeforeCompleteBuffer",
     "co.fallsoft.pocket.IndependentVoiceCaptureNativeTest#captureStartsAndStopsIndependentlyOfPresentationState",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#nativeOrderSurvivesDelayedArrivalQuestionsAndReconnectWithoutLegacyRepair",
