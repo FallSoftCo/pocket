@@ -3547,14 +3547,15 @@
     {
       "id": "immersion-meaningful-links-boundaries-20261108",
       "request": "Hyphenate useful foreign grammatical dependencies rather than obvious multiword glosses; make phrase boundaries visually clear on all platforms.",
-      "status": "Candidate integrated; browser/source checks passed; native release and actual teacher qualification pending.",
+      "status": "Android 180 / alpha162 published to both paired channels; both backend/web hosts live. No new physical phone install claimed.",
       "implementation": [
         "Lexical meaning, complete flip group and explicit adjacent dependency are distinct",
         "Postnominal modifier/preverbal clitic links validated separately; ordinary English gloss spaces retained",
         "Safe existing-cache contraction-prefix repair without mass regeneration or budget reset",
         "Measured phrase padding, modest rounding and visible edge on Android/web; fixed0%/50% phase geometry unchanged"
       ],
-      "verification": "44 focused cases; four actual browser views across narrow/desktop light/dark with exact geometry across phases and both-form reveal; independent server review. Native/device and real teacher evidence recorded separately."
+      "verification": "44 focused checks; four browser views across narrow/desktop light/dark with fixed phase geometry; independent source review; one actual teacher batch retained mixed-gender agreement error. Both Android unit/lint variants, 18 native journeys and exact optimized signed catalog/history review passed. Original admission-blocking emulator System UI ANR retained; passing successor uses identical build. Source cache provenance limitations remain explicit.",
+      "evidence": "docs/qualification/grammar-boundaries-reset-180.json"
     }
   ],
   "current_state": {

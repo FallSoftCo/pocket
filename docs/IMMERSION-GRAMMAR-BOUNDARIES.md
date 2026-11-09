@@ -1,4 +1,4 @@
-# Grammar linkage and phrase boundaries candidate
+# Grammar linkage and phrase boundaries
 
 The prior lexical decoder changed every space in a lexical gloss into a hyphen.
 That marked `to-the`, `the-latest` and `am-taking-care` regardless of their value
@@ -22,8 +22,8 @@ The teacher supplies lexical roles and `linkPrevious`. The server rejects links
 across groups or punctuation and role-incompatible links. A modifier chain must
 start at a noun, not at an arbitrary adjacent adjective. The teacher must still
 judge whether English already naturally uses that post-nominal construction;
-this is not a claim of a universal deterministic grammar parser. No new provider
-call was made to qualify its linguistic adherence.
+this is not a claim of a universal deterministic grammar parser. Initial source
+qualification used authored fixtures; the later actual teacher check is below.
 
 Both renderers retain their measured shared-slot contract and use a 1px/dp inset
 edge, 6% foreground wash, 55% foreground edge and 3px/dp corners. Small 4px/dp
@@ -112,5 +112,20 @@ loanword rather than fully Italian vocabulary.
 
 This bounded check demonstrates useful new links and ordinary spacing in actual
 teacher output, **not universal linguistic correctness**. It adds no Android,
-physical-device, sustained-provider or release qualification. No prompt tuning,
-model change or rerun was performed after the imperfect agreement was observed.
+physical-device or sustained-provider qualification. No prompt tuning, model
+change or rerun was performed after the imperfect agreement was observed.
+
+## Delivery qualification
+
+Android 180 / alpha162 was compiled, signed and published after both unit/lint
+variants, 18 native journeys and an exact optimized catalog/history journey.
+Native reading and narrow large-font footer checks retained the measured phrase
+padding; reviewed screenshots show distinct phrase edges and spacing. The
+workstation and Mac backend/web updates are live. These are software-emulator
+and actual browser observations, not new physical-handset performance evidence.
+One original emulator System UI ANR blocked admission before test interaction;
+that failed attempt is retained separately from the passing successor.
+
+The older grouped cache cannot recover discarded lexical roles. Only the safe
+contraction-prefix repair applies to those records; new annotations use the
+explicit link contract. No blanket retranslations were scheduled.
