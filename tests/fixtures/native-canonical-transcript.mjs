@@ -14,7 +14,7 @@ let queueStudy=false,queueRevision=1,queueHold=false;const queueCalls=[];let que
 const queueSnapshot=()=>({version:1,revision:queueRevision,items:structuredClone(queueItems)});
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:queueStudy?'active':'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 // Opt-in repository lifecycle evidence; all identities/content remain synthetic.
-let historyLifecycle=false;const lifecycleReads=[],lifecycleThreads=new Map();
+let historyLifecycle=false,historyCatalogHold=false,historyCatalogReads=0;const lifecycleReads=[],lifecycleThreads=new Map();
 const lifecycleMeta=(id,state)=>({...meta(),id,name:'History '+id,archived:state.archived===true,ephemeral:state.ephemeral===true,path:state.ephemeral?null:'/synthetic/retained-rollout',status:{type:state.status||'idle'},updatedAt:state.revision||1,activityAt:state.revision||1});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,startedAtMs:1794017100000+position*60000,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
 function page(){
@@ -87,12 +87,17 @@ const server=http.createServer(async(req,res)=>{
  }
  if(path==='/_qa/history-lifecycle'){
   historyLifecycle=true;const change=JSON.parse(raw||'{}');
-  if(change.releaseHolds)for(const state of lifecycleThreads.values()){state.holdNative=false;state.holdHead=false;}
+  if(typeof change.holdCatalog==='boolean')historyCatalogHold=change.holdCatalog;
+  if(change.releaseHolds){historyCatalogHold=false;for(const state of lifecycleThreads.values()){state.holdNative=false;state.holdHead=false;}}
   if(change.id)lifecycleThreads.set(change.id,{...lifecycleThreads.get(change.id),...change});
-  res.end(JSON.stringify({reads:lifecycleReads,threads:[...lifecycleThreads.entries()].map(([id,state])=>lifecycleMeta(id,state)),workSubmissions}));return;
+  res.end(JSON.stringify({reads:lifecycleReads,catalogReads:historyCatalogReads,threads:[...lifecycleThreads.entries()].map(([id,state])=>lifecycleMeta(id,state)),workSubmissions}));return;
  }
  if(historyLifecycle&&path==='/api/threads'){
-  res.end(JSON.stringify({threads:[...lifecycleThreads.entries()].filter(([,state])=>state.catalog!==false&&!!state.archived===(url.searchParams.get('archived')==='true')).map(([id,state])=>lifecycleMeta(id,state))}));return;
+  const threads=[...lifecycleThreads.entries()].filter(([,state])=>state.catalog!==false&&!!state.archived===(url.searchParams.get('archived')==='true')).map(([id,state])=>lifecycleMeta(id,state));
+  historyCatalogReads++;
+  while(historyCatalogHold&&!res.destroyed)await new Promise(r=>setTimeout(r,20));
+  if(res.destroyed)return;
+  res.end(JSON.stringify({threads}));return;
  }
  if(historyLifecycle&&/^\/api\/threads\/[^/]+(?:\/native-timeline|\/head)?$/.test(path)){
   const id=decodeURIComponent(path.split('/')[3]),state=structuredClone(lifecycleThreads.get(id)||{code:'THREAD_HISTORY_UNAVAILABLE'});
