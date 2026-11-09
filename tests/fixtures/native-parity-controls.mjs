@@ -15,7 +15,7 @@ import {requestPresentation} from '../../server/native-request-contract.mjs';
 
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
-const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[]}));
+const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[],appsHold:false,appsWaiters:[]}));
 const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[],nativeReloadStarts=[];
 const pluginCount=10074,pluginKey=crypto.createHash('sha256').update('synthetic-plugin').digest('hex');
 for(const origin of origins)origin.pluginCatalog=new PluginCatalogPages({secret:'synthetic-catalog-'+origin.name,capture:()=>({origin:origin.name,installed:origin.pluginInstalled}),check:source=>{if(source.origin!==origin.name||source.installed!==origin.pluginInstalled)throw Object.assign(Error('Synthetic plugin catalog changed'),{status:409});},load:async view=>{
@@ -112,6 +112,8 @@ for(const origin of origins){
    reloadMode=input.mode;body={ok:true};
   }
   else if(path==='/_qa/mcp-completion'){authCodex.emit('event',{method:'mcpServer/oauthLogin/completed',params:input});body={ok:true};}
+  else if(path==='/_qa/apps-hold'){origin.appsHold=true;body={ok:true};}
+  else if(path==='/_qa/apps-release'){origin.appsHold=false;for(const release of origin.appsWaiters.splice(0))release();body={ok:true};}
   else if(path==='/_qa/output-mode'){
    if(!['qualified','unavailable','hold'].includes(input.mode)){res.writeHead(400).end('{"error":"Unknown synthetic output mode"}');return;}
    origin.outputMode=input.mode;body={ok:true};
@@ -171,7 +173,12 @@ for(const origin of origins){
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';
    let page=null;if(section==='plugins'){try{page=await origin.pluginCatalog.page({threadId,cwd:metadata(origin).cwd,view:url.searchParams.get('pluginView')||undefined,query:url.searchParams.get('query')||'',cursor:url.searchParams.get('cursor')||undefined,refresh:url.searchParams.get('refresh')||undefined});}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
-   body={state:'available',section,canReviewReload:section==='mcp',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='mcp'?[{id:'fixture-mcp',name:'Synthetic MCP server',enabled:true,authStatus:'notLoggedIn',canReviewAuthentication:true,configurable:false,tools:[]}]:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?page.items:[],features:{},...(page?{...page,browseAvailable:true,readOnly:false,receipts:origin.pluginReceipts}:{})};
+   if(section==='apps'){
+    const browse=url.searchParams.get('appsView')==='browse',offset=url.searchParams.get('cursor')?30:0;
+    page={appsView:browse?'browse':'installed',browseAvailable:true,refreshAvailable:true,nextCursor:browse&&!offset?'synthetic-apps-next':null,notice:'Synthetic app inspection. Discovery is not installation; authentication is unverified.',items:Array.from({length:browse?(offset?1:30):1},(_,n)=>({id:n===0&&!offset?'installed-app':'app-'+(offset+n),name:origin.name+' app '+(offset+n),description:'Synthetic app detail '+(offset+n),installed:n===0&&!offset,enabled:n===0&&!offset?true:null,callable:n===0&&!offset?false:null,authStatus:'unverified',configurable:false}))};
+    if(origin.appsHold){const result=JSON.stringify({state:'available',section,host:origin.name,runtime:{version:'0.167.0 synthetic'},...page});origin.appsWaiters.push(()=>{if(!res.destroyed)res.end(result);});return;}
+   }
+   body={state:'available',section,canReviewReload:section==='mcp',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='mcp'?[{id:'fixture-mcp',name:'Synthetic MCP server',enabled:true,authStatus:'notLoggedIn',canReviewAuthentication:true,configurable:false,tools:[]}]:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?page.items:[],features:{},...(page?{...page,...(section==='plugins'?{browseAvailable:true,readOnly:false,receipts:origin.pluginReceipts}:{})}:{})};
   }
   else if(path==='/api/notifications'||path==='/api/attention'||path==='/api/activity')body={notifications:[],items:[]};
   else if(path==='/api/app/update')body={available:false};

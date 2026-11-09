@@ -18,6 +18,8 @@ import org.json.JSONObject
 @Composable fun NativeSettingsDialog(onDismiss:()->Unit){
     val destination=remember{Pocket.captureEnvironment()}
     val threadId=remember{Pocket.selected}
+    val authGeneration=remember{Pocket.nativeAuthGeneration}
+    LaunchedEffect(Pocket.nativeAuthGeneration){if(authGeneration!=Pocket.nativeAuthGeneration)onDismiss()}
     val scope=rememberCoroutineScope()
     val catalogScroll=rememberScrollState()
     var section by remember{mutableStateOf("settings")}
@@ -37,11 +39,14 @@ import org.json.JSONObject
     var pluginQuery by remember{mutableStateOf("")}
     var pluginCursor by remember{mutableStateOf<String?>(null)}
     var pluginRefresh by remember{mutableStateOf(false)}
+    var appsView by remember{mutableStateOf("installed")}
+    var appsCursor by remember{mutableStateOf<String?>(null)}
+    var appsRefresh by remember{mutableStateOf(false)}
     val sections=listOf("settings" to "Runtime", "agents" to "Agents", "skills" to "Skills", "mcp" to "MCP", "apps" to "Apps", "plugins" to "Plugins", "hooks" to "Hooks")
-    fun current()=destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==threadId
+    fun current()=authGeneration==Pocket.nativeAuthGeneration&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==threadId
     suspend fun request(target:String,cursor:String?=null):JSONObject{
         check(current()){ "Open settings again in the original environment." }
-        val query="/api/native/configuration?section=$target"+(threadId?.let{"&threadId=${Uri.encode(it)}"}?:"")+(cursor?.let{"&cursor=${Uri.encode(it)}"}?:"")+(if(target=="plugins")"&pluginView=$pluginView&query=${Uri.encode(pluginQuery)}"+(if(pluginRefresh)"&refresh=1" else "") else "")
+        val query="/api/native/configuration?section=$target"+(threadId?.let{"&threadId=${Uri.encode(it)}"}?:"")+(cursor?.let{"&cursor=${Uri.encode(it)}"}?:"")+(if(target=="plugins")"&pluginView=$pluginView&query=${Uri.encode(pluginQuery)}"+(if(pluginRefresh)"&refresh=1" else "") else if(target=="apps")"&appsView=$appsView"+(if(appsRefresh)"&refresh=1" else "") else "")
         val response=Pocket.apiEnvironment(requireNotNull(destination),query)
         check(current()){ "The selected environment changed." }
         return response
@@ -49,11 +54,11 @@ import org.json.JSONObject
     if(mcpReloadOpen){NativeMcpReloadDialog(destination,threadId){mcpReloadOpen=false;revision++};return}
     mcpAuthName?.let{name->NativeMcpAuthDialog(destination,threadId,name){mcpAuthName=null;revision++};return}
     pluginKey?.let{key->NativePluginDialog(destination,threadId,key){pluginKey=null;pluginCursor=null;pluginRefresh=true;revision++};return}
-    LaunchedEffect(section,revision,pluginView,pluginQuery,pluginCursor){
-        if(section=="plugins")catalogScroll.scrollTo(0)
+    LaunchedEffect(section,revision,pluginView,pluginQuery,pluginCursor,appsView,appsCursor){
+        if(section in listOf("plugins","apps"))catalogScroll.scrollTo(0)
         loading=true;problem="";uncertain=false;view=null;rows=emptyList()
-        try{val result=request(section,if(section=="plugins")pluginCursor else null);val items=result.optJSONArray("items")?.objects()?:emptyList();check(section!="plugins"||items.size<=30){"Plugin catalog page exceeds this client’s limit. Update the backend and reload."};view=result;rows=items}
-        catch(e:CancellationException){throw e}catch(e:Exception){if(current())problem=e.message?:"Native catalog unavailable"}finally{loading=false;pluginRefresh=false}
+        try{val result=request(section,if(section=="plugins")pluginCursor else if(section=="apps")appsCursor else null);val items=result.optJSONArray("items")?.objects()?:emptyList();check(section !in listOf("plugins","apps")||items.size<=30){"Native catalog page exceeds this client’s limit. Update the backend and reload."};view=result;rows=items}
+        catch(e:CancellationException){throw e}catch(e:Exception){if(current())problem=e.message?:"Native catalog unavailable"}finally{loading=false;pluginRefresh=false;appsRefresh=false}
     }
     AlertDialog(onDismissRequest=onDismiss,title={BilingualLabel("Codex settings & agents")},text={Column(Modifier.fillMaxWidth().heightIn(max=560.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
         view?.let{WorkflowText("${it.s("host")} · Codex ${it.optJSONObject("runtime")?.s("version")?.ifBlank{"version unavailable"}}",fontSize=12.sp,color=Muted)}
@@ -89,6 +94,13 @@ import org.json.JSONObject
                         val total=data.optInt("total",rows.size);val offset=data.optInt("offset")
                         WorkflowText("${if(data.s("pluginView")=="browse")"Catalog" else "Installed plugins"} · ${if(total>0)offset+1 else 0}–${offset+rows.size} of $total",fontSize=12.sp,color=Muted)
                     }
+                    if(section=="apps"){
+                        Row(Modifier.fillMaxWidth()){
+                            TextButton({if(current()){appsView="installed";appsCursor=null;revision++}},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Installed apps",maxLines=2)}
+                            if(data.optBoolean("browseAvailable"))TextButton({if(current()){appsView="browse";appsCursor=null;revision++}},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Browse apps",maxLines=2)}
+                        }
+                        WorkflowText(if(data.s("appsView")=="browse")"Available apps · discovery is not installation" else "Installed apps",fontSize=12.sp,color=Muted)
+                    }
                     if(section=="plugins")data.optJSONArray("receipts")?.objects()?.forEach{receipt->
                         WorkflowText("${receipt.s("name")} · ${receipt.s("action")} · ${pluginOperationLabel(receipt.s("state"))}: ${receipt.s("notice")}",fontSize=12.sp,color=Muted)
                         TextButton({if(current())pluginKey=receipt.s("key")},enabled=current()&&!loading){BilingualLabel("Review operation")}
@@ -97,8 +109,15 @@ import org.json.JSONObject
                     rows.forEach{item->
                         HorizontalDivider()
                         BilingualLabel(item.s("name").ifBlank{item.s("id")})
-                        if(item.s("description").isNotBlank())WorkflowText(item.s("description"),fontSize=12.sp,color=Muted)
-                        val detail=listOf("enabled","callable","authStatus","runtimeStatus","trustStatus","handlerType","marketplace","disabledReason","model","reasoningEffort").filter{item.has(it)&&!item.isNull(it)}.joinToString(" · "){"$it: ${item.opt(it)}"}
+                        if(section!="apps"&&item.s("description").isNotBlank())WorkflowText(item.s("description"),fontSize=12.sp,color=Muted)
+                        if(section=="apps"){
+                            fun state(key:String)=if(!item.has(key)||item.isNull(key))"Unknown" else if(item.optBoolean(key))"Yes" else "No"
+                            WorkflowText("Installed: ${state("installed")} · Enabled: ${state("enabled")} · Callable: ${state("callable")}",fontSize=12.sp,color=Muted)
+                            var detailsOpen by remember(item.toString()){mutableStateOf(false)}
+                            TextButton({detailsOpen=!detailsOpen}){BilingualLabel(if(detailsOpen)"Hide app details" else "App details")}
+                            if(detailsOpen){WorkflowText(item.s("description").ifBlank{"No description reported."},fontSize=12.sp);WorkflowText("Authentication: "+item.s("authStatus").ifBlank{"unverified"},fontSize=12.sp,color=Muted)}
+                        }
+                        val detail=listOf("enabled","callable","authStatus","runtimeStatus","trustStatus","handlerType","marketplace","disabledReason","model","reasoningEffort").filter{!(section=="apps"&&it in listOf("enabled","callable","authStatus"))&&item.has(it)&&!item.isNull(it)}.joinToString(" · "){"$it: ${item.opt(it)}"}
                         if(detail.isNotBlank())WorkflowText(detail,fontSize=12.sp,color=Muted)
                         if(section=="agents"){
                             WorkflowText("Status: ${item.optJSONObject("status")?.s("type")?:item.s("status")}",fontSize=12.sp,color=Muted)
@@ -129,7 +148,7 @@ import org.json.JSONObject
                         },enabled=!loading&&changing==null&&!uncertain){BilingualLabel("${if(item.optBoolean("enabled"))"Disable" else "Enable"} for this environment")}
                     }
                     val cursor=data.s("nextCursor")
-                    if(section!="plugins"&&cursor.isNotBlank())TextButton({scope.launch{loading=true;try{val more=request(section,cursor);view=more;rows=rows+(more.optJSONArray("items")?.objects()?:emptyList())}catch(e:Exception){problem=e.message?:"Could not load more"}finally{loading=false}}},enabled=!loading&&changing==null){BilingualLabel("Load more")}
+                    if(section !in listOf("plugins","apps")&&cursor.isNotBlank())TextButton({scope.launch{loading=true;try{val more=request(section,cursor);view=more;rows=rows+(more.optJSONArray("items")?.objects()?:emptyList())}catch(e:Exception){problem=e.message?:"Could not load more"}finally{loading=false}}},enabled=!loading&&changing==null){BilingualLabel("Load more")}
                     if(data.optInt("errorCount")>0)WorkflowText("${data.optInt("errorCount")} native catalog entries could not be loaded.",fontSize=12.sp,color=Muted)
                 }
             }
@@ -139,8 +158,12 @@ import org.json.JSONObject
             if(data.s("previousCursor").isNotBlank())TextButton({if(current())pluginCursor=data.s("previousCursor")},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Previous plugin page",maxLines=2)}
             if(data.s("nextCursor").isNotBlank())TextButton({if(current())pluginCursor=data.s("nextCursor")},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Next plugin page",maxLines=2)}
         }}
+        if(section=="apps")view?.let{data->Row(Modifier.fillMaxWidth()){
+            if(data.s("nextCursor").isNotBlank())TextButton({if(current())appsCursor=data.s("nextCursor")},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Next apps page",maxLines=2)}
+            if(data.optBoolean("refreshAvailable"))TextButton({if(current()){appsCursor=null;appsRefresh=true;revision++}},modifier=Modifier.weight(1f),enabled=current()&&!loading){BilingualLabel("Refresh apps",maxLines=2)}
+        }}
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
-            TextButton({if(section=="plugins"){pluginCursor=null;pluginRefresh=true};revision++},enabled=current()&&!loading&&changing==null){BilingualLabel(if(section=="mcp")"Refresh MCP status" else "Reload")}
+            TextButton({if(section=="plugins"){pluginCursor=null;pluginRefresh=true};if(section=="apps")appsCursor=null;revision++},enabled=current()&&!loading&&changing==null){BilingualLabel(if(section=="mcp")"Refresh MCP status" else if(section=="apps")"Reload apps view" else "Reload")}
             TextButton(onDismiss){BilingualLabel("Close")}
         }
     }})
