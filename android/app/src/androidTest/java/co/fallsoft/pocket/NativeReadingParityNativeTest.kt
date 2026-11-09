@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import android.view.KeyEvent
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.*
 import androidx.compose.ui.unit.dp
@@ -73,28 +76,69 @@ class NativeReadingParityNativeTest {
    click(By.text("Dismiss"))
    await("Dismiss did not apply its canonical notes receipt"){Pocket.detail?.optJSONArray("notes")?.length()==0}
    main{Pocket.closeTask();PocketLive.stop()}
-   fun form(values:List<String>)=buildAnnotatedString{values.forEachIndexed{at,text->if(at>0)append(' ');val begin=length;append(text);addStringAnnotation("immersion-reserve","part:$at",begin,length)}}
+   val linkTaps=java.util.concurrent.atomic.AtomicInteger(0)
+   fun form(values:List<String>)=buildAnnotatedString{values.forEachIndexed{at,text->
+    if(at>0)append(' ');val begin=length;append(text);addStringAnnotation("immersion-reserve","part:$at",begin,length)
+    if(at==3)addLink(LinkAnnotation.Clickable("reading-fixture-link",TextLinkStyles(),linkInteractionListener={linkTaps.incrementAndGet()}),begin,length)
+   }}
    val forms=requireNotNull(immersionFlipForms(form(listOf("La correzione","è pronta","per la distribuzione","in questa conversazione")),form(listOf("The correction","is ready","for the distribution","in this conversation"))))
+   val fontScale=mutableFloatStateOf(1f)
    val phase=mutableIntStateOf(0);val boxes=java.util.concurrent.atomic.AtomicReference<List<androidx.compose.ui.geometry.Rect?>>(null)
    main{val activity=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single();activity.setContent{
+    val density=LocalDensity.current
+    CompositionLocalProvider(LocalDensity provides Density(density.density,fontScale.floatValue)){
     MaterialTheme{Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp)){
-     SelectionContainer{StableImmersionPhrases(forms,phase.intValue,onTextLayout={boxes.set(it.placeholderRects)})}
+     SelectionContainer{StableImmersionPhrases(forms,phase.intValue,modifier=Modifier.widthIn(max=320.dp),onTextLayout={boxes.set(it.placeholderRects)})}
      Spacer(Modifier.height(16.dp))
      GalleryCardPreview(MarkdownImage("http://127.0.0.1:18880/8bar/#native-preview","Native synthetic gallery",gallery=true))
-    }}
+    }}}
    }}
    await("Phrase layout did not appear"){boxes.get()?.size==4}
+   fun capture(name:String){device.waitForIdle();assertTrue("Screenshot failed: $name",device.takeScreenshot(java.io.File(c.cacheDir,name)));device.dumpWindowHierarchy(java.io.File(c.cacheDir,name.removeSuffix(".png")+".xml"))}
+   capture("native-reading-slots-english.png")
    val before=boxes.get()
    val rects=requireNotNull(before).filterNotNull();val bands=rects.groupBy{it.top}.values.sortedBy{it.first().top}
    assertTrue("The reading fixture must wrap to exercise line spacing",bands.size>=2)
    assertTrue("Reserved phrase rows overlap",bands.zipWithNext().all{(prior,next)->next.minOf{it.top}>=prior.maxOf{it.bottom}-.5f})
    for(value in 1..3){main{phase.intValue=value};Thread.sleep(250);assertEquals("Phrase geometry changed on flip",before,boxes.get())}
+   main{phase.intValue=1};Thread.sleep(250)
+   assertTrue(device.wait(Until.hasObject(By.desc("La correzione")),2000))
+   capture("native-reading-slots-mixed.png")
    main{phase.intValue=0};Thread.sleep(200)
    val phrase=device.wait(Until.findObject(By.desc("The correction")),2000);assertNotNull(phrase);phrase!!.click()
    assertTrue("Direct phrase tap did not change language",device.wait(Until.hasObject(By.desc("La correzione")),2000))
    assertEquals(before,boxes.get())
    assertTrue("Gallery poster not rendered inline",device.wait(Until.hasObject(By.desc("Native material study")),10000))
    device.takeScreenshot(java.io.File(c.cacheDir,"native-reading-gallery-slots.png"))
+   // Exercise a real linked phrase: its action must not become a language toggle.
+   val linked=device.wait(Until.findObject(By.text("in this conversation")),2000);assertNotNull(linked);linked!!.click()
+   await("Phrase link did not retain its action"){linkTaps.get()==1}
+   assertTrue(device.hasObject(By.text("in this conversation")))
+   assertEquals(before,boxes.get())
+   main{phase.intValue=2;fontScale.floatValue=2f}
+   await("Enlarged phrase layout did not settle"){boxes.get()?.size==4&&boxes.get()!=before}
+   device.waitForIdle()
+   val enlarged=boxes.get();val enlargedRects=requireNotNull(enlarged).filterNotNull()
+   assertTrue("Large-font phrase rows overlap",enlargedRects.groupBy{it.top}.values.sortedBy{it.first().top}.zipWithNext().all{(a,b)->b.minOf{it.top}>=a.maxOf{it.bottom}-.5f})
+   assertTrue("Large-font phrase exceeded reserved width",enlargedRects.all{it.left>=0&&it.width<=320*c.resources.displayMetrics.density+1})
+   assertTrue(device.wait(Until.hasObject(By.desc("The correction")),2000))
+   capture("native-reading-slots-large-english.png")
+   main{phase.intValue=3};Thread.sleep(250);assertEquals(enlarged,boxes.get())
+   assertTrue(device.wait(Until.hasObject(By.text("in questa conversazione")),2000))
+   capture("native-reading-slots-large-mixed.png")
+   main{phase.intValue=0};Thread.sleep(250)
+   // Tab navigation and Enter go through the actual native input path, not performClick semantics.
+   var focused=false
+   for(attempt in 0 until 6){
+    device.pressKeyCode(KeyEvent.KEYCODE_TAB)
+    if(device.wait(Until.hasObject(By.desc("The correction").focused(true)),500)){focused=true;break}
+   }
+   assertTrue("Keyboard could not focus the first phrase",focused)
+   capture("native-reading-slots-large-focused.png")
+   device.pressKeyCode(KeyEvent.KEYCODE_ENTER)
+   assertTrue("Keyboard activation did not switch the focused phrase",device.wait(Until.hasObject(By.desc("La correzione")),2000))
+   assertEquals("Keyboard activation changed phrase geometry",enlarged,boxes.get())
+   assertEquals("Keyboard phrase activation fired the unrelated link",1,linkTaps.get())
    val state=qa("state");assertEquals(1,state.optInt("galleryMetadataReads"));assertTrue(state.optInt("galleryImageReads")>=1);assertEquals(0,state.optInt("galleryCredentialLeaks"));assertEquals(0,state.optInt("workSubmissions"))
   }catch(error:Throwable){
    device.takeScreenshot(java.io.File(c.cacheDir,"native-reading-failure.png"))
