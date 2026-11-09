@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.UUID
 
@@ -30,12 +32,14 @@ import java.util.UUID
     var revision by remember{mutableIntStateOf(0)}
     var dismissing by remember{mutableStateOf<String?>(null)}
     var attemptId by remember{mutableStateOf<String?>(null)}
-    LaunchedEffect(revision){
-        if(!current())return@LaunchedEffect
+    // Review state belongs to Android's UI thread even when a caller supplies
+    // a non-main effect dispatcher. Transport still executes on Dispatchers.IO.
+    LaunchedEffect(revision){withContext(Dispatchers.Main.immediate){
+        if(!current()){busy=false;return@withContext}
         busy=true;view=null;receipt=null;message=""
         try{val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/mcp-auth?name=${Uri.encode(name)}"+(threadId?.let{"&threadId=${Uri.encode(it)}"}?:""));if(current()){view=result;if(result.optBoolean("canStart"))attemptId=null}}
-        catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Sign-in details unavailable. Inspect the original host before trying again."}finally{if(current())busy=false}
-    }
+        catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Sign-in details unavailable. Inspect the original host before trying again."}finally{busy=false}
+    }}
     AlertDialog(onDismissRequest=onDismiss,title={BilingualLabel("MCP sign-in")},text={Column(Modifier.fillMaxWidth().heightIn(max=560.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)){
         WorkflowText("${destination?.environment?.name?:"Original environment"} · $name")
         if(!current())WorkflowText("Reopen sign-in in the original environment and conversation.")
@@ -50,10 +54,10 @@ import java.util.UUID
                 TextButton({if(current())dismissing=r.s("attemptId")},enabled=current()&&!busy){BilingualLabel("I inspected the host; review dismissal")}
                 if(dismissing==r.s("attemptId")){
                     WorkflowText("This does not cancel the original flow. Starting again can duplicate an unfinished sign-in.")
-                    OutlinedButton({if(current()&&!busy)scope.launch{
+                    OutlinedButton({if(current()&&!busy)scope.launch(Dispatchers.Main.immediate){
                         busy=true;view=null;receipt=null
                         try{val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/configuration",JSONObject().put("section","mcp").put("action","oauthAcknowledge").put("threadId",r.opt("threadId")).put("name",name).put("attemptId",r.s("attemptId")).put("confirmInspected",true));if(current()){receipt=result;view=null;dismissing=null}}
-                        catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Dismissal unconfirmed. Reload the original receipt."}finally{if(current())busy=false}
+                        catch(e:CancellationException){throw e}catch(_:Exception){if(current())message="Dismissal unconfirmed. Reload the original receipt."}finally{busy=false}
                     }},enabled=current()&&!busy){BilingualLabel("Dismiss inspected sign-in receipt")}
                 }
             }
@@ -63,14 +67,14 @@ import java.util.UUID
             }
         }
         if(receipt==null&&view?.optBoolean("canStart")==true)OutlinedButton({
-            if(current()&&!busy)scope.launch{
+            if(current()&&!busy)scope.launch(Dispatchers.Main.immediate){
                 busy=true;attemptId=attemptId?:UUID.randomUUID().toString()
                 try{
                     val body=JSONObject().put("section","mcp").put("action","oauthStart").put("threadId",threadId).put("name",name).put("attemptId",attemptId).put("reviewToken",view?.s("reviewToken")).put("confirmHostAuthentication",true)
                     val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/native/configuration",body)
                     if(current()){receipt=result;view=null}
-                }catch(e:CancellationException){throw e}catch(_:Exception){if(current()){view=null;message="Sign-in outcome unconfirmed. Reload the original receipt; do not start another attempt."}}finally{if(current())busy=false}
+                }catch(e:CancellationException){throw e}catch(_:Exception){if(current()){view=null;message="Sign-in outcome unconfirmed. Reload the original receipt; do not start another attempt."}}finally{busy=false}
             }
         },enabled=current()&&!busy){BilingualLabel("Start sign-in on original host")}
-    }},confirmButton={TextButton(onDismiss){BilingualLabel("Close")}},dismissButton={TextButton({if(current())revision++},enabled=current()&&!busy){BilingualLabel("Reload sign-in receipt")}})
+    }},confirmButton={TextButton(onDismiss){BilingualLabel("Close")}},dismissButton={TextButton({if(current()&&!busy){busy=true;revision++}},enabled=current()&&!busy){BilingualLabel("Reload sign-in receipt")}})
 }

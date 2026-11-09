@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-08",
+  "updated": "2026-11-09",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,25 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "local-ux-measurement-visual-native-parity-20261109",
+      "request": "Instrument UX locally, visually check borders/clipping and continue meaningful Codex TUI parity with Astra medium team.",
+      "status": "181 published both Android channels. Backend/web182 live on workstation and Mac; Android182 candidate remains in native qualification.",
+      "delivered": [
+        "Bounded foreground cached/fresh/history/send latency and original failed/unknown outcomes without content telemetry",
+        "Release-bound native footer screenshot matrix and exact optimized visual review",
+        "Shared card border/clip shape; enlarged web footer overflow correction",
+        "Explicit source-bound native MCP OAuth sign-in and stable original completion",
+        "Account/native-connection guarded settings-write preflight; scoped Firebase OAuth networking"
+      ],
+      "followup": [
+        "Explicit host-wide native MCP reload with durable source-bound original receipts and account-wide unresolved guard",
+        "Required CI composed sign-in/reload DOM journeys",
+        "More compact web cards retaining full title width, meaningful preview and accessible controls"
+      ],
+      "validation": "18119nativejourneys and optimized review; current182 source/HTTP/DOM checks do not yet prove native UI; physical-phone rendering/performance remains separate.",
+      "deployment": "Owner readiness confirmed Nov9; both gateways updated without restarting nativeCodex or changing pairing/queues/unknown receipts."
+    },
     {
       "id": "codex-plugin-lifecycle-parity-20261108",
       "request": "Complete accepted Codex parity work while continuously monitoring delivery and independently reviewing meaningful integration evidence.",
@@ -3967,5 +3986,19 @@
       "No new timers or polling model turns."
     ],
     "evidence": "docs/qualification/initial-history-recovery-179.json"
+  },
+  "explicit_conversation_navigation_20261109": {
+    "requirement": "Closing and reopening the same session must show current messages, not a retained transient questions/settings panel. Background reconnect must preserve reading and drafts.",
+    "cause": "Compose may coalesce close/reopen or A-to-B-to-A into the same final source key, preserving a previous screen despite explicit navigation.",
+    "implementation": "Separate explicit navigation generation from runtime incarnation and same-source history replacement. Questions panel has CLOSED/MANUAL/ATTENTION ownership: cached pending metadata cannot interrupt reading; verified resolution closes automatic attention while manual result browsing stays open. Attention uses the same revision fingerprint as request drafts, not only a reusable native request ID, and forgets revisions once no longer pending.",
+    "evidence": "Retained native failures exposed coalesced navigation, same-source forced reset, cached answered-question attention and reused request-ID suppression. Revision-aware native request journey passed with original action identities/counts/drafts and command-output transition; the obsolete expectation that automatic attention remains open was replaced by explicit auto-close and manual-reopen checks. Final signed182 remains pending. Final182r06 passed all19required native journeys, exact optimized catalog/history review and16footer visual captures; published both channels.",
+    "state": "candidate; native qualification pending"
+  },
+  "native_review_request_ownership_20261109": {
+    "requirement": "Native settings, plugin and MCP reviews must complete visibly without cross-environment result application or duplicate actions. Diagnose real integration failures before release.",
+    "implementation": "Explicit Main.immediate ownership for review-state effects/actions, with IO-only transport; captured environment/account guards remain on responses and mutations. Request completion releases local loading independently of source validity. Reload reserves loading synchronously so stale enabled UI cannot overlap revisions.",
+    "evidence": "Original real-HTTP native journey retained: request responses completed in1–3ms while a dialog stayed loading. Temporary traces on a later passing run showed off-main effect continuations with all validity predicates true, so the original failure cause is not claimed proven. Test-only StandardTestDispatcher experiment reverted: installed Compose1.9.3 lacks full1.10 scheduler support. Original assertions/timeouts unchanged.",
+    "state": "candidate; native and optimized qualification pending; no182 Android publication",
+    "status": "delivered182; synthetic native and exact optimized qualification passed; physical phone/provider authentication separate"
   }
 }

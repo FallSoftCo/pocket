@@ -78,6 +78,13 @@ try{
   check.summary=summary;
   assert.deepEqual(summary,{tests:5,pass:5,fail:0,cancelled:0,skipped:0,todo:0},'Execution capability and source-binding DOM journeys must execute without skips.');
  });
+ for(const [name,file] of [['mcp-auth-dom','tests/native-mcp-auth.dom.mjs'],['mcp-reload-dom','tests/native-mcp-reload.dom.mjs']]){
+  await run(name,['--test','--test-reporter=tap',file],env,(output,check)=>{
+   const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));
+   check.summary=summary;
+   assert.deepEqual(summary,{tests:1,pass:1,fail:0,cancelled:0,skipped:0,todo:0},'Required MCP settings → HTTP → original native receipt journey must finish without skips.');
+  });
+ }
  await run('app-controls-dom',['--experimental-vm-modules','--test','--test-reporter=tap','tests/web-app-controls.dom.mjs'],{...env,NEXTCOMP_TEST_WEB_SOURCE_ROOT:''},(output,check)=>{
   const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));
   check.summary=summary;

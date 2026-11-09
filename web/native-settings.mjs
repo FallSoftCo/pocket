@@ -1,3 +1,4 @@
+import {mcpReloadButton} from './native-mcp-reload.mjs';
 import {mcpAuthenticationButton} from './native-mcp-auth.mjs';
 import {pluginBrowserControls} from './native-plugin-browser.mjs';
 import {pluginDetailsButton,operationLabel} from './native-plugins.mjs';
@@ -57,6 +58,7 @@ export class NativeSettingsPanel {
   if(!append)this.body.replaceChildren();
   this.body.querySelector('[data-more]')?.remove();
   if(view.parentThreadId||view.rootThreadId){const id=view.parentThreadId||view.rootThreadId;if(id!==this.threadId){const parent=node('button','Open parent task');parent.onclick=()=>this.navigate(id);this.body.append(parent);}}
+  if(view.section==='mcp'&&!append&&view.canReviewReload)this.body.append(mcpReloadButton(this));
   if(view.section==='plugins')this.body.append(pluginBrowserControls(this,view));
   if(view.section==='plugins')for(const receipt of view.receipts||[]){const row=node('article');row.append(node('p',`${receipt.name} · ${receipt.action} · ${operationLabel(receipt.state)}: ${receipt.notice}`),pluginDetailsButton(this,{key:receipt.key},'Review operation'));this.body.append(row);}
   if(!view.items?.length)this.body.append(node('p',view.state==='available'?'No items reported by this native catalog.':'Catalog unavailable.'));
@@ -77,7 +79,7 @@ export class NativeSettingsPanel {
   if(view.errorCount)this.body.append(node('p',`${view.errorCount} native catalog entries could not be loaded.`));
   if(view.section==='plugins')return;
   if(view.nextCursor){const more=node('button','Load more');more.dataset.more='';more.onclick=()=>this.load(view.section,view.nextCursor);this.body.append(more);}
-  const refresh=node('button','Reload '+titles[view.section]);refresh.onclick=()=>this.load(view.section);this.body.append(refresh);
+  const refresh=node('button',view.section==='mcp'?'Refresh MCP status':'Reload '+titles[view.section]);refresh.onclick=()=>this.load(view.section);this.body.append(refresh);
  }
  navigate(id){if(!id||!this.current())return;this.dialog.close();this.openThread(id);}
  async change(view,item,button){

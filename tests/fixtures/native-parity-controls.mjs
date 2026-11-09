@@ -4,6 +4,7 @@ import http from 'node:http';
 import {EventEmitter} from 'node:events';
 import {DatabaseSync} from 'node:sqlite';
 import {NativeMcpAuth} from '../../server/native-mcp-auth.mjs';
+import {NativeMcpReload} from '../../server/native-mcp-reload.mjs';
 import fs from 'node:fs';
 import {PluginCatalogPages} from '../../server/native-plugin-catalog.mjs';
 import crypto from 'node:crypto';
@@ -15,7 +16,7 @@ import {requestPresentation} from '../../server/native-request-contract.mjs';
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
 const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[]}));
-const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[];
+const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[],nativeReloadStarts=[];
 const pluginCount=10074,pluginKey=crypto.createHash('sha256').update('synthetic-plugin').digest('hex');
 for(const origin of origins)origin.pluginCatalog=new PluginCatalogPages({secret:'synthetic-catalog-'+origin.name,capture:()=>({origin:origin.name,installed:origin.pluginInstalled}),check:source=>{if(source.origin!==origin.name||source.installed!==origin.pluginInstalled)throw Object.assign(Error('Synthetic plugin catalog changed'),{status:409});},load:async view=>{
  nativeReads.push({origin:origin.name,method:view==='browse'?'plugin/list':'plugin/installed'});
@@ -58,18 +59,27 @@ for(const origin of origins){
  }};
  const execution=new NativeExecution(codex);
  // Real receipt/correlation controller; all upstream auth is synthetic and local.
- const authCodex=new EventEmitter();Object.assign(authCodex,{ready:true,transport:{},initializeResult:{userAgent:'codex/0.167.0'},connect:async()=>{},operationCapacityAvailable:()=>true,
+ const authDb=new DatabaseSync(':memory:');let account='original',reloadMode='hold',reloadPending=null;
+ const authCodex=new EventEmitter();Object.assign(authCodex,{ready:true,transport:{},initializeResult:{userAgent:'codex/0.167.0'},connect:async()=>{},operationCapacityAvailable:()=>reloadPending===null,
   call:async(method,params)=>{
    nativeReads.push({origin:origin.name,method,params});
    if(method==='config/read')return {config:{mcp_servers:{'fixture-mcp':{url:'https://fixture.invalid/mcp'}}}};
    if(method==='mcpServerStatus/list')return {data:[{name:'fixture-mcp',authStatus:'notLoggedIn',tools:{}}]};
    throw Error('Unexpected synthetic auth read');
   },callOperation:async(method,params,complete)=>{
+   if(method==='config/mcpServer/reload'){
+    if(params!==undefined)throw Error('Reload must remain parameterless');
+    const row=authDb.prepare("SELECT id FROM native_mcp_reload WHERE state='dispatching'").get();if(!row)throw Error('Missing original durable reload intent');
+    nativeReloadStarts.push({origin:origin.name,method,attemptId:row.id});
+    if(reloadMode==='hold'){reloadPending=complete;throw Error('Synthetic caller wait ended; original operation retained');}
+    complete({result:{},terminal:true});return {};
+   }
    if(method!=='mcpServer/oauth/login'||params.name!=='fixture-mcp'||params.threadId!==threadId)throw Error('Foreign synthetic auth request');
    const loginId=origin.name+'-oauth-'+(nativeAuthStarts.length+1);nativeAuthStarts.push({origin:origin.name,method,params,loginId});
    const result={loginId,authorizationUrl:'https://auth.invalid/'+origin.name+'/synthetic-sign-in'};complete({result,terminal:true});return result;
   }});
- const auth=new NativeMcpAuth({db:new DatabaseSync(':memory:'),codex:authCodex,context:async id=>{if(id!==threadId)throw Error('Foreign synthetic auth thread');return metadata(origin);},accountEvidence:()=>({accountId:'synthetic-'+origin.name})});
+ const auth=new NativeMcpAuth({db:authDb,codex:authCodex,context:async id=>{if(id!==threadId)throw Error('Foreign synthetic auth thread');return metadata(origin);},accountEvidence:()=>({accountId:'synthetic-'+origin.name+'-'+account})});
+ const reload=new NativeMcpReload({db:authDb,codex:authCodex,source:auth});
  const authDevice='parity-device-'+origin.index;
  const authorized=req=>new RegExp('^Bearer synthetic-parity-'+origin.index+'-[a-f0-9-]{36}$').test(req.headers.authorization||'');
  const server=http.createServer(async(req,res)=>{
@@ -78,7 +88,7 @@ for(const origin of origins){
   const url=new URL(req.url,'http://localhost'),path=url.pathname;
   // Retain transport completion separately from request admission. A received
   // GET alone cannot explain a native dialog that remains in its loading state.
-  if(process.env.NEXTCOMP_QA_LOG&&path==='/api/native/plugins/detail'){
+  if(process.env.NEXTCOMP_QA_LOG&&(path==='/api/native/plugins/detail'||req.method==='GET'&&path==='/api/native/mcp-auth')){
    const requestId=crypto.randomUUID(),startedAt=Date.now();
    const trace=phase=>fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished})+'\n',{mode:0o600});
    trace('request');res.once('finish',()=>trace('finish'));res.once('close',()=>trace('close'));
@@ -87,7 +97,20 @@ for(const origin of origins){
   const input=raw?JSON.parse(raw):{};
   calls.push({origin:origin.name,path,query:url.search,method:req.method,input});
   let body={};
-  if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()],nativeAnswers,nativeReads,nativeAuthStarts};
+  if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()],nativeAnswers,nativeReads,nativeAuthStarts,nativeReloadStarts,reloadReceipts:authDb.prepare('SELECT id,state,native_outcome FROM native_mcp_reload').all()};
+  else if(path==='/_qa/mcp-account'){
+   if(!['original','secondary'].includes(input.account)){res.writeHead(400).end('{"error":"Unknown synthetic account"}');return;}
+   account=input.account;authCodex.emit('event',{method:'account/updated',params:{}});for(const socket of origin.sockets)frame(socket,{type:'nativeAuthBoundary'});body={ok:true};
+  }
+  else if(path==='/_qa/mcp-reload-loss'){
+   if(!reloadPending){res.writeHead(409).end('{"error":"No pending synthetic reload"}');return;}
+   const original=reloadPending;reloadPending=null;original({error:Error('Synthetic original transport lost'),terminal:false});
+   authCodex.emit('disconnected');authCodex.transport={};authCodex.emit('connected');for(const socket of origin.sockets)frame(socket,{type:'nativeAuthBoundary'});body={ok:true};
+  }
+  else if(path==='/_qa/mcp-reload-mode'){
+   if(!['hold','accepted'].includes(input.mode)){res.writeHead(400).end('{"error":"Unknown synthetic mode"}');return;}
+   reloadMode=input.mode;body={ok:true};
+  }
   else if(path==='/_qa/mcp-completion'){authCodex.emit('event',{method:'mcpServer/oauthLogin/completed',params:input});body={ok:true};}
   else if(path==='/_qa/output-mode'){
    if(!['qualified','unavailable','hold'].includes(input.mode)){res.writeHead(400).end('{"error":"Unknown synthetic output mode"}');return;}
@@ -131,8 +154,9 @@ for(const origin of origins){
   else if(path.endsWith('/terminals'))body={data:[{processId:'shared-process-id',command:`${origin.name} synthetic watcher`,cwd:metadata(origin).cwd,cpuPercent:0}],nextCursor:null,features:executionFeatures(origin)};
   else if(path.endsWith('/terminals/terminate')&&executionFeatures(origin)?.backgroundTerminals?.mutation?.state!=='available'){res.writeHead(409).end('{"error":"Synthetic runtime does not permit termination."}');return;}
   else if(path.endsWith('/terminals/terminate'))body={ok:true,terminated:true};
+  else if(path==='/api/native/configuration'&&req.method==='GET'&&url.searchParams.get('reloadReview')==='1'){try{const {_snapshot,...view}=await reload.detail({threadId:url.searchParams.get('threadId')},authDevice);body=view;}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
   else if(path==='/api/native/mcp-auth'){try{const {_snapshot,...view}=await auth.detail({name:url.searchParams.get('name'),threadId:url.searchParams.get('threadId')},authDevice);body=view;}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
-  else if(path==='/api/native/configuration'&&req.method==='POST'&&input.section==='mcp'){try{body=await auth[input.action==='oauthStart'?'start':'acknowledge'](input,{kind:'paired-device',deviceId:authDevice});}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
+  else if(path==='/api/native/configuration'&&req.method==='POST'&&input.section==='mcp'){try{body=['reload','reloadAcknowledge'].includes(input.action)?await reload.mutate(input,{kind:'paired-device',deviceId:authDevice}):await auth[input.action==='oauthStart'?'start':'acknowledge'](input,{kind:'paired-device',deviceId:authDevice});}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
   else if(path==='/api/native/plugins/detail'){
    const key=crypto.createHash('sha256').update('synthetic-plugin').digest('hex'),reviewToken=crypto.createHash('sha256').update(origin.name+':'+origin.pluginInstalled).digest('hex');
    if(url.searchParams.get('key')!==key){res.writeHead(409).end('{"error":"Synthetic plugin identity mismatch"}');return;}
@@ -147,7 +171,7 @@ for(const origin of origins){
   else if(path==='/api/native/configuration'){
    const section=url.searchParams.get('section')||'settings';
    let page=null;if(section==='plugins'){try{page=await origin.pluginCatalog.page({threadId,cwd:metadata(origin).cwd,view:url.searchParams.get('pluginView')||undefined,query:url.searchParams.get('query')||'',cursor:url.searchParams.get('cursor')||undefined,refresh:url.searchParams.get('refresh')||undefined});}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}}
-   body={state:'available',section,host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='mcp'?[{id:'fixture-mcp',name:'Synthetic MCP server',enabled:true,authStatus:'notLoggedIn',canReviewAuthentication:true,configurable:false,tools:[]}]:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?page.items:[],features:{},...(page?{...page,browseAvailable:true,readOnly:false,receipts:origin.pluginReceipts}:{})};
+   body={state:'available',section,canReviewReload:section==='mcp',host:origin.name,runtime:{version:'0.167.0 synthetic'},requested:{permissions:'full'},observed:{state:'observed',settings:{sandbox:{type:'danger-full-access'},approvalPolicy:'never'},notice:'Synthetic observation'},settings:{model:'synthetic-codex'},configVersion:'parity-config-1',items:section==='mcp'?[{id:'fixture-mcp',name:'Synthetic MCP server',enabled:true,authStatus:'notLoggedIn',canReviewAuthentication:true,configurable:false,tools:[]}]:section==='skills'?[{id:'qa-skill',name:'Synthetic skill',description:'Visible from the actual native settings catalog.',enabled:true,configurable:false}]:section==='plugins'?page.items:[],features:{},...(page?{...page,browseAvailable:true,readOnly:false,receipts:origin.pluginReceipts}:{})};
   }
   else if(path==='/api/notifications'||path==='/api/attention'||path==='/api/activity')body={notifications:[],items:[]};
   else if(path==='/api/app/update')body={available:false};

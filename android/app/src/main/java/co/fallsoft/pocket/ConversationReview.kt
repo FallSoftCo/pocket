@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONObject
 
+internal enum class ConversationReviewMode { CLOSED, MANUAL, ATTENTION }
+
 internal fun usefulConversationResults(notes:List<JSONObject>,rows:List<JSONObject>):List<JSONObject>{
     fun normalized(value:String)=value.replace(Regex("\\s+")," ").trim().lowercase(java.util.Locale.ROOT)
     val users=rows.filter{it.s("kind")=="user"}.map{normalized(it.s("text"))}.toSet()

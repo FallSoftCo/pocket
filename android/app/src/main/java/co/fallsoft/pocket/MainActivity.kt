@@ -574,7 +574,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 }
 @Composable fun RequestCard(r:JSONObject){val p=r.optJSONObject("params")?:return;val id=r.s("id");val isQuestion=r.s("method").contains("requestUserInput")
     val destination=Pocket.captureEnvironment();val sourceThread=Pocket.selected
-    val fingerprint=remember(r.toString()){java.security.MessageDigest.getInstance("SHA-256").digest(r.toString().toByteArray()).take(12).joinToString(""){"%02x".format(it)}}
+    val fingerprint=remember(r.toString()){nativeRequestFingerprint(r.toString())}
     val draftKey=Pocket.key("questionDraft:"+backendOwner(Pocket.base,Pocket.token)+":"+Pocket.selected+":"+id+":"+fingerprint)
     val answers=remember(draftKey){mutableStateMapOf<String,String>().apply{runCatching{JSONObject(Pocket.prefs.getString(draftKey,"{}")?:"{}").let{saved->saved.keys().forEach{key->put(key,saved.s(key))}}}}}
     fun saveAnswer(key:String,value:String){answers[key]=value;val saved=JSONObject();answers.forEach{(k,v)->if(p.optJSONArray("questions")?.objects()?.none{it.s("id")==k&&it.optBoolean("isSecret")}!=false)saved.put(k,v)};Pocket.prefs.edit().putString(draftKey,saved.toString()).apply()}

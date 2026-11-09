@@ -219,8 +219,11 @@ class NativeParityControlsNativeTest {
             assertEquals("replacement",replacementApproval.getJSONObject("result").getJSONObject("decision").getJSONObject("acceptWithExecpolicyAmendment").getJSONArray("execpolicy_amendment").getString(1))
             assertEquals("1",calls("/api/requests/same-native-request/answer").last().getJSONObject("input").s("actionId"))
             capture("01b-structured-approval-origin-and-replacement")
-            // Resolving the request keeps the review drawer open for inspection.
-            // Close its actual visible control before interacting with the footer.
+            // Automatic attention yields back to the conversation on resolution.
+            // Deliberate review is separate: it remains open for inspection even
+            // without pending questions, until its visible close control is used.
+            await{runCatching{compose.onNodeWithContentDescription("Close questions").assertIsNotDisplayed()}.isSuccess}
+            compose.onNodeWithContentDescription("Questions and results").assertIsDisplayed().performClick()
             visible("No unanswered questions")
             compose.onNodeWithContentDescription("Close questions").assertIsDisplayed().performClick()
             compose.waitForIdle()
@@ -426,6 +429,54 @@ class NativeParityControlsNativeTest {
             assertEquals("Beta retained draft",prefs.getString("environment:parity_beta:draft:$thread",null))
             assertTrue("Authentication submitted the draft",calls("/api/threads/$thread/reply").isEmpty())
             capture("06d-mcp-sign-in-completed")
+            tap("Close",inDialog=true);tap("Close",inDialog=true)
+            fun reloadNotice(text:String){
+                await{compose.onAllNodesWithText(text,substring=true,useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+                compose.onAllNodesWithText(text,substring=true).onFirst().performScrollTo().assertIsDisplayed()
+            }
+            // Host-wide reload uses the production durable receipt controller. Merely
+            // reviewing Alpha must never submit a reload to either environment.
+            navigate("workstation");menu("Codex settings & agents");tap("MCP");tap("Review host MCP reload")
+            visible("Host MCP reload");reloadNotice("across this host’s loaded conversations")
+            assertEquals(0,qa("state").getJSONArray("nativeReloadStarts").length())
+            navigate("parity_beta");absent("Host MCP reload")
+            menu("Codex settings & agents");tap("MCP");tap("Review host MCP reload");tap("Reload MCP across this host")
+            reloadNotice("Waiting for the original native reload reply")
+            tap("Check reload receipts");reloadNotice("Waiting for the original native reload reply")
+            val reloadStarts=qa("state").getJSONArray("nativeReloadStarts").objects()
+            assertEquals(1,reloadStarts.size);assertEquals("Beta",reloadStarts.single().s("origin"))
+            val originalReloadId=reloadStarts.single().s("attemptId")
+            capture("06e-mcp-reload-pending")
+            navigate("workstation");absent("Host MCP reload")
+            qa("mcp-reload-loss",JSONObject(),origin=1)
+            navigate("parity_beta");menu("Codex settings & agents");tap("MCP");tap("Review host MCP reload")
+            reloadNotice("Reload outcome unconfirmed")
+            assertEquals(originalReloadId,qa("state",origin=1).getJSONArray("reloadReceipts").getJSONObject(0).s("id"))
+            // A different account cannot bypass the original host-wide unknown effect.
+            qa("mcp-account",JSONObject().put("account","secondary"),origin=1)
+            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            tap("Review host MCP reload");reloadNotice("Return to that original account")
+            absent("Reload MCP across this host");absent("I inspected the host; review dismissal")
+            assertEquals(1,qa("state").getJSONArray("nativeReloadStarts").length())
+            assertEquals("unknown",qa("state",origin=1).getJSONArray("reloadReceipts").getJSONObject(0).s("state"))
+            capture("06f-mcp-reload-account-blocked")
+            qa("mcp-account",JSONObject().put("account","original"),origin=1)
+            await{compose.onAllNodesWithText("Host MCP reload",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+            tap("Review host MCP reload");reloadNotice("Reload outcome unconfirmed")
+            tap("I inspected the host; review dismissal");reloadNotice("does not cancel the reload")
+            tap("Dismiss inspected reload receipt");reloadNotice("Uncertain reload inspected and dismissed")
+            assertEquals(1,qa("state").getJSONArray("nativeReloadStarts").length())
+            qa("mcp-reload-mode",JSONObject().put("mode","accepted"),origin=1)
+            tap("Check reload receipts");tap("Reload MCP across this host");reloadNotice("Native reload acknowledged")
+            val finalStarts=qa("state").getJSONArray("nativeReloadStarts").objects()
+            assertEquals(2,finalStarts.size);assertTrue(finalStarts.all{it.s("origin")=="Beta"})
+            assertTrue(finalStarts.last().s("attemptId")!=originalReloadId)
+            val reloadReceipts=qa("state",origin=1).getJSONArray("reloadReceipts").objects()
+            assertEquals("acknowledged",reloadReceipts.single{it.s("id")==originalReloadId}.s("state"))
+            assertEquals("accepted",reloadReceipts.single{it.s("id")==finalStarts.last().s("attemptId")}.s("state"))
+            assertEquals("Beta retained draft",prefs.getString("environment:parity_beta:draft:$thread",null))
+            assertTrue("Reload submitted the draft",calls("/api/threads/$thread/reply").isEmpty())
+            capture("06g-mcp-reload-accepted")
             tap("Close",inDialog=true);tap("Close",inDialog=true)
             navigate("workstation")
             assertEquals("Alpha edited draft\n\nAlpha original request",prefs.getString("draft:$thread",null))

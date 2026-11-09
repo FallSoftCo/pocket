@@ -127,7 +127,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val density=LocalDensity.current
     var confirmRetry by remember(Pocket.selected){mutableStateOf<JSONObject?>(null)}
     val notes=d?.optJSONArray("notes")?.objects().orEmpty()
-    var reviewOpen by rememberSaveable(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
+    var reviewMode by rememberSaveable(Pocket.environmentId,Pocket.selected){mutableStateOf(ConversationReviewMode.CLOSED)}
+    val reviewOpen=reviewMode!=ConversationReviewMode.CLOSED
     var conversationToolsOpen by rememberSaveable(Pocket.environmentId,Pocket.selected){mutableStateOf(false)}
     val reviewRequests=d?.optJSONArray("pending")?.objects().orEmpty()
     val reviewResults=remember(notes,rows){usefulConversationResults(notes,rows)}
@@ -276,10 +277,19 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val keyboard=androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val inputFocus=remember{androidx.compose.ui.focus.FocusRequester()}
     val seenQuestions=remember(Pocket.environmentId,Pocket.selected){mutableSetOf<String>()}
-    LaunchedEffect(reviewRequests.map{it.s("id")}){
-        val fresh=reviewRequests.any{it.s("id") !in seenQuestions}
-        seenQuestions.addAll(reviewRequests.map{it.s("id")})
-        if(fresh&&!keyboardInput&&!PocketVoice.captureBusy&&!BlackoutVisibility.active)reviewOpen=true
+    val requestRevisions=remember(reviewRequests.map{it.toString()}){reviewRequests.map{it.s("id")+":"+nativeRequestFingerprint(it.toString())}}
+    LaunchedEffect(requestRevisions,conversation.workVerified){
+        // Cached questions can already be answered. Only current metadata may
+        // interrupt reading; resolving automatic attention returns to the chat.
+        // A deliberately opened results panel belongs to the reader instead.
+        if(!conversation.workVerified)return@LaunchedEffect
+        if(reviewMode==ConversationReviewMode.ATTENTION&&reviewRequests.isEmpty())reviewMode=ConversationReviewMode.CLOSED
+        val fresh=requestRevisions.any{it !in seenQuestions}
+        // Only currently pending revisions are seen. A resolved ID must not
+        // suppress a later form/approval that reuses that ID.
+        seenQuestions.retainAll(requestRevisions.toSet())
+        seenQuestions.addAll(requestRevisions)
+        if(fresh&&!reviewOpen&&!keyboardInput&&!PocketVoice.captureBusy&&!BlackoutVisibility.active)reviewMode=ConversationReviewMode.ATTENTION
     }
     LaunchedEffect(keyboardInput,conversation.incarnation){if(keyboardInput){inputFocus.requestFocus();keyboard?.show()}}
     val dismissingControl=actionsOpen||reviewOpen||settingsOpen||nativeSettingsOpen||renameOpen||confirmArchive||
@@ -293,7 +303,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             nativeSettingsOpen->nativeSettingsOpen=false
             settingsOpen->settingsOpen=false
             queueOpen->queueOpen=false
-            reviewOpen->reviewOpen=false
+            reviewOpen->reviewMode=ConversationReviewMode.CLOSED
             actionsOpen->actionsOpen=false
             else->Pocket.closeTask()
         }
@@ -472,7 +482,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             NativeTerminalsControl()
             TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort, tier & mode")}
             TextButton({actionsOpen=false;nativeSettingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Codex settings & agents")}
-            if(reviewCount>0)TextButton({actionsOpen=false;reviewOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Needs you · $reviewCount",color=Coral)}
+            if(reviewCount>0)TextButton({actionsOpen=false;reviewMode=ConversationReviewMode.MANUAL},modifier=Modifier.fillMaxWidth()){BilingualLabel("Needs you · $reviewCount",color=Coral)}
             d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
             TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
             if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue · ${waiting.size}")}
@@ -494,10 +504,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             .filter{it.isNotBlank()}.joinToString("\n\n")
     }
     val reviewPanel:@Composable ()->Unit={ConversationReviewContent(reviewRequests,reviewResults,otherQuestions,
-        onClose={reviewOpen=false},
-        onReply={note->val context="About this result:\n"+note.s("text").take(500)+"\n\n";val next=context+editor.text;editor=TextFieldValue(next,TextRange(context.length));saveReplyDraft(draftKey,next);keyboardInput=true;reviewOpen=false},
+        onClose={reviewMode=ConversationReviewMode.CLOSED},
+        onReply={note->val context="About this result:\n"+note.s("text").take(500)+"\n\n";val next=context+editor.text;editor=TextFieldValue(next,TextRange(context.length));saveReplyDraft(draftKey,next);keyboardInput=true;reviewMode=ConversationReviewMode.CLOSED},
         onSource={note->
-            reviewOpen=false;follow=false;CodexConversations.readerInteraction(conversation.key,conversation.incarnation)
+            reviewMode=ConversationReviewMode.CLOSED;follow=false;CodexConversations.readerInteraction(conversation.key,conversation.incarnation)
             val sourceThread=Pocket.selected;val destination=Pocket.captureEnvironment()
             val owns={Pocket.selected==sourceThread&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true}
             scope.launch{val found=locateTranscriptSource(owns,{PocketTranscript.loading},{PocketTranscript.earlier},{PocketTranscript.before},
@@ -512,7 +522,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 if(Pocket.selected==thread&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true)Pocket.detail=Pocket.detail?.let{JSONObject(it.toString()).put("notes",response.optJSONArray("notes"))}
             }catch(e:Exception){if(Pocket.selected==thread&&destination!=null&&Pocket.captureEnvironment()?.matches(destination)==true)Pocket.error=PocketNetwork.error(e)}finally{removingNotes=removingNotes-id}}
         },removing=removingNotes)}
-    ConversationReviewScaffold(reviewOpen,{reviewOpen=false},reviewPanel){
+    ConversationReviewScaffold(reviewOpen,{reviewMode=ConversationReviewMode.CLOSED},reviewPanel){
     Column(Modifier.fillMaxSize().imePadding()){
         Box(Modifier.weight(1f).fillMaxWidth()){
             LazyColumn(Modifier.fillMaxSize().nestedScroll(historyScrollObserver).semantics{testTagsAsResourceId=true}.testTag("conversation-history"),state=list,contentPadding=PaddingValues(start=18.dp,end=18.dp,top=12.dp,bottom=12.dp+with(density){(if(important)filterTailPixels else 0).toDp()}),verticalArrangement=Arrangement.spacedBy(10.dp)){
@@ -655,7 +665,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         val pageEnvironment=Pocket.environmentId
         ConversationFooter{
             InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
-            ConversationNotesControls(reviewCount,reviewResults.size,{reviewOpen=true},hasVisibleSpeech,visibleSpeech)
+            ConversationNotesControls(reviewCount,reviewResults.size,{reviewMode=ConversationReviewMode.MANUAL},hasVisibleSpeech,visibleSpeech)
             ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning){
                 TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
                 if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
