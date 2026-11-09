@@ -25,14 +25,33 @@ judge whether English already naturally uses that post-nominal construction;
 this is not a claim of a universal deterministic grammar parser. Initial source
 qualification used authored fixtures; the later actual teacher check is below.
 
-Both renderers retain their measured shared-slot contract and use a 1px/dp inset
-edge, 6% foreground wash, 55% foreground edge and 3px/dp corners. Small 4px/dp
-horizontal and 1px/dp vertical internal padding is included in both forms’
-intrinsic reservation (explicitly included in Android placeholder dimensions). Source word spaces and
-existing phrase gutters remain; borders do not wrap every lexical word or change
-with the current language. No new animation, per-frame measurement or state loop
-is introduced. Equal pairs such as `Menu` have no pointless web toggle, matching
-the existing Android distinct-form behavior.
+Both renderers retain their measured shared-slot contract. The 183 reading
+candidate replaces the always-visible 55% outline with a quiet 6% foreground wash
+and 3px/dp corners. Ordinary control labels remain transparent; interactive text
+has local touch/hover feedback and a keyboard-focus ring only on the focused
+phrase. These treatments do not depend on the current language. Text stays at
+full contrast. The existing 4px/dp horizontal and 1px/dp vertical padding, phrase
+gutters and intrinsic reservations are unchanged, so removing the outline does
+not move words or cause reflow. No animation, per-frame measurement or inference
+is added. Equal pairs such as `Menu` retain no pointless toggle.
+
+This follows a reading-highlight pattern rather than an outlined-input pattern.
+The configured Mobbin MCP was queried and its actual screenshots inspected:
+[Matter](https://mobbin.com/screens/058e54c1-2c6e-4568-939e-72ca0bd6ef85)
+uses a soft filled passage highlight, while
+[Duolingo ABC](https://mobbin.com/screens/6a7afff6-1193-4511-91de-129f1cc52007)
+marks a word with fill instead of enclosing every word in a border. These are
+visual references, not evidence of bilingual learning effectiveness. NextComp
+uses its own existing palette and geometry; no reference assets are copied.
+
+Native large-text qualification also exposed a reserved-box conversion error:
+Compose Android 1.9.3 renders placeholder SP dimensions with linear scaling,
+whereas `Density.toSp()` uses nonlinear accessible font scaling. Applying the
+latter to already measured pixel dimensions oversized the boxes at 2x text.
+The renderer now inverts the placeholder's own linear conversion. Glyphs still
+use normal accessible font scaling, and the measured reserve stays within the
+paragraph. The existing native reading journey checks actual placeholder bounds,
+row separation and unchanged geometry across language flips at both sizes.
 
 ## Synthetic before/after
 
@@ -70,7 +89,7 @@ still reject duplicated meaning ownership. Valid plans remain cache hits:
 there is no provider-wide regeneration or automatic retry-budget reset. The
 existing backend worker applies this migration when loading its retained cache;
 already materialized clients need the normal authenticated snapshot to receive
-it. All existing paired groups benefit from the new visible edges immediately
+it. All existing paired groups benefit from the current reading treatment immediately
 when their updated renderer is loaded.
 
 ## Qualification boundary

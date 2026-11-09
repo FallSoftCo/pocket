@@ -4000,5 +4000,11 @@
     "evidence": "Original real-HTTP native journey retained: request responses completed in1–3ms while a dialog stayed loading. Temporary traces on a later passing run showed off-main effect continuations with all validity predicates true, so the original failure cause is not claimed proven. Test-only StandardTestDispatcher experiment reverted: installed Compose1.9.3 lacks full1.10 scheduler support. Original assertions/timeouts unchanged.",
     "state": "candidate; native and optimized qualification pending; no182 Android publication",
     "status": "delivered182; synthetic native and exact optimized qualification passed; physical phone/provider authentication separate"
+  },
+  "immersion_quiet_reading_highlights_20261109": {
+    "requirement": "Hard immersion tile borders interrupt reading; consult Mobbin and improve Android/web phrase presentation.",
+    "design": "Quiet inline highlights at rest; emphasis only on interaction/keyboard focus. Preserve grammatical groups, stable measured geometry, 0%/nearest 50% Italian phases, text contrast, links and original tap behavior. No animation or inference changes.",
+    "status": "delivered183: Android published both channels; web live; physical-phone installation unverified",
+    "evidence": "Configured Mobbin MCP and six reference screens inspected. Browser light/dark narrow/wide normal/2x phases and links passed. Both Android unit variants/lints and19native journeys passed; actual final reading/footer/optimized screenshots reviewed. Native keyboard focus pixels observed in same-source preview only; final focused capture gap retained without a visual pass claim. See qualification/immersion-reading-183.json."
   }
 }

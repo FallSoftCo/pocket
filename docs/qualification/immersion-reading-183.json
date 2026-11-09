@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "date": "2026-11-09",
+  "versionCode": 183,
+  "versionName": "0.5.0-alpha.165",
+  "state": "delivered",
+  "changes": [
+    "Quiet 6% foreground phrase highlight replaces the 55% idle outline on Android and web",
+    "Control labels transparent; touch/hover feedback and keyboard-focus-only ring",
+    "Native measured phrase reserve uses correct PlaceholderSpan conversion at larger font scales; normal glyph accessibility scaling retained"
+  ],
+  "research": {
+    "provider": "configured Mobbin MCP",
+    "screensInspected": 6,
+    "references": [
+      "https://mobbin.com/screens/058e54c1-2c6e-4568-939e-72ca0bd6ef85",
+      "https://mobbin.com/screens/6a7afff6-1193-4511-91de-129f1cc52007"
+    ],
+    "limits": "Visual reading references, not a language-learning effectiveness study; no reference assets copied."
+  },
+  "evidence": {
+    "browser": "Eight actual theme/width/text-scale combinations; four stable phases; Enter/Space semantics and link action; real composed conversation/drawer journey",
+    "nativePreview": "34.408s existing reading journey: actual tap/link/Tab/Enter, normal+2x paragraph containment and stable measured phases",
+    "webDelivery": "Both private web gateways serve verified CSS SHA 646ca7a36f627c114f3efe24f8bf2160e3e9f66253acca9c92ed9d0a43c78f85; backend/native PIDs and state unchanged",
+    "androidRelease": {
+      "build": "Both signed optimized APK variants complete; exact compatible APK catalog/history/question/reopen journey and two actual screenshots passed",
+      "unitPerVariant": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "lints": [
+        "debug",
+        "release"
+      ],
+      "nativeJourneys": 19,
+      "nativeFailures": 0,
+      "finalVisuals": "16 footer and 5 reading screenshots inspected; legibility and containment accepted",
+      "focusBoundary": "Keyboard Tab/Enter assertions passed. Preview screenshot visibly shows ring; final screenshot does not, despite its later XML confirming focus. Same production and qualification source fingerprints; repaint/capture timing remains unproven. No final focus-pixel pass claim.",
+      "productionSourceSha": "1d342ecb47d3db1264ab2e92cad2485d3ac61075ddaf8ca4ed3392f1e03d6659",
+      "qualificationInputSha": "c75b08e1d97174a1eb36b1da40fd1f65d8c11f38985e5c1e40a9f34048f10e9f"
+    },
+    "phoneTouched": false,
+    "github": "Backend and Android CI passed on e3e55ee0, identical production and qualification source to delivered183."
+  },
+  "limits": [
+    "Fixed reserve can still leave whitespace for the longer alternative; this change does not redesign phrase wrapping.",
+    "Browser focus computed style and keyboard interaction passed. Native focus ring pixels observed in preview only; final capture gap retained separately.",
+    "No handset install or physical performance claim."
+  ],
+  "delivery": {
+    "android": "183 / 0.5.0-alpha.165 published on workstation and Mac; authenticated compatible-signer metadata verified on both. One announcement2874 accepted by FCM on attempt1. Handset installation unverified.",
+    "web": "Quiet highlight assets live on both existing private workstation web gateways; reload existing browser tabs. Mac sessions use these same gateways.",
+    "backend": "Existing182 backend and native Codex processes unchanged."
+  },
+  "artifacts": [
+    {
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "path": "nextcomp-183-b28f55b44c93.apk",
+      "sha256": "ab54405baf7f5576c1da5019ce50ce6974417f642ef2f99629d4850d97b624bc",
+      "size": 52681663
+    },
+    {
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "path": "nextcomp-183-22ecabe28e15.apk",
+      "sha256": "7bd4d49abddcb3ed103a5eb98e5d5ac5d08b9727f3e0a6e38b388e1c39fcff97",
+      "size": 52681663
+    }
+  ]
+}
