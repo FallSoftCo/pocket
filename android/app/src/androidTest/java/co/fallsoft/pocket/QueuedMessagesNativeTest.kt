@@ -40,7 +40,45 @@ class QueuedMessagesNativeTest {
    compose.onNodeWithText("Ordinary completed work",useUnmergedTree=true).assertDoesNotExist()
    compose.onNodeWithText("All sessions",useUnmergedTree=true).assertIsDisplayed()
    assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"needs-you-native-list.png")))
-   compose.onNodeWithContentDescription("Open Chat for Native canonical work").performClick()
+   // Needs you keeps the named parent and expands both affected child rows.
+   prefs.edit().putString(Pocket.key("draft:$tid"),"Preserve parent guidance draft").commit()
+   compose.onNodeWithText("Review runtime error",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+   compose.onNodeWithText("Review agent",useUnmergedTree=true).performScrollTo().performClick()
+   await{Pocket.selected=="attention-error"&&Pocket.detail?.optJSONObject("thread")?.s("id")=="attention-error"}
+   compose.onNodeWithText("Parent: Native canonical work",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText("Keyboard",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText("Open parent task",useUnmergedTree=true).performClick()
+   await{Pocket.selected==tid&&PocketTranscript.currentHistoryVerified}
+   assertTrue(requireNotNull(Pocket.captureEnvironment()).matches(destination))
+   assertEquals("Preserve parent guidance draft",prefs.getString(Pocket.key("draft:$tid"),null))
+   compose.onNode(hasSetTextAction()).assertTextEquals("Preserve parent guidance draft")
+   val parentOpened=qa("attention-state")
+   assertEquals("Opening parent must not send guidance",0,parentOpened.optInt("workSubmissions"))
+   assertEquals(0,parentOpened.getJSONArray("calls").length())
+   assertEquals(0,parentOpened.getJSONArray("answers").length())
+   device.pressBack() // Hide the parent's keyboard before returning to the catalog.
+   main{Pocket.closeTask();UnifiedWorkCatalog.refresh()}
+   await{Pocket.selected==null&&Pocket.tasks.any{it.id=="attention-question"&&it.needsReview()}}
+   compose.onNodeWithText("Review request",useUnmergedTree=true).performScrollTo().performClick()
+   await{Pocket.selected=="attention-question"&&Pocket.detail?.optJSONArray("pending")?.length()==1}
+   compose.onNodeWithText("Parent: Native canonical work",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText("Which path should this child take?",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText("Keyboard",useUnmergedTree=true).assertDoesNotExist()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"needs-you-child-request.png")))
+   compose.onNodeWithText("Proceed",useUnmergedTree=true).performScrollTo().performClick()
+   compose.onNodeWithText("Send answers",useUnmergedTree=true).performScrollTo().performClick()
+   await{qa("attention-state").getJSONArray("answers").length()==1&&Pocket.detail?.optJSONArray("pending")?.length()==0}
+   val childReceipt=qa("attention-state")
+   val answer=childReceipt.getJSONArray("answers").getJSONObject(0)
+   assertEquals("attention-question",answer.getString("threadId"))
+   assertEquals("attention-child-request",answer.getString("requestId"))
+   assertEquals("original",answer.getString("origin"));assertEquals("Proceed",answer.getString("answer"))
+   assertEquals(0,childReceipt.optInt("workSubmissions"));assertEquals(0,childReceipt.getJSONArray("calls").length())
+   assertEquals("Preserve parent guidance draft",prefs.getString(Pocket.key("draft:$tid"),null))
+   java.io.File(c.cacheDir,"needs-you-child-receipt.json").writeText(childReceipt.toString())
+   main{Pocket.closeTask();UnifiedWorkCatalog.refresh()}
+   await{Pocket.selected==null&&Pocket.tasks.firstOrNull{it.id=="attention-question"}?.needsReview()==false}
+   compose.onNodeWithContentDescription("Open Chat for Native canonical work").performScrollTo().performClick()
    await{Pocket.selected==tid&&PocketTranscript.currentHistoryVerified&&Pocket.detail?.optJSONArray("outgoing")?.length()==1}
    compose.onNodeWithTag("outgoing-needs-review-original").assertIsDisplayed()
    assertEquals("Review opened without resubmitting",0,qa("queue-state").getJSONArray("calls").length())

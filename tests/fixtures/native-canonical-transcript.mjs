@@ -9,7 +9,9 @@ let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads
 let archiveHold=false,archiveError=false,archiveOrigins=[];
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
 const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
-let attentionStudy=false,attentionResolved=false,reportReads=0;
+let attentionStudy=false,attentionResolved=false,reportReads=0,attentionChildQuestion=false;const attentionAnswers=[];
+const attentionChild=id=>({...meta(),id,name:id==='attention-error'?'Runtime child':'Question child',agentNickname:id==='attention-error'?'Runtime child':'Question child',parentThreadId:'same-thread',isChild:true,canAcceptDirectInput:false,status:{type:id==='attention-error'?'systemError':'active'},source:{subAgent:{thread_spawn:{parent_thread_id:'same-thread'}}}});
+const attentionRequest=()=>({id:'attention-child-request',method:'item/tool/requestUserInput',_pocketUI:{token:'synthetic-child-request-v1'},params:{threadId:'attention-question',turnId:'native-turn',itemId:'child-question',questions:[{id:'choice',header:'Child choice',question:'Which path should this child take?',options:[{label:'Proceed',description:'Use the synthetic child path'}]}]}});
 let queueStudy=false,queueRevision=1,queueHold=false;const queueCalls=[];let queueItems=[];
 const queueSnapshot=()=>({version:1,revision:queueRevision,items:structuredClone(queueItems)});
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:queueStudy?'active':'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
@@ -51,9 +53,20 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
  if(path==='/_qa/attention-setup'){
-  attentionStudy=true;attentionResolved=false;queueStudy=true;queueRevision++;queueHold=false;queueCalls.length=0;
+  attentionStudy=true;attentionResolved=false;attentionChildQuestion=true;attentionAnswers.length=0;queueStudy=true;queueRevision++;queueHold=false;queueCalls.length=0;
   queueItems=[{id:'needs-review-original',threadId:'same-thread',text:'Delivery needs checking',state:'unknown',mode:'steer'}];
   res.end(JSON.stringify({ok:true}));return;
+ }
+ if(path==='/_qa/attention-state'){res.end(JSON.stringify({answers:attentionAnswers,workSubmissions,calls:queueCalls,reportReads}));return;}
+ if(attentionStudy&&path==='/api/requests/attention-child-request/answer'){
+  const answer=JSON.parse(raw||'{}'),origin=req.headers.authorization==='Bearer synthetic-system76-queue'?'original':'other';
+  if(!attentionChildQuestion||origin!=='original'||answer.requestToken!=='synthetic-child-request-v1'||answer.answers?.choice!=='Proceed'){res.writeHead(409).end('{"error":"Wrong original child request"}');return;}
+  attentionAnswers.push({threadId:'attention-question',requestId:'attention-child-request',origin,answer:answer.answers.choice});attentionChildQuestion=false;revision++;
+  broadcast({type:'timeline',threadId:'attention-question',version:revision,reload:true,historyHead:{threadId:'attention-question',epoch,version:revision}});
+  res.end(JSON.stringify({ok:true,submitted:true}));return;
+ }
+ if(attentionStudy&&/^\/api\/threads\/attention-(error|question)(?:\/native-timeline|\/head)?$/.test(path)){
+  const id=path.split('/')[3];res.end(JSON.stringify({thread:attentionChild(id),timeline:projectNativeTimeline(page(),{threadId:id,revision}),revision,historyHead:{threadId:id,epoch,version:revision},pending:id==='attention-question'&&attentionChildQuestion?[attentionRequest()]:[],outgoing:[],notifications:[],notes:[]}));return;
  }
  if(path==='/_qa/attention-resolve'){
   attentionResolved=true;queueItems=[];queueRevision++;
@@ -64,7 +77,7 @@ const server=http.createServer(async(req,res)=>{
  if(path==='/api/coordinator/reports'){reportReads++;res.end(JSON.stringify({reports:[],unreadCount:0,hasEarlier:false}));return;}
  if(attentionStudy&&path==='/api/threads'){
   const evidence={version:1,verified:true,items:attentionResolved?[]:[{kind:'deliveryUnknown',id:'outgoing:needs-review-original',label:'Check message delivery'}]};
-  res.end(JSON.stringify({threads:[{...meta(),attention:evidence,preview:'Review this original message'},{...meta(),id:'ordinary-work',name:'Ordinary completed work',status:{type:'idle'},preview:'Completed result',attention:{version:1,verified:true,items:[]}}]}));return;
+  res.end(JSON.stringify({threads:[{...meta(),attention:evidence,preview:'Review this original message'},...['attention-error','attention-question'].map(id=>({...attentionChild(id),attention:{version:1,verified:true,items:attentionResolved||id==='attention-question'&&!attentionChildQuestion?[]:[{kind:id==='attention-error'?'runtimeError':'question',id:'reason:'+id,label:id==='attention-error'?'Review runtime error':'Answer question'}]}})),{...meta(),id:'ordinary-work',name:'Ordinary completed work',status:{type:'idle'},preview:'Completed result',attention:{version:1,verified:true,items:[]}}]}));return;
  }
  if(path==='/_qa/queue-setup'){
   // Scenarios share one source/outbox lifetime: revisions must never rewind.
