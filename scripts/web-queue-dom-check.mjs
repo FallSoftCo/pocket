@@ -72,12 +72,14 @@ try{
  assert.deepEqual(errors,[]);
  // Accepted delivery must bridge delayed canonical history by exact intent ID.
  const sendBase=w.fetch,sendText='Synthetic accepted message awaiting canonical history';
+ const sendWrites=[];let firstSendId=null;
  let sentIntent=null,sendPosts=0,receiptReads=0,failSendHead=false,failedSendHeads=0,echoSend=false,independentEcho=false,releaseSend;
  const sendHeld=new Promise(resolve=>releaseSend=resolve);
  w.fetch=async(path,options={})=>{
   const route=new URL(path,f.url).pathname,json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+  if(options.method&&options.method!=='GET')sendWrites.push({route,method:options.method,body:options.body});
   if(route==='/api/threads/other-123/reply'){
-   sendPosts++;sentIntent=JSON.parse(options.body);await sendHeld;
+   sendPosts++;sentIntent=JSON.parse(options.body);firstSendId??=sentIntent.id;await sendHeld;
    return json({id:sentIntent.id,thread_id:'other-123',state:'accepted'});
   }
   if(sentIntent&&route==='/api/replies/'+sentIntent.id){receiptReads++;return json({id:sentIntent.id,thread_id:'other-123',state:'accepted'});}
@@ -85,7 +87,7 @@ try{
    if(failSendHead){failSendHead=false;failedSendHeads++;return json({error:'Synthetic accepted-send head unavailable'},503);}
    const response=await sendBase(path,options),data=await response.json();
    const rows=[...(data.timeline?.rows||[])];
-   if(echoSend)rows.push({id:'canonical-send-original',kind:'user',title:'You',text:sendText,clientId:sentIntent.id});
+   if(echoSend)rows.push({id:'canonical-send-original',kind:'user',title:'You',text:sendText,clientId:firstSendId});
    if(independentEcho)rows.push({id:'canonical-send-independent',kind:'user',title:'You',text:sendText,clientId:'independently-sent-client-id'});
    return json({...data,timeline:{...data.timeline,rows},revision:10+Number(echoSend)+Number(independentEcho)});
   }
@@ -98,9 +100,17 @@ try{
  fill($('draft'),sendText);$('composer').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
  await wait(()=>sendPosts===1&&localSendBodies().length===1,'local message visible before original POST acceptance');
  assert.equal(canonicalSendBodies().length,0,'Local delivery must not fabricate canonical history');
+ assert.equal([...localSendBodies()[0].closest('.local-send').querySelectorAll('button')].some(b=>b.textContent==='Hide local copy'),false,'Unconfirmed sends must retain their recovery presentation');
  fill($('draft'),'Next draft after accepted message');failSendHead=true;releaseSend();
  await wait(()=>receiptReads>0&&failedSendHeads===1,'original receipt accepted then one failed head');
  await new Promise(r=>setTimeout(r,100));assert.equal(sendBodies().length,1,'Accepted local row survives failed refresh');assert.equal(localSendBodies()[0]?.closest('.local-send')?.dataset.deliveryState,'accepted');assert.equal(sendPosts,1);assert.equal($('draft').value,'Next draft after accepted message');
+ await wait(()=>!$('send').disabled,'verified acceptance frees composer despite history503');
+ assert.equal([...$('outbox').querySelectorAll('button')].some(b=>b.textContent==='Check delivery'),false,'Accepted delivery must not remain unknown');
+ socket.emit('message',JSON.stringify({type:'reply',threadId:'other-123',id:firstSendId,state:'sending',outbox:{version:1,revision:50,items:[{id:firstSendId,threadId:'other-123',text:sendText,state:'sending',mode:'auto'}]}}));
+ await new Promise(r=>setTimeout(r,100));
+ assert.equal(localSendBodies().length,1,'Stale sending outbox must not hide durable accepted body');
+ assert.equal(localSendBodies()[0].closest('.local-send').dataset.deliveryState,'accepted');
+ assert.equal(d.querySelector(`[data-outgoing-id="${firstSendId}"]`),null,'Stale same-ID outgoing must not duplicate accepted presentation');
  click(d.querySelector('[data-id=parent-123]'));await wait(()=>$('draft').value==='Keep the next draft','other source draft isolation');
  assert.equal(sendBodies().length,0,'Accepted local row must not paint another source');
  click(d.querySelector('[data-id=other-123]'));await wait(()=>$('draft').value==='Next draft after accepted message'&&sendBodies().length===1,'accepted row and next draft survive reopen without echo');
@@ -109,7 +119,19 @@ try{
  echoSend=true;f.broadcast({type:'conversationChanged',threadId:'other-123'});
  await wait(()=>sendBodies().length===2&&canonicalSendBodies().some(n=>n.dataset.id==='canonical-send-original')&&localSendBodies().length===0,'exact client ID echo replaces only its local body');
  assert.equal(sendPosts,1,'Refresh and canonical reconciliation must never resubmit');assert.equal($('draft').value,'Next draft after accepted message');
- const acceptedSend={passed:true,originalId:sentIntent.id,sendPosts,receiptReads,failedSendHeads,visibleBeforeAcceptance:true,acceptedUntilExactEcho:true,sameTextDistinct:true,sourceAndDraftIsolation:true,noRefreshResubmission:true};
+ // A separate explicit second send exercises presentation-only dismissal,
+ // without sacrificing the first message's exact canonical-echo assertions.
+ fill($('draft'),sendText);$('composer').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+ await wait(()=>sendPosts===2&&localSendBodies()[0]?.closest('.local-send')?.dataset.deliveryState==='accepted'&&!$('send').disabled,'second explicit send accepted');
+ assert.notEqual(sentIntent.id,firstSendId);assert.equal(sendBodies().length,3);
+ fill($('draft'),'Draft survives hiding accepted copy');
+ const writesBeforeHide=sendWrites.length;
+ click([...localSendBodies()[0].closest('.local-send').querySelectorAll('button')].find(b=>b.textContent==='Hide local copy'));
+ await wait(()=>localSendBodies().length===0,'hide accepted local copy');
+ assert.equal(canonicalSendBodies().length,2,'Hide must preserve canonical messages');
+ assert.equal(sendWrites.length,writesBeforeHide,'Hide local copy must not issue a mutation');
+ assert.equal(sendPosts,2);assert.equal($('draft').value,'Draft survives hiding accepted copy');
+ const acceptedSend={passed:true,originalId:firstSendId,secondExplicitId:sentIntent.id,sendPosts,receiptReads,failedSendHeads,composerFreedAfterAcceptance:true,staleSendingCannotDowngrade:true,hidePresentationOnly:true,visibleBeforeAcceptance:true,acceptedUntilExactEcho:true,sameTextDistinct:true,sourceAndDraftIsolation:true,noRefreshResubmission:true};
  // Needs you uses typed source-qualified catalog summaries, never reports.
  const alpha='env_alpha__c2FtZS10aHJlYWQ',beta='env_beta__c2FtZS10aHJlYWQ',questionId='env_alpha__bmVlZHMtcXVlc3Rpb24',alphaParent='env_alpha__cGFyZW50';
  let questionPending=true,unknownPending=true,parentAvailable=true;const attentionRequests=[];
