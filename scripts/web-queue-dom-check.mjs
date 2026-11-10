@@ -70,6 +70,46 @@ try{
  click(d.querySelector('[data-id=parent-123]'));await wait(()=>$('draft').value==='Keep the next draft','original draft restored');
  await new Promise(r=>setTimeout(r,150));assert.equal(promotions,1);assert.equal($('outbox').textContent.includes('Original queued steering text'),false);assert.ok($('outbox').textContent.includes('Keep this queue paused'));
  assert.deepEqual(errors,[]);
+ // Accepted delivery must bridge delayed canonical history by exact intent ID.
+ const sendBase=w.fetch,sendText='Synthetic accepted message awaiting canonical history';
+ let sentIntent=null,sendPosts=0,receiptReads=0,failSendHead=false,failedSendHeads=0,echoSend=false,independentEcho=false,releaseSend;
+ const sendHeld=new Promise(resolve=>releaseSend=resolve);
+ w.fetch=async(path,options={})=>{
+  const route=new URL(path,f.url).pathname,json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
+  if(route==='/api/threads/other-123/reply'){
+   sendPosts++;sentIntent=JSON.parse(options.body);await sendHeld;
+   return json({id:sentIntent.id,thread_id:'other-123',state:'accepted'});
+  }
+  if(sentIntent&&route==='/api/replies/'+sentIntent.id){receiptReads++;return json({id:sentIntent.id,thread_id:'other-123',state:'accepted'});}
+  if(route==='/api/threads/other-123'&&!options.body){
+   if(failSendHead){failSendHead=false;failedSendHeads++;return json({error:'Synthetic accepted-send head unavailable'},503);}
+   const response=await sendBase(path,options),data=await response.json();
+   const rows=[...(data.timeline?.rows||[])];
+   if(echoSend)rows.push({id:'canonical-send-original',kind:'user',title:'You',text:sendText,clientId:sentIntent.id});
+   if(independentEcho)rows.push({id:'canonical-send-independent',kind:'user',title:'You',text:sendText,clientId:'independently-sent-client-id'});
+   return json({...data,timeline:{...data.timeline,rows},revision:10+Number(echoSend)+Number(independentEcho)});
+  }
+  return sendBase(path,options);
+ };
+ const canonicalSendBodies=()=>[...$('transcript').children].filter(n=>n._row?.kind==='user'&&n._row.text===sendText);
+ const localSendBodies=()=>[...$('outbox').querySelectorAll('.local-send-body')].filter(n=>n.textContent===sendText);
+ const sendBodies=()=>[...canonicalSendBodies(),...localSendBodies()];
+ click(d.querySelector('[data-id=other-123]'));await wait(()=>$('title').textContent==='Compare lighting studies'&&!$('send').disabled,'send source ready');
+ fill($('draft'),sendText);$('composer').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+ await wait(()=>sendPosts===1&&localSendBodies().length===1,'local message visible before original POST acceptance');
+ assert.equal(canonicalSendBodies().length,0,'Local delivery must not fabricate canonical history');
+ fill($('draft'),'Next draft after accepted message');failSendHead=true;releaseSend();
+ await wait(()=>receiptReads>0&&failedSendHeads===1,'original receipt accepted then one failed head');
+ await new Promise(r=>setTimeout(r,100));assert.equal(sendBodies().length,1,'Accepted local row survives failed refresh');assert.equal(localSendBodies()[0]?.closest('.local-send')?.dataset.deliveryState,'accepted');assert.equal(sendPosts,1);assert.equal($('draft').value,'Next draft after accepted message');
+ click(d.querySelector('[data-id=parent-123]'));await wait(()=>$('draft').value==='Keep the next draft','other source draft isolation');
+ assert.equal(sendBodies().length,0,'Accepted local row must not paint another source');
+ click(d.querySelector('[data-id=other-123]'));await wait(()=>$('draft').value==='Next draft after accepted message'&&sendBodies().length===1,'accepted row and next draft survive reopen without echo');
+ independentEcho=true;f.broadcast({type:'conversationChanged',threadId:'other-123'});
+ await wait(()=>sendBodies().length===2&&localSendBodies().length===1,'independent same-text client ID cannot retire original local body');
+ echoSend=true;f.broadcast({type:'conversationChanged',threadId:'other-123'});
+ await wait(()=>sendBodies().length===2&&canonicalSendBodies().some(n=>n.dataset.id==='canonical-send-original')&&localSendBodies().length===0,'exact client ID echo replaces only its local body');
+ assert.equal(sendPosts,1,'Refresh and canonical reconciliation must never resubmit');assert.equal($('draft').value,'Next draft after accepted message');
+ const acceptedSend={passed:true,originalId:sentIntent.id,sendPosts,receiptReads,failedSendHeads,visibleBeforeAcceptance:true,acceptedUntilExactEcho:true,sameTextDistinct:true,sourceAndDraftIsolation:true,noRefreshResubmission:true};
  // Needs you uses typed source-qualified catalog summaries, never reports.
  const alpha='env_alpha__c2FtZS10aHJlYWQ',beta='env_beta__c2FtZS10aHJlYWQ',questionId='env_alpha__bmVlZHMtcXVlc3Rpb24',alphaParent='env_alpha__cGFyZW50';
  let questionPending=true,unknownPending=true,parentAvailable=true;const attentionRequests=[];
@@ -131,6 +171,6 @@ try{
  assert.equal([...requests,...attentionRequests].some(r=>/coordinator\/reports|coordinator\/reporting/.test(r.path)),false,'Needs you must not fetch report feeds');
  assert.equal(attentionRequests.filter(r=>r.method==='POST'&&r.path.includes(questionId)).length,1);assert.equal(attentionRequests.filter(r=>r.method==='POST').length,1,'Only explicit child answer may mutate');assert.deepEqual(errors,[]);
  const needsYou={passed:true,namedParentGrouping:true,sameSourceParentNavigation:true,missingParentFallback:true,parentDraftPreserved:true,childDecisionNotRedirected:true,noImplicitMutation:true,sourceQualifiedSessions:[alpha,beta],sameNativeThreadId:'same-thread',sessionCountNotReasonCount:true,affectedChildVisible:true,questionAnswerOnce:true,unknownReviewedWithoutSend:true,noReportFetch:true,emptyFilterEscapeRestoresView:true,requests:attentionRequests};
- const result={passed:true,bundledAppSha256:createHash('sha256').update(bundle.outputFiles[0].text).digest('hex'),needsYou,promotionOriginalId:'promote-dom',promotionOriginalText:'Original queued steering text',promotionDispatches:promotions,doubleTapOneDispatch:true,unknownSendingNonpromotable:true,heldOthersRetained:true,sourceSwitchPreservedDraft:true,latePromotionAckCannotPaintForeignSource:true,evidence:'actual app in virtual DOM; synthetic HTTP and WebSocket observations',queueVisibleBeforeHistory:true,removalFromOriginalAckWithoutSocket:true,lateHistoryCannotResurrect:true,draftPreserved:true,removals,errors};
+ const result={passed:true,acceptedSend,bundledAppSha256:createHash('sha256').update(bundle.outputFiles[0].text).digest('hex'),needsYou,promotionOriginalId:'promote-dom',promotionOriginalText:'Original queued steering text',promotionDispatches:promotions,doubleTapOneDispatch:true,unknownSendingNonpromotable:true,heldOthersRetained:true,sourceSwitchPreservedDraft:true,latePromotionAckCannotPaintForeignSource:true,evidence:'actual app in virtual DOM; synthetic HTTP and WebSocket observations',queueVisibleBeforeHistory:true,removalFromOriginalAckWithoutSocket:true,lateHistoryCannotResurrect:true,draftPreserved:true,removals,errors};
  if(process.env.WEB_QA_OUTPUT)await writeFile(process.env.WEB_QA_OUTPUT,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 }catch(error){if(process.env.WEB_QA_OUTPUT)await writeFile(process.env.WEB_QA_OUTPUT,JSON.stringify({passed:false,error:error.stack,errors},null,2));const d=dom?.window.document;console.error(JSON.stringify({stage:'failure',errors,appHidden:d?.getElementById('app')?.hidden,pairError:d?.getElementById('pair-error')?.textContent,appError:d?.getElementById('error')?.textContent,connection:d?.getElementById('connection')?.textContent,socketState:socket?.readyState,workList:d?.getElementById('work-list')?.innerHTML.slice(0,500)}));throw error;}finally{release();promotionRelease();if(socket){socket.onclose=null;socket.onmessage=null;socket.onopen=null;socket.onerror=()=>{};if(socket.readyState!==WebSocket.CLOSED)await new Promise(resolve=>{socket.once('close',resolve);socket.terminate();});}dom?.window.close();await f.close();}
