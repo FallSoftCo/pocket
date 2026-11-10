@@ -4049,6 +4049,7 @@
   "immersion_phrase_hold_20261110": {
     "requirement": "Tapped phrases hold the explicitly chosen language rather than rejoining the global flip phase.",
     "design": "Manual phrase state is separate from automatic phase; repeated tap switches and holds the opposite language. Content-bound native saveable state and bounded web reading-session choices survive ordinary redraw/scroll. Untouched phrases continue cycling; replacement text does not inherit stale offsets.",
-    "status": "Implementing Android/web and actual interaction qualification."
+    "status": "Delivered: Android188/alpha170 published on workstation and Mac; web live on both private routes. Actual browser8cases,20native journeys and exact optimized APK passed. Phone install not performed.",
+    "evidence": "docs/qualification/immersion-phrase-hold188.json"
   }
 }
