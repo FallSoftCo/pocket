@@ -4045,5 +4045,10 @@
     "design": "Only explicit immediate input checks the newest native turn in one bounded summary read and rechecks current thread/transport before turn/start. Failure must be terminal; active, missing, unknown and changed transport remain protected. Queued work does not auto-resume; original outgoing identity and provenance remain intact.",
     "verification": "Real HTTP paired-device admission, SQLite receipt and native socket integration: manual send, retry identity/dedup, pending queue preservation, active race, nonfailed head rejection and lost acknowledgement hold. No generic400 automatic retry or changed runtime settings.",
     "status": "Deployed to workstation and Mac backends; existing Android/web clients use unchanged API. Native Codex processes, pairing, queued work and uncertain receipts preserved. No APK required."
+  },
+  "immersion_phrase_hold_20261110": {
+    "requirement": "Tapped phrases hold the explicitly chosen language rather than rejoining the global flip phase.",
+    "design": "Manual phrase state is separate from automatic phase; repeated tap switches and holds the opposite language. Content-bound native saveable state and bounded web reading-session choices survive ordinary redraw/scroll. Untouched phrases continue cycling; replacement text does not inherit stale offsets.",
+    "status": "Implementing Android/web and actual interaction qualification."
   }
 }

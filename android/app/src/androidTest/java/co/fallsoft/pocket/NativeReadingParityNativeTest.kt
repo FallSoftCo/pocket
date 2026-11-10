@@ -124,6 +124,14 @@ class NativeReadingParityNativeTest {
    main{phase.intValue=0};Thread.sleep(200)
    val phrase=device.wait(Until.findObject(By.desc("The correction")),2000);assertNotNull(phrase);phrase!!.click()
    assertTrue("Direct phrase tap did not change language",device.wait(Until.hasObject(By.desc("La correzione")),2000))
+   for(value in listOf(1,2,3,0)){
+    main{phase.intValue=value};Thread.sleep(250)
+    assertTrue("Global flip erased the manually chosen language",device.hasObject(By.desc("La correzione")))
+    assertEquals("Held phrase changed geometry",before,boxes.get())
+    if(value==3)assertTrue("Untouched phrases stopped cycling",device.hasObject(By.text("in questa conversazione")))
+   }
+   device.findObject(By.desc("La correzione")).click()
+   assertTrue("Second tap must hold English",device.wait(Until.hasObject(By.desc("The correction")),2000))
    assertEquals(before,boxes.get())
    assertTrue("Gallery poster not rendered inline",device.wait(Until.hasObject(By.desc("Native material study")),10000))
    device.takeScreenshot(java.io.File(c.cacheDir,"native-reading-gallery-slots.png"))
