@@ -131,9 +131,53 @@ class QueuedMessagesNativeTest {
    assertEquals("Keep my unsent draft",prefs.getString(Pocket.key("draft:$tid"),null))
    java.io.File(c.cacheDir,"queued-message-native.json").writeText(org.json.JSONObject().put("syntheticUiFixture",true).put("nativeRpcDeliveryProven",false).put("calls",calls).put("originalAckRemovedPromotion",true).put("otherQueueRemainsHeld",true).put("draftAndImePreservedBeforeNavigation",true).put("lateAckDidNotReopen",true).toString())
    assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native.png")))
+   // Original POST acceptance and canonical history echo are separate boundaries.
+   main{Pocket.closeTask()};assertTrue(qa("sent-setup").optBoolean("ok"))
+   main{Pocket.open(tid,keyboard=true)}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==0}
+   val sentText="Keep this sent message visible"
+   compose.onNode(hasSetTextAction()).performTextReplacement(sentText)
+   compose.onNodeWithContentDescription("Send message").performClick()
+   await{qa("sent-state").optInt("submissions")==1}
+   val sentId=qa("sent-state").getJSONObject("intent").getString("id")
+   compose.onNode(hasText(sentText) and !hasSetTextAction(),useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+   assertFalse(qa("sent-state").optBoolean("accepted"))
+   qa("sent-accept")
+   await{PocketReplies.entries(tid).isEmpty()&&CodexConversations.snapshot.deliveries.any{it.id==sentId&&it.state=="accepted"}}
+   // An unrelated canonical user input with identical words cannot retire ours.
+   await{PocketTranscript.rows.any{it.s("clientId")=="unrelated-same-text"}}
+   assertTrue(CodexConversations.snapshot.deliveries.any{it.id==sentId})
+   compose.onNodeWithText("Sent",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"sent-awaiting-history.png")))
+   main{Pocket.closeTask();Pocket.open(tid)}
+   await{PocketTranscript.currentHistoryVerified&&CodexConversations.snapshot.deliveries.any{it.id==sentId&&it.state=="accepted"}}
+   val beta=EnvironmentIdentity("qa_sent_beta","Synthetic alternate source")
+   val profiles=org.json.JSONArray(prefs.getString("environments:v1","[]"))
+   profiles.put(org.json.JSONObject().put("id",beta.id).put("name",beta.name))
+   prefs.edit().putString("environments:v1",profiles.toString()).putString(beta.key("server"),destination.endpoint)
+    .putString(beta.key("token"),"synthetic-system76-beta").putString(beta.key("deviceId"),"synthetic-device-beta").commit()
+   main{Pocket.activateEnvironment(beta.id);Pocket.open(tid)}
+   await{Pocket.environmentId==beta.id&&PocketTranscript.currentHistoryVerified}
+   assertTrue(CodexConversations.snapshot.deliveries.none{it.id==sentId})
+   assertTrue(PocketTranscript.rows.none{it.s("clientId")==sentId||it.s("text")==sentText})
+   compose.onNodeWithText(sentText,useUnmergedTree=true).assertDoesNotExist()
+   main{Pocket.activateEnvironment(destination.environment.id);Pocket.open(tid)}
+   await{PocketTranscript.currentHistoryVerified&&CodexConversations.snapshot.deliveries.any{it.id==sentId&&it.state=="accepted"}}
+   qa("sent-echo")
+   await{PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")==sentId}==1&&CodexConversations.snapshot.deliveries.none{it.id==sentId}}
+   assertEquals(1,PocketTranscript.rows.count{it.s("clientId")=="unrelated-same-text"})
+   assertEquals(2,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("text")==sentText})
+   assertTrue(PocketReplies.entries(tid).isEmpty())
+   compose.onNodeWithText("Sent",useUnmergedTree=true).assertDoesNotExist()
+   val sentReceipt=qa("sent-state");assertEquals(1,sentReceipt.optInt("submissions"))
+   assertEquals("original",sentReceipt.getJSONObject("intent").getString("origin"))
+   java.io.File(c.cacheDir,"sent-delayed-echo-receipt.json").writeText(sentReceipt.put("exactCanonicalCount",1).put("unrelatedSameTextPreserved",true).put("sourceIsolation",true).put("syntheticUiFixture",true).toString())
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"sent-canonical-echo.png")))
+   qa("sent-end")
+
   }catch(error:Throwable){
    device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native-failure.png"));device.dumpWindowHierarchy(java.io.File(c.cacheDir,"queued-message-native-failure.xml"));throw error
-  }finally{qa("queue-release");main{Pocket.closeTask();PocketLive.stop()}}
+  }finally{qa("queue-release");qa("sent-end");main{Pocket.closeTask();PocketLive.stop()}}
 
  }
 }

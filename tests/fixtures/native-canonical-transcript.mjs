@@ -12,6 +12,7 @@ const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,
 let attentionStudy=false,attentionResolved=false,reportReads=0,attentionChildQuestion=false;const attentionAnswers=[];
 const attentionChild=id=>({...meta(),id,name:id==='attention-error'?'Runtime child':'Question child',agentNickname:id==='attention-error'?'Runtime child':'Question child',parentThreadId:'same-thread',isChild:true,canAcceptDirectInput:false,status:{type:id==='attention-error'?'systemError':'active'},source:{subAgent:{thread_spawn:{parent_thread_id:'same-thread'}}}});
 const attentionRequest=()=>({id:'attention-child-request',method:'item/tool/requestUserInput',_pocketUI:{token:'synthetic-child-request-v1'},params:{threadId:'attention-question',turnId:'native-turn',itemId:'child-question',questions:[{id:'choice',header:'Child choice',question:'Which path should this child take?',options:[{label:'Proceed',description:'Use the synthetic child path'}]}]}});
+let sentStudy=false,sentAccepted=false,sentEcho=false,sentIntent=null,sentSubmissions=0;
 let queueStudy=false,queueRevision=1,queueHold=false;const queueCalls=[];let queueItems=[];
 const queueSnapshot=()=>({version:1,revision:queueRevision,items:structuredClone(queueItems)});
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:queueStudy?'active':'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
@@ -52,6 +53,21 @@ const server=http.createServer(async(req,res)=>{
  if(!String(req.headers.authorization||'').startsWith('Bearer synthetic-system76')){res.writeHead(401).end('{}');return;}
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
+ if(path==='/_qa/sent-setup'){sentStudy=true;sentAccepted=false;sentEcho=false;sentIntent=null;sentSubmissions=0;queueStudy=false;queueItems=[];queueRevision++;revision++;res.end(JSON.stringify({ok:true}));return;}
+ if(path==='/_qa/sent-state'){res.end(JSON.stringify({intent:sentIntent,submissions:sentSubmissions,accepted:sentAccepted,echo:sentEcho}));return;}
+ if(path==='/_qa/sent-accept'||path==='/_qa/sent-echo'){
+  if(path.endsWith('sent-accept'))sentAccepted=true;else sentEcho=true;
+  revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});res.end(JSON.stringify({ok:true}));return;
+ }
+ if(path==='/_qa/sent-end'){sentAccepted=true;sentStudy=false;res.end(JSON.stringify({ok:true}));return;}
+ if(sentStudy&&path==='/api/threads/same-thread/reply'&&req.method==='POST'){
+  const value=JSON.parse(raw||'{}');sentSubmissions++;
+  if(req.headers.authorization!=='Bearer synthetic-system76-queue'||sentIntent){res.writeHead(409).end('{"error":"Duplicate or foreign synthetic send"}');return;}
+  sentIntent={id:value.id,text:value.text,mode:value.mode,threadId:'same-thread',origin:'original'};
+  while(!sentAccepted&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
+  if(!res.destroyed)res.end(JSON.stringify({id:value.id,state:'accepted',outbox:queueSnapshot()}));return;
+ }
+ if(sentStudy&&sentIntent&&path==='/api/replies/'+sentIntent.id){res.end(JSON.stringify({id:sentIntent.id,thread_id:'same-thread',state:sentAccepted?'accepted':'sending',outbox:queueSnapshot()}));return;}
  if(path==='/_qa/attention-setup'){
   attentionStudy=true;attentionResolved=false;attentionChildQuestion=true;attentionAnswers.length=0;queueStudy=true;queueRevision++;queueHold=false;queueCalls.length=0;
   queueItems=[{id:'needs-review-original',threadId:'same-thread',text:'Delivery needs checking',state:'unknown',mode:'steer'}];
@@ -150,10 +166,15 @@ const server=http.createServer(async(req,res)=>{
   while((hold||holdOlder&&cursor)&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
   if(res.destroyed)return;
   if(offline){res.writeHead(503).end('{"error":"Synthetic native outage"}');return;}
-  const source=replay?captured.get(cursor):page();
+  let source=replay?captured.get(cursor):page();
+  if(sentStudy&&sentAccepted&&sentIntent&&!req.headers.authorization.endsWith('-beta'))source={...source,data:[...source.data,
+   {type:'turnStarted',position:20,turnId:'sent-turn',startedAt:3},
+   {type:'item',position:21,turnId:'sent-turn',item:{id:'unrelated-sent-item',type:'userMessage',clientId:'unrelated-same-text',content:[{type:'text',text:sentIntent.text}]}},
+   ...(sentEcho?[{type:'item',position:22,turnId:'sent-turn',item:{id:'original-sent-item',type:'userMessage',clientId:sentIntent.id,content:[{type:'text',text:sentIntent.text}]}}]:[]),
+   {type:'turnCompleted',position:23,turnId:'sent-turn',status:'completed'}]};
   if(!source){res.writeHead(409).end('{"error":"Capture boundary, not end of history"}');return;}
   body={thread:meta(),timeline:projectNativeTimeline(source,{threadId:'same-thread',revision}),revision,
-   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:queueStudy?queueSnapshot().items:[],...(queueStudy?{outbox:queueSnapshot()}:{}),notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
+   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:queueStudy?queueSnapshot().items:[],...((queueStudy||sentStudy)?{outbox:queueSnapshot()}:{}),notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
  }else if(path==='/api/threads/same-thread'||path==='/api/threads/same-thread/head'){
   legacyReads++;res.writeHead(500).end('{"error":"Native source used legacy history"}');return;
  }else if(path==='/_qa/result'){retainedResult=true;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
