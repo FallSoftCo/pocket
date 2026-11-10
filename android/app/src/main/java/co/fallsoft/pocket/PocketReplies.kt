@@ -6,6 +6,7 @@ import org.json.JSONObject
 
 /** Diagnostic admission outcome only; never a command or delivery receipt. */
 enum class ReplyAdmissionObservation { FAILED, UNKNOWN, CANCELLED }
+internal data class ClientReplyPresentation(val detail:JSONObject?,val deliveries:List<ClientReplyIntent>)
 internal object PocketReplies {
     private const val storeKey="client-replies:v1"
     private val journal by lazy{ClientReplyJournal({Pocket.prefs.getString(storeKey,"[]")?:"[]"},{Pocket.prefs.edit().putString(storeKey,it).commit()})}
@@ -14,11 +15,52 @@ internal object PocketReplies {
     var dispatching by mutableStateOf(setOf<String>());private set
     val clearedDrafts=mutableStateMapOf<String,ClearedReplyDraft>()
     private val sendingOwners=mutableMapOf<String,EnvironmentRequest>()
+    private var representedRows:List<JSONObject>?=null
+    private var representedIds:Set<String> = emptySet()
+    private fun represented(rows:List<JSONObject>):Set<String>{
+        if(rows===representedRows)return representedIds
+        val unplaced=unplacedTranscriptInputs(rows)
+        representedIds=rows.asSequence().filter{it.s("kind")=="user"&&it.s("id") !in unplaced}.map{it.s("clientId")}.filter{it.isNotBlank()}.toSet()
+        representedRows=rows;return representedIds
+    }
     fun profileChanged(){Pocket.sending=Pocket.captureEnvironment()?.let{selected->sendingOwners.values.any{it.matches(selected)}}==true}
     private fun current(intent:ClientReplyIntent):EnvironmentRequest?=Pocket.captureEnvironment(intent.environment)?.takeIf{backendOwner(it.endpoint,it.token)==intent.owner}
-    fun entries(thread:String):List<ClientReplyIntent>{revision;return runCatching{journal.all().filter{it.environment==Pocket.environmentId&&it.thread==thread}}.getOrDefault(emptyList())}
+    private fun saved(thread:String):List<ClientReplyIntent>{revision;return runCatching{journal.all().filter{it.environment==Pocket.environmentId&&it.thread==thread}}.getOrDefault(emptyList())}
+    /** Accepted records are presentation evidence, never recoverable commands. */
+    fun entries(thread:String)=saved(thread).filter{it.state!="accepted"}
     fun matchesCurrent(intent:ClientReplyIntent)=intent.environment==Pocket.environmentId&&Pocket.captureEnvironment()?.let{current(intent)?.matches(it)}==true
-    fun visible(thread:String)=entries(thread).filter{it.state !in listOf("accepted","cancelled")&&Pocket.detail?.optJSONArray("outgoing")?.objects()?.none{row->row.s("id")==it.id}!=false}
+    fun presentation(thread:String,rows:List<JSONObject>,detail:JSONObject?):ClientReplyPresentation{
+        val local=saved(thread)
+        if(local.isEmpty())return ClientReplyPresentation(detail,emptyList())
+        val accepted=local.filter{it.state=="accepted"&&matchesCurrent(it)}.mapTo(hashSetOf()){it.id}
+        val outgoing=detail?.optJSONArray("outgoing")?.objects().orEmpty()
+        // A delayed detail snapshot cannot resurrect a sending/queued card after
+        // the original receipt has already established acceptance.
+        val shown=if(outgoing.any{it.s("id") in accepted})JSONObject(detail.toString()).put("outgoing",org.json.JSONArray(outgoing.filterNot{it.s("id") in accepted}))else detail
+        val represented=represented(rows)
+        val deliveries=local.filter{intent->
+            if(intent.state=="accepted")matchesCurrent(intent)&&intent.id !in represented
+            else intent.state!="cancelled"&&shown?.optJSONArray("outgoing")?.objects()?.none{it.s("id")==intent.id}!=false
+        }
+        return ClientReplyPresentation(shown,deliveries)
+    }
+    /** Called only after repository storage commits, including background reads.
+     * An acknowledgement or same-text row is not proof of transcript coverage. */
+    fun transcriptCommitted(destination:EnvironmentRequest,thread:String,rows:List<JSONObject>){
+        if(Pocket.captureEnvironment(destination.environment.id)?.matches(destination)!=true)return
+        val owner=backendOwner(destination.endpoint,destination.token)
+        val accepted=runCatching{journal.all().filter{it.state=="accepted"&&it.environment==destination.environment.id&&it.owner==owner&&it.thread==thread}}.getOrDefault(emptyList())
+        if(accepted.isEmpty())return
+        val ids=represented(rows)
+        if(ids.isEmpty())return
+        val selected=Pocket.selected==thread&&Pocket.captureEnvironment()?.matches(destination)==true
+        val painted=if(selected&&PocketTranscript.presentationReady)PocketTranscript.rows else emptyList()
+        val retired=runCatching{
+            val safe=accepted.filter{it.id !in dispatching&&it.id in ids&&(!selected||it.id in represented(painted))&&clearDraft(it)}.mapTo(hashSetOf()){it.id}
+            journal.removeAccepted(destination.environment.id,owner,thread,safe)
+        }.getOrDefault(false)
+        if(retired)revision++
+    }
     private fun clearDraft(intent:ClientReplyIntent):Boolean{
         if(current(intent)==null)return false
         val key=intent.draftKey?:return true
@@ -33,9 +75,9 @@ internal object PocketReplies {
         sendingOwners.remove(intent.id);profileChanged()
         val next=journal.update(intent.id){old->if(old.state in listOf("accepted","cancelled"))old else old.copy(phase="observed",state=state,message=receipt.s("result",receipt.s("error")))}
         if(next!=null){
-            val cleared=if(next.state in admittedReplyStates)clearDraft(next)else false
+            if(next.state in admittedReplyStates)clearDraft(next)
             if(next.state in admittedReplyStates&&Pocket.captureEnvironment()?.let{current(next)?.matches(it)}==true)Pocket.dismissReplyFailure(next.thread,next.id)
-            if(next.state=="cancelled"||(next.state=="accepted"&&cleared))journal.remove(next.id)
+            if(next.state=="cancelled")journal.remove(next.id)
             revision++
         }
         return next?.state?:state
@@ -74,11 +116,23 @@ internal object PocketReplies {
                 else if(state in listOf("failed","unknown")&&Pocket.captureEnvironment()?.matches(destination)==true)Pocket.recordReplyFailure(intent.thread,intent.id,receipt.s("error","Message delivery needs attention"))
                 if(Pocket.captureEnvironment()?.matches(destination)==true&&Pocket.selected==intent.thread)Pocket.scheduleRefresh()
             }catch(e:CancellationException){if(!admitted)diagnose(if(marked)ReplyAdmissionObservation.UNKNOWN else ReplyAdmissionObservation.CANCELLED);throw e}
-            catch(e:Exception){problem(intent,e.message?:"Message delivery could not be confirmed");if(!admitted)diagnose(if(marked)ReplyAdmissionObservation.UNKNOWN else ReplyAdmissionObservation.FAILED)}
-            finally{busy=busy-intent.id;dispatching=dispatching-intent.id;sendingOwners.remove(intent.id);profileChanged();val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)};if(marked&&!Pocket.sending&&Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true)entries(intent.thread).firstOrNull{it.phase=="prepared"&&it.id !in busy&&matchesCurrent(it)}?.let{next->current(next)?.let{dispatch(next,it)}}}
+            catch(e:Exception){
+                // A verified socket receipt can precede a lost HTTP reply.
+                // Preserve that evidence instead of downgrading it to unknown.
+                if(!admitted&&runCatching{journal.get(intent.id)?.state=="accepted"}.getOrDefault(false)){
+                    admitted=true
+                    if(Pocket.captureEnvironment()?.matches(destination)==true)runCatching{onDone()}
+                }else if(!admitted){problem(intent,e.message?:"Message delivery could not be confirmed");diagnose(if(marked)ReplyAdmissionObservation.UNKNOWN else ReplyAdmissionObservation.FAILED)}
+            }
+            finally{busy=busy-intent.id;dispatching=dispatching-intent.id;sendingOwners.remove(intent.id);profileChanged();
+                if(Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true&&PocketTranscript.canonicalMode&&PocketTranscript.presentationReady)transcriptCommitted(destination,intent.thread,PocketTranscript.rows)
+                val pending=runCatching{journal.get(intent.id)}.getOrNull();if(pending?.state=="unconfirmed")Pocket.scope.launch{delay(800);if(current(pending)!=null)check(pending)};if(marked&&!Pocket.sending&&Pocket.selected==intent.thread&&Pocket.captureEnvironment()?.matches(destination)==true)entries(intent.thread).firstOrNull{it.phase=="prepared"&&it.id !in busy&&matchesCurrent(it)}?.let{next->current(next)?.let{dispatch(next,it)}}}
         }
     }
     fun reconcile(thread:String){
+        // Failed local draft cleanup is retried locally, not by resending or
+        // polling an already accepted command.
+        saved(thread).filter{it.state=="accepted"&&matchesCurrent(it)}.forEach{clearDraft(it)}
         entries(thread).filter{matchesCurrent(it)&&it.id !in busy}.take(16).forEach{intent->
             if(intent.phase=="prepared"){if(!Pocket.sending)current(intent)?.let{dispatch(intent,it)}}else check(intent)
         }

@@ -14,13 +14,22 @@ import androidx.compose.ui.text.style.TextOverflow
     var confirm by remember(intent.id){mutableStateOf(false)}
     val busy=intent.id in PocketReplies.busy
     val current=PocketReplies.matchesCurrent(intent)
+    if(intent.state=="accepted"&&current){
+        Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+            BilingualLabel("Sent",color=Muted)
+            if(!representedInTranscript)ImmersionText("saved-reply:"+intent.id,intent.text,rescue=false,fontSize=14.sp,lineHeight=21.sp)
+            TextButton({PocketReplies.forget(intent)},modifier=Modifier.heightIn(min=48.dp),enabled=!busy){BilingualLabel("Hide local copy",color=Muted)}
+        }
+        return
+    }
+    val sending=current&&(intent.id in PocketReplies.dispatching||intent.phase=="prepared")
     val label=if(!current)"Saved under previous pairing"else if(intent.id in PocketReplies.dispatching)"Sending"else when(intent.state){"queued"->"Queued";"held"->"Waiting in queue";"sending"->"Sending";"failed"->"Message failed";else->"Delivery not confirmed"}
     Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
         BilingualLabel(label,color=if(intent.state in admittedReplyStates)Mint else Coral)
-        if(!representedInTranscript)ImmersionText("saved-reply:"+intent.id,intent.text,rescue=false,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+        if(!representedInTranscript)ImmersionText("saved-reply:"+intent.id,intent.text,rescue=false,fontSize=14.sp,lineHeight=20.sp,maxLines=if(sending)Int.MAX_VALUE else 2,overflow=TextOverflow.Ellipsis)
         if(!current)WorkflowText("Switch back to its pairing to check delivery. Removing this copy will not cancel work already submitted.",color=Muted,fontSize=13.sp)
         if(intent.message.isNotBlank())WorkflowText(intent.message,color=Coral,fontSize=13.sp,lineHeight=19.sp,maxLines=3,overflow=TextOverflow.Ellipsis)
-        FlowRow{
+        if(!sending)FlowRow{
             TextButton({PocketReplies.check(intent)},modifier=Modifier.heightIn(min=48.dp),enabled=current&&!busy){BilingualLabel(if(busy)"Checking…" else "Check status")}
             if(intent.state !in admittedReplyStates)TextButton({confirm=true},modifier=Modifier.heightIn(min=48.dp),enabled=current&&!busy&&!Pocket.sending){BilingualLabel("Retry")}
             TextButton({onEdit(intent.text)},modifier=Modifier.heightIn(min=48.dp),enabled=!busy){BilingualLabel("Edit draft")}
