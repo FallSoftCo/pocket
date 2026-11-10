@@ -71,21 +71,22 @@ try{
  await new Promise(r=>setTimeout(r,150));assert.equal(promotions,1);assert.equal($('outbox').textContent.includes('Original queued steering text'),false);assert.ok($('outbox').textContent.includes('Keep this queue paused'));
  assert.deepEqual(errors,[]);
  // Needs you uses typed source-qualified catalog summaries, never reports.
- const alpha='env_alpha__c2FtZS10aHJlYWQ',beta='env_beta__c2FtZS10aHJlYWQ',questionId='env_alpha__bmVlZHMtcXVlc3Rpb24';
- let questionPending=true,unknownPending=true;const attentionRequests=[];
- const summary=(id)=>({id,nativeThreadId:'same-thread',environmentId:id===alpha?'alpha':'beta',environmentName:id===alpha?'Alpha source':'Beta source',name:id===alpha?'Alpha decision':'Beta uncertain delivery',status:{type:'idle'},canAcceptDirectInput:true,createdAt:1700000000,...(id===beta?{isChild:true,parentThreadId:alpha}:{}),attention:{version:1,verified:true,items:id===alpha?(questionPending?[{kind:'question',id:questionId,label:'Answer question'},{kind:'needsInput',id:'input-extra',label:'Input needed'}]:[]):(unknownPending?[{kind:'deliveryUnknown',id:'unknown-beta',label:'Review uncertain delivery'}]:[])}});
+ const alpha='env_alpha__c2FtZS10aHJlYWQ',beta='env_beta__c2FtZS10aHJlYWQ',questionId='env_alpha__bmVlZHMtcXVlc3Rpb24',alphaParent='env_alpha__cGFyZW50';
+ let questionPending=true,unknownPending=true,parentAvailable=true;const attentionRequests=[];
+ const parentSummary=()=>({id:alphaParent,nativeThreadId:'parent',environmentId:'alpha',environmentName:'Alpha source',name:'Alpha parent task',status:{type:'idle'},canAcceptDirectInput:true,attention:{version:1,verified:true,items:[]}});
+ const summary=(id)=>({id,nativeThreadId:'same-thread',environmentId:id===alpha?'alpha':'beta',environmentName:id===alpha?'Alpha source':'Beta source',name:id===alpha?'Alpha decision':'Beta uncertain delivery',status:{type:'idle'},canAcceptDirectInput:true,createdAt:1700000000,...(id===alpha?{isChild:true,parentThreadId:alphaParent,canAcceptDirectInput:false}:{}),attention:{version:1,verified:true,items:id===alpha?(questionPending?[{kind:'question',id:questionId,label:'Answer question'},{kind:'needsInput',id:'input-extra',label:'Input needed'}]:[]):(unknownPending?[{kind:'deliveryUnknown',id:'unknown-beta',label:'Review uncertain delivery'}]:[])}});
  const originalFetch=w.fetch;w.fetch=async(path,options={})=>{
   const url=new URL(path,f.url),route=url.pathname;attentionRequests.push({path:route,method:options.method||'GET',body:options.body?JSON.parse(options.body):null});
   const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});
-  if(route==='/api/threads'&&!options.body){const response=await originalFetch(path,options),data=await response.json();return json({...data,threads:[...data.threads.map(t=>({...t,attention:{version:1,verified:true,items:[]}})),summary(alpha),summary(beta)]});}
+  if(route==='/api/threads'&&!options.body){const response=await originalFetch(path,options),data=await response.json();return json({...data,threads:[...data.threads.map(t=>({...t,attention:{version:1,verified:true,items:[]}})),summary(alpha),summary(beta),...(parentAvailable?[parentSummary()]:[])]});}
   if(route.includes('/api/requests/')&&route.includes(questionId)||route.includes('/requests/'+questionId)){
    assert.equal(options.method,'POST');assert.ok(route.endsWith('/answer'));assert.equal(JSON.parse(options.body).answers.choice,'Proceed');questionPending=false;return json({ok:true});
   }
-  const id=[alpha,beta].find(id=>route.includes('/threads/'+id));
+  const id=[alpha,beta,alphaParent].find(id=>route.includes('/threads/'+id));
   if(id){
    assert.equal(options.method||'GET','GET','Review must not submit or retry work');
    if(route.endsWith('/native-timeline'))return json({code:'NATIVE_TIMELINE_UNSUPPORTED',error:'Synthetic legacy history'},409);
-   return json({thread:summary(id),timeline:{rows:[{id:id+'/message',kind:'message',text:id===alpha?'Alpha original question context':'Beta original unknown-delivery context'}],hasEarlier:false},revision:1,pending:id===alpha&&questionPending?[{id:questionId,method:'item/tool/requestUserInput',params:{threadId:alpha,questions:[{id:'choice',header:'Decision',question:'Alpha source decision?',options:[{label:'Proceed',description:'Synthetic answer'}]}]}}]:[],notes:[],outbox:{version:1,revision:1,items:id===beta&&unknownPending?[{id:'unknown-beta',threadId:beta,text:'Uncertain original Beta message',state:'unknown',mode:'queue'}]:[]},outgoing:id===beta&&unknownPending?[{id:'unknown-beta',threadId:beta,text:'Uncertain original Beta message',state:'unknown',mode:'queue'}]:[]});
+   return json({thread:id===alphaParent?parentSummary():summary(id),timeline:{rows:[{id:id+'/message',kind:'message',text:id===alpha?'Alpha original question context':'Beta original unknown-delivery context'}],hasEarlier:false},revision:1,pending:id===alpha&&questionPending?[{id:questionId,method:'item/tool/requestUserInput',params:{threadId:alpha,questions:[{id:'choice',header:'Decision',question:'Alpha source decision?',options:[{label:'Proceed',description:'Synthetic answer'}]}]}}]:[],notes:[],outbox:{version:1,revision:1,items:id===beta&&unknownPending?[{id:'unknown-beta',threadId:beta,text:'Uncertain original Beta message',state:'unknown',mode:'queue'}]:[]},outgoing:id===beta&&unknownPending?[{id:'unknown-beta',threadId:beta,text:'Uncertain original Beta message',state:'unknown',mode:'queue'}]:[]});
   }
   return originalFetch(path,options);
  };
@@ -96,9 +97,26 @@ try{
  click($('needs-you-toggle'));await wait(()=>$('filter').value==='needs-you'&&d.querySelectorAll('#work-list .work-card').length===2,'Needs you filtered original list');
  assert.equal(d.body.classList.contains('review-open'),false);assert.equal(d.body.classList.contains('chat-open'),false);
  assert.ok([...d.querySelectorAll('.attention-reason')].every(n=>n.classList.contains('preview')&&!n.closest('.card-heading')),'Attention must use reserved preview row');
- assert.equal($('search').value,'');assert.ok(d.querySelector(`[data-id="${beta}"]`),'Affected child session must be directly visible');
+ assert.equal($('search').value,'');assert.ok(d.querySelector(`[data-id="${alpha}"]`),'Affected child session must be directly visible');
+ const parentGroup=()=>d.querySelector(`.attention-parent[data-parent-id="${alphaParent}"]`);
+ assert.equal(parentGroup()?.querySelector('.attention-parent-name')?.textContent,'Alpha parent task');
+ assert.equal(parentGroup().nextElementSibling?.dataset.id,alpha,'Affected child must remain adjacent to its parent heading');
+ const parentReadsBefore=attentionRequests.length;
+ click(parentGroup().querySelector('.attention-parent-open'));await wait(()=>$('title').textContent==='Alpha parent task'&&!$('draft').disabled,'same-source parent navigation');
+ assert.ok(attentionRequests.slice(parentReadsBefore).some(r=>r.path.includes('/threads/'+alphaParent)));
+ assert.equal(attentionRequests.slice(parentReadsBefore).some(r=>r.path.includes('/threads/'+beta)),false,'Parent navigation must not substitute another source');
+ fill($('draft'),'Keep Alpha parent unsent guidance');click($('back'));
+ // A bounded catalog may omit the parent. Keep its explicit source identity
+ // and honest fallback rather than inventing a label or redirecting the child.
+ parentAvailable=false;f.broadcast({type:'attention',threadId:alpha});
+ await wait(()=>parentGroup()?.textContent.includes('Parent not in current list'),'missing parent fallback');
+ assert.equal(parentGroup().dataset.parentId,alphaParent);assert.ok(parentGroup().querySelector('.attention-parent-open'));
+ click(parentGroup().querySelector('.attention-parent-open'));await wait(()=>$('title').textContent==='Alpha parent task'&&$('draft').value==='Keep Alpha parent unsent guidance','missing parent explicit original navigation preserves draft');
+ click($('back'));assert.equal(attentionRequests.filter(r=>r.method==='POST').length,0,'Parent review/navigation must not mutate work');
  click(d.querySelector(`[data-id="${alpha}"] .attention-reason`));await wait(()=>$('title').textContent==='Alpha decision'&&$('requests').textContent.includes('Alpha source decision?'),'question original source');
  await wait(()=>$('review-pane').hidden===false,'question review opens');
+ assert.equal($('draft').disabled,true,'Read-only child decision must not enable a parent-directed composer');
+ assert.ok(attentionRequests.some(r=>r.path.includes('/threads/'+alpha)),'Question must load the child, not its parent');
  const input=$('requests').querySelector('input');fill(input,'Proceed');click([...$('requests').querySelectorAll('button')].find(b=>b.textContent==='Submit answers'));
  await wait(()=>!questionPending,'original question answer accepted');
  f.broadcast({type:'attentionResolved',threadId:alpha});await wait(()=>$('needs-you-toggle').dataset.count==='1','resolved question leaves filtered list');
@@ -111,8 +129,8 @@ try{
  assert.equal(d.querySelectorAll('#work-list .work-card').length,0);click($('needs-you-toggle'));await wait(()=>$('filter').value==='all'&&$('search').value==='field guide'&&d.querySelector('[data-id=parent-123]')&&$('work-list').scrollTop===37,'escape restores normal work');
  assert.equal($('work-list').scrollTop,37);assert.equal(d.body.classList.contains('review-open'),false);assert.equal(d.body.classList.contains('chat-open'),false);
  assert.equal([...requests,...attentionRequests].some(r=>/coordinator\/reports|coordinator\/reporting/.test(r.path)),false,'Needs you must not fetch report feeds');
- assert.equal(attentionRequests.filter(r=>r.method==='POST'&&r.path.includes(questionId)).length,1);assert.deepEqual(errors,[]);
- const needsYou={passed:true,sourceQualifiedSessions:[alpha,beta],sameNativeThreadId:'same-thread',sessionCountNotReasonCount:true,affectedChildVisible:true,questionAnswerOnce:true,unknownReviewedWithoutSend:true,noReportFetch:true,emptyFilterEscapeRestoresView:true,requests:attentionRequests};
+ assert.equal(attentionRequests.filter(r=>r.method==='POST'&&r.path.includes(questionId)).length,1);assert.equal(attentionRequests.filter(r=>r.method==='POST').length,1,'Only explicit child answer may mutate');assert.deepEqual(errors,[]);
+ const needsYou={passed:true,namedParentGrouping:true,sameSourceParentNavigation:true,missingParentFallback:true,parentDraftPreserved:true,childDecisionNotRedirected:true,noImplicitMutation:true,sourceQualifiedSessions:[alpha,beta],sameNativeThreadId:'same-thread',sessionCountNotReasonCount:true,affectedChildVisible:true,questionAnswerOnce:true,unknownReviewedWithoutSend:true,noReportFetch:true,emptyFilterEscapeRestoresView:true,requests:attentionRequests};
  const result={passed:true,bundledAppSha256:createHash('sha256').update(bundle.outputFiles[0].text).digest('hex'),needsYou,promotionOriginalId:'promote-dom',promotionOriginalText:'Original queued steering text',promotionDispatches:promotions,doubleTapOneDispatch:true,unknownSendingNonpromotable:true,heldOthersRetained:true,sourceSwitchPreservedDraft:true,latePromotionAckCannotPaintForeignSource:true,evidence:'actual app in virtual DOM; synthetic HTTP and WebSocket observations',queueVisibleBeforeHistory:true,removalFromOriginalAckWithoutSocket:true,lateHistoryCannotResurrect:true,draftPreserved:true,removals,errors};
  if(process.env.WEB_QA_OUTPUT)await writeFile(process.env.WEB_QA_OUTPUT,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
 }catch(error){if(process.env.WEB_QA_OUTPUT)await writeFile(process.env.WEB_QA_OUTPUT,JSON.stringify({passed:false,error:error.stack,errors},null,2));const d=dom?.window.document;console.error(JSON.stringify({stage:'failure',errors,appHidden:d?.getElementById('app')?.hidden,pairError:d?.getElementById('pair-error')?.textContent,appError:d?.getElementById('error')?.textContent,connection:d?.getElementById('connection')?.textContent,socketState:socket?.readyState,workList:d?.getElementById('work-list')?.innerHTML.slice(0,500)}));throw error;}finally{release();promotionRelease();if(socket){socket.onclose=null;socket.onmessage=null;socket.onopen=null;socket.onerror=()=>{};if(socket.readyState!==WebSocket.CLOSED)await new Promise(resolve=>{socket.once('close',resolve);socket.terminate();});}dom?.window.close();await f.close();}
