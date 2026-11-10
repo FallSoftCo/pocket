@@ -137,9 +137,16 @@ class QueuedMessagesNativeTest {
    await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==0}
    val sentText="Keep this sent message visible"
    compose.onNode(hasSetTextAction()).performTextReplacement(sentText)
-   compose.onNodeWithContentDescription("Send message").performClick()
+   // The preceding active queue may retain its current execution status. Both
+   // composer labels submit the original steer-mode input through the same UI.
+   val sendAction=hasContentDescription("Send message") or hasContentDescription("Steer running turn")
+   await{compose.onAllNodes(sendAction).fetchSemanticsNodes().size==1}
+   compose.onNode(sendAction).assertIsEnabled().performClick()
    await{qa("sent-state").optInt("submissions")==1}
-   val sentId=qa("sent-state").getJSONObject("intent").getString("id")
+   val sentIntent=qa("sent-state").getJSONObject("intent")
+   val sentId=sentIntent.getString("id")
+   assertEquals("steer",sentIntent.getString("mode"))
+   assertEquals(sentText,sentIntent.getString("text"))
    compose.onNode(hasText(sentText) and !hasSetTextAction(),useUnmergedTree=true).performScrollTo().assertIsDisplayed()
    assertFalse(qa("sent-state").optBoolean("accepted"))
    qa("sent-accept")
