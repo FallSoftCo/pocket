@@ -4055,6 +4055,7 @@
   "toolbar_settings_resets_20261110": {
     "requirement": "Remove the obsolete per-chat activity/reply list from the toolbar menu; display available banked Codex resets.",
     "design": "Settings uses the same anchored menu in list and conversation. Existing account quota cache exposes only provider reset count and its independent observation freshness; missing fields remain unavailable. No new quota polling or redemption. Speech-source popup and actionable Needs you remain intact.",
-    "status": "Implementation and qualification in progress."
+    "status": "Delivered: Android189/alpha171 available on both existing channels; web and both backends live. Required native journeys, exact optimized menu/catalog/history and browser checks passed. No phone installation performed.",
+    "evidence": "docs/qualification/toolbar-resets-189.json"
   }
 }
