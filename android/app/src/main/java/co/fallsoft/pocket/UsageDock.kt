@@ -166,6 +166,9 @@ import java.util.Locale
         if(stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false)
         TextButton({Pocket.retryConnection()}){BilingualLabel("Refresh")}
     }
-    DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
+    DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp),
+        shape=RoundedCornerShape(18.dp),containerColor=Panel){
+        Column(Modifier.padding(horizontal=12.dp)){details()}
+    }
     }
 }
