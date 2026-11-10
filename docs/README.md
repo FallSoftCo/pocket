@@ -10,6 +10,8 @@ The current controls include native session branching/context actions, configura
 
 [185 Needs you update](qualification/needs-you-185.json) replaces the permanent Work updates feed with a filter on the original session list, and fixes a native preview/catalog feedback read found in qualification. Android is published on both channels, with web and both backends live; phone installation is separately unverified. [184 queued steering and Apps](qualification/queued-steering-apps-184.json) remains included.
 
+[187 sent-message visibility](qualification/sent-message-187.json) keeps accepted typed input visible until its exact canonical history entry arrives. History failures leave acceptance and the next draft intact. Android is published on both update channels; web is live on both private entry points. Phone installation remains separately unverified.
+
 ## Understand and evaluate
 
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.

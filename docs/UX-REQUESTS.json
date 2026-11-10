@@ -4037,6 +4037,7 @@
   "sent_message_visibility_20261109": {
     "requirement": "Sent input must appear immediately and remain visible across verified acceptance until matching canonical history arrives. A history read failure must not revoke acceptance or block further input.",
     "design": "Source-bound durable local sent presentation separate from canonical ordering; use exact clientId identity only. Preserve unknown/queued controls and newer drafts, never replay because history is late. Accepted local evidence retires after exact stored canonical match; optional missing provider identity stays honest and explicitly dismissible.",
-    "status": "Implementation complete; composed browser journey and native delayed-echo qualification in progress."
+    "status": "Delivered187: both Android update channels; web live on both private routes. Exact delayed-echo native journey, composed DOM, visual and optimized qualification passed. Phone installation unverified.",
+    "evidence": "docs/qualification/sent-message-187.json"
   }
 }
