@@ -110,6 +110,19 @@ function attentionEvidence(thread){
 }
 const needsReasons=t=>attentionEvidence(t)?.items||[];
 const needsIncomplete=t=>catalogFailure||t.environmentUnavailable||unavailableEnvironments.has(environmentOf(t.id))||(!environmentOf(t.id)&&runtimeConnected===false)||attentionEvidence(t)?.verified!==true;
+function attentionParent(thread){
+ const identity=sessionIdentity(thread),raw=identity.parentThreadId;
+ if(!identity.isChild)return null;
+ const source=environmentOf(thread.id),parentSource=environmentOf(raw);
+ if(!raw||typeof raw!=='string'||(parentSource&&parentSource!==source))return {id:null,parent:null};
+ const id=source&&!parentSource?'env_'+source+'__'+btoa(String.fromCharCode(...new TextEncoder().encode(raw))).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,''):raw;
+ return {id,parent:threads.find(t=>t.id===id)||null};
+}
+async function openAttentionParent(childId,parentId){
+ const child=threads.find(t=>t.id===childId);
+ if(!authenticated||!child||attentionParent(child)?.id!==parentId)return;
+ review.show(false);await open(parentId);
+}
 async function openAttention(thread){
  thread=threads.find(t=>t.id===thread.id);if(!authenticated||!thread||!needsReasons(thread).length)return;
  const id=thread.id,decisions=needsReasons(thread).some(r=>['question','approval'].includes(r.kind));
@@ -139,10 +152,29 @@ function renderList(){
   const prior=new Map(seatOrder.map((id,i)=>[id,i]));
   seatOrder=[...threads,...roomCards].sort((a,b)=>Math.floor(workTime(a)/10000)-Math.floor(workTime(b)/10000)||(prior.get(a.id)??1e6)-(prior.get(b.id)??1e6)||a.id.localeCompare(b.id)).map(t=>t.id);lastSeatRefresh=now;
  }for(const t of [...threads,...roomCards])if(!seatOrder.includes(t.id))seatOrder.push(t.id);
- const known=new Set(visible.map(t=>t.id)),ordered=[...visible].filter(t=>needsOnly||query||!known.has(sessionIdentity(t).parentThreadId)||expandedParents.has(sessionIdentity(t).parentThreadId)).sort((a,b)=>seatOrder.indexOf(a.id)-seatOrder.indexOf(b.id));
+ const known=new Set(visible.map(t=>t.id)),initialOrder=[...visible].filter(t=>needsOnly||query||!known.has(sessionIdentity(t).parentThreadId)||expandedParents.has(sessionIdentity(t).parentThreadId)).sort((a,b)=>seatOrder.indexOf(a.id)-seatOrder.indexOf(b.id));
+ const groups=new Map();
+ if(needsOnly)for(const t of initialOrder){const owner=attentionParent(t),key=owner?.id||t.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(t);}
+ const ordered=needsOnly?[...groups.values()].flatMap(group=>group.sort((a,b)=>Number(!!attentionParent(a))-Number(!!attentionParent(b)))):initialOrder;
+ const shownParents=new Set();
  const list=$('work-list'),anchor=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top),anchorOffset=anchor?.getBoundingClientRect().top,wasBottom=list.scrollHeight-list.scrollTop-list.clientHeight<60;
  const old=new Map([...list.children].map(n=>[n.dataset.id,n]));let cursor=list.firstChild;
- for(const t of ordered){let n=old.get(t.id);if(!n){n=el('article','work-card');n.dataset.id=t.id;n.tabIndex=0;n.setAttribute('role','button');n.onclick=run(()=>needsReasons(n._thread).length?openAttention(n._thread):open(n._thread.id));n.onkeydown=e=>{if(e.target===n&&['Enter',' '].includes(e.key)){e.preventDefault();void run(()=>needsReasons(n._thread).length?openAttention(n._thread):open(n._thread.id))();}};n.append(el('div','card-heading'),el('span','preview'),el('span','card-meta'));}
+ for(const t of ordered){
+  if(needsOnly){
+   const owner=attentionParent(t),groupKey=owner?.id||t.id,group=groups.get(groupKey)||[],child=group.find(row=>attentionParent(row));
+   if(child&&!shownParents.has(groupKey)){
+    shownParents.add(groupKey);const context=attentionParent(child),key='attention-parent:'+groupKey;
+    let heading=old.get(key);if(!heading){heading=el('div','attention-parent');heading.dataset.id=key;heading.append(el('strong','attention-parent-name'),button('Open parent',()=>openAttentionParent(heading._childId,heading.dataset.parentId)));heading.children[1].className='attention-parent-open';}
+    old.delete(key);heading._childId=child.id;heading.dataset.parentId=context.id||'';
+    setLabel(heading.children[0],context.parent?catalogTitle(context.parent):context.id?'Parent not in current list · '+context.id:'Parent identity unavailable');
+    heading.children[0].title=context.id||'No same-source parent identity available';
+    const guide=group.some(row=>!sessionIdentity(row).canAcceptDirectInput&&needsReasons(row).some(r=>r.kind==='runtimeError'));
+    setLabel(heading.children[1],guide?'Guide parent':'Open parent');heading.children[1].hidden=!context.id;
+    heading.children[1].title=guide?'Open the owning session to guide it; no message is sent':'Open the owning session';
+    if(heading!==cursor)list.insertBefore(heading,cursor);cursor=heading.nextSibling;
+   }
+  }
+  let n=old.get(t.id);if(!n){n=el('article','work-card');n.dataset.id=t.id;n.tabIndex=0;n.setAttribute('role','button');n.onclick=run(()=>needsReasons(n._thread).length?openAttention(n._thread):open(n._thread.id));n.onkeydown=e=>{if(e.target===n&&['Enter',' '].includes(e.key)){e.preventDefault();void run(()=>needsReasons(n._thread).length?openAttention(n._thread):open(n._thread.id))();}};n.append(el('div','card-heading'),el('span','preview'),el('span','card-meta'));}
   old.delete(t.id);const identity=sessionIdentity(t),state=t._room?roomState(t._room.room,{available:t._room.routes.some(r=>r.available)}):sessionState(t);n.className='work-card'+(scope===t.id?' selected':'')+(identity.isChild?' child':'');n.dataset.state=state.tone;n.setAttribute('aria-current',scope===t.id?'page':'false');if(t._room)n.dataset.roomId=t._room.roomId;
   n._thread=t;
   if(!n.querySelector('input')){let title=n.querySelector('.card-title');if(!title){title=button('',()=>isRoom(n._thread.id)?open(n._thread.id):renameCard(n._thread,n));title.className='card-title';title.addEventListener('click',e=>e.stopPropagation());const titleRow=el('div','card-title-row');titleRow.append(title);n.children[0].prepend(titleRow);}setLabel(title,t._room?'Room · '+t.name:catalogTitle(t));

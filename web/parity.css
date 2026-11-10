@@ -187,3 +187,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .work-card .preview.attention-reason { color:var(--ink); }
 .catalog-dock #needs-you-toggle[hidden] { display:none; }
 .catalog-dock #needs-you-toggle[aria-pressed="true"] { background:var(--attention); box-shadow:inset 0 0 0 1px var(--attention-line); }
+
+.attention-parent { padding:12px 8px 6px; border-top:1px solid var(--line); display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+.attention-parent-name { font-size:13px; overflow-wrap:anywhere; }
+.attention-parent-open { font-size:12px; min-height:44px; }
