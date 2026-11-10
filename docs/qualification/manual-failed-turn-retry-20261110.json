@@ -1,0 +1,30 @@
+{
+  "feature": "Explicit input after a confirmed failed Codex turn",
+  "sourceCommit": "bb6f07341fda0bd982c8c44de9a7738835c27fc9",
+  "releaseDigest": "56be2ab80f1ceee22e450e7ea12281441859a2182e53112fb374c771bfc010a0",
+  "qualification": {
+    "httpNativeSocketAndOutboxChecks": 16,
+    "turnControlsAndAttentionChecks": 7,
+    "negativeControl": "Original idle-only admission fails the new manual-continuation integration journey.",
+    "cases": [
+      "Explicit send and retry from systemError with failed native head",
+      "Original input and client identity retained; repeat retry rejected",
+      "Queued work remains paused",
+      "Active race and nonfailed head rejected",
+      "Lost acknowledgement remains unknown without replay"
+    ]
+  },
+  "delivery": {
+    "workstation": "live",
+    "mac": "live",
+    "nativeProcessesRestarted": false,
+    "pairingPreserved": true,
+    "queuedAndUnknownPreserved": true,
+    "apkNeeded": false
+  },
+  "limits": [
+    "Generic upstream HTTP400 root cause remains unspecified; this fixes NextComp manual admission.",
+    "No blanket automatic retry of provider400.",
+    "Integration failure scenarios use isolated synthetic native socket; no paid/provider error induced."
+  ]
+}
