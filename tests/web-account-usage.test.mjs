@@ -32,3 +32,14 @@ test('malformed or absent remaining data is unavailable, not a coerced zero limi
  for(const value of [null,false,'',-1,101,NaN]){cache.status('current',{deviceId:'device',usage:sample(now,value)},'CPU');assert.equal(cache.view('current').label,'Usage unavailable');assert.equal(cache.view('current').state,'unavailable');}
  assert.throws(()=>cache.status('gpu',{deviceId:'owner',usage:sample(now)},'GPU'),/unconfirmed/);
 });
+
+test('menu shows banked benefits independently of weekly reset, with explicit zero and unavailable',()=>{
+ let now=Date.now();const cache=new AccountUsageCache({clock:()=>now}),usage=sample(now);
+ usage.resetCredits={availableCount:2,updatedAt:now,stale:false};
+ cache.status('current',{deviceId:'device',usage},'CPU');assert.equal(cache.view('current').resetCredits,'2 banked resets available');
+ now+=120001;assert.match(cache.view('current').resetCredits,/Last known/);
+ cache.limits('current',{...usage,resetCredits:{availableCount:0,updatedAt:now,stale:false}});
+ assert.equal(cache.view('current').resetCredits,'0 banked resets available');
+ cache.unavailable('current');assert.match(cache.view('current').resetCredits,/Last known/);
+ cache.profile('another-owner');assert.equal(cache.view('current').resetCredits,'Banked resets unavailable');
+});

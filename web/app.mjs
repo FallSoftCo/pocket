@@ -565,7 +565,7 @@ function renderUsage(){
  const source=accountSource(),usage=accountUsage.view(source.environment,source.name);
  setLabel($('usage'),usage.label);$('usage').title=usage.provenance+' · '+usage.reset+' · '+usage.freshness;
  const toolbarUsage=$('conversation-usage');if(toolbarUsage){setLabel(toolbarUsage.querySelector('.account-allowance'),usage.label);setLabel(toolbarUsage.querySelector('.account-source'),' · '+usage.source);toolbarUsage.dataset.usageState=usage.state;toolbarUsage.dataset.usageEnvironment=usage.environment||'';toolbarUsage.title=usage.reset+' · '+usage.freshness;toolbarUsage.setAttribute('aria-label',usage.provenance+'; '+usage.label+'; '+usage.reset+'; '+usage.freshness);}
- const box=$('account-usage');box.replaceChildren(el('strong','',usage.label),el('p','',usage.provenance),el('p','',usage.reset),el('p','',usage.credits),el('p','muted',usage.creditStale?'Last known or unavailable credit observation':'Current credit observation'),el('p','muted',usage.continuation),el('p','muted',usage.freshness));
+ const box=$('account-usage');box.replaceChildren(el('strong','',usage.label),el('p','',usage.provenance),el('p','',usage.reset),el('p','',usage.resetCredits),el('p','',usage.credits),el('p','muted',usage.creditStale?'Last known or unavailable credit observation':'Current credit observation'),el('p','muted',usage.continuation),el('p','muted',usage.freshness));
 }
 $('usage').onclick=()=>{$('settings-dialog').showModal();renderUsage();};
 

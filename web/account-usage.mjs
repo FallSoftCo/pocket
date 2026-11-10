@@ -19,8 +19,12 @@ export class AccountUsageCache{
   const creditLabel=knownCredit?new Intl.NumberFormat(undefined,{notation:'compact',maximumFractionDigits:1}).format(balance)+' cr':null;
   const label=summary.compact+(summary.remaining===0&&creditLabel?' · '+creditLabel:'');
   const known=summary.remaining!==null,stale=summary.stale||summary.remaining===0&&knownCredit&&creditStale;
+  const reset=raw?.resetCredits,count=reset?.availableCount;
+  const resetKnown=Number.isSafeInteger(count)&&count>=0;
+  const resetStale=reset?.stale===true||!reset?.updatedAt||reset.updatedAt>now+30000||now-reset.updatedAt>120000||record?.available===false;
+  const resetCredits=resetKnown?`${count} banked ${count===1?'reset':'resets'} available${resetStale?' · Last known observation':''}`:'Banked resets unavailable';
   const source=name||record?.name||environment||'Original source unavailable';
-  return {...summary,label,source,environment:environment||null,state:!known?'unavailable':stale?'stale':'fresh',creditStale,
+  return {...summary,label,source,resetCredits,environment:environment||null,state:!known?'unavailable':stale?'stale':'fresh',creditStale,
    provenance:'Account via '+source+'; not a room-wide quota',freshness:!known?'Usage unavailable':stale?'Last known observation':'Current account observation'};
  }
 }

@@ -74,8 +74,8 @@ class EnvironmentIsolationNativeTest {
   // The catalog and conversation intentionally share the same control label.
   // Wait for the actual conversation window before touching its controls.
   assertTrue("Conversation has not painted",visible(By.res("conversation-history"),10000))
-  assertTrue(visible(By.desc("Settings, app updates, usage and activity"),5000))
-  device.findObject(By.desc("Settings, app updates, usage and activity")).click()
+  assertTrue(visible(By.desc("Settings, app updates and usage"),5000))
+  device.findObject(By.desc("Settings, app updates and usage")).click()
   if(!visible(By.text("Rename"),1000)){
    repeat(3){if(!present(By.text("Rename")))device.swipe(device.displayWidth*2/3,device.displayHeight*4/5,device.displayWidth*2/3,device.displayHeight*2/5,25)}
   }
@@ -97,7 +97,13 @@ class EnvironmentIsolationNativeTest {
   await{PocketTranscript.rows.any{it.s("text")=="System76 answer only"}}
   main{Pocket.closeTask()}
   assertTrue("Catalog scene not mounted",visible(By.res("work-catalog"),5000))
-  assertTrue(visible(By.desc("Settings, app updates, usage and activity"),5000));device.findObject(By.desc("Settings, app updates, usage and activity")).click()
+  assertTrue(visible(By.desc("Settings, app updates and usage"),5000));device.findObject(By.desc("Settings, app updates and usage")).click()
+  assertFalse("Obsolete activity heading remained in settings",present(By.text("Activity")))
+  repeat(6){if(!present(By.text("2 banked resets available")))device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.DOWN,0.65f)}
+  assertTrue("Banked reset count missing from catalog settings",visible(By.text("2 banked resets available"),5000))
+  device.takeScreenshot(java.io.File(context.filesDir,"toolbar-banked-resets.png"))
+  assertFalse("Per-chat quick reply leaked into settings",present(By.text("Reply")))
+  repeat(6){if(!present(By.desc("Development environment: System76")))device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.UP,0.65f)}
   assertTrue(visible(By.desc("Development environment: System76"),5000));device.findObject(By.desc("Development environment: System76")).click()
   assertTrue(visible(By.text("OZZZ"),5000));device.findObject(By.text("OZZZ")).click()
   await{Pocket.environmentId=="remote_qa"&&Pocket.tasks.any{it.title=="OZZZ synthetic work"}}

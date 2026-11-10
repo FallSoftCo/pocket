@@ -56,7 +56,7 @@ class NativeParityControlsNativeTest {
     private fun editor()=compose.onNode(hasSetTextAction())
     private fun editorText()=editor().fetchSemanticsNode().config[SemanticsProperties.EditableText].text
     private fun menu(action:String,captureMenu:Boolean=false){
-        compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Settings, app updates and usage").assertIsDisplayed().performClick()
         // These work controls must be in the initial viewport, before any
         // performScrollTo in tap() could hide an ordering regression.
         for(label in listOf("Context & files","Background terminals","Model, effort, tier & mode","Codex settings & agents"))

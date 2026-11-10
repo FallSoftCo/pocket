@@ -119,7 +119,7 @@ class ReaderPagingFooterNativeTest {
                     }
                     assertEquals("$label orphaned Page down",up.top,down.top,1f)
                     assertEquals("$label changed page spacing",2*pixelsPerDp,down.left-up.right,1f)
-                    val footerTargets=listOf("Speech volume","Questions and results","Settings, app updates, usage and activity").map{description->
+                    val footerTargets=listOf("Speech volume","Questions and results","Settings, app updates and usage").map{description->
                         val node=compose.onNodeWithContentDescription(description).assertIsDisplayed()
                         val target=node.fetchSemanticsNode().boundsInRoot
                         assertTrue("$label shrank $description",target.width>=48*pixelsPerDp-1&&target.height>=48*pixelsPerDp-1)
@@ -170,7 +170,7 @@ class ReaderPagingFooterNativeTest {
                         layout.layoutInput.text.indices.all{index->val box=layout.getBoundingBox(index)
                             box.left>=-1f&&box.top>=-1f&&box.right<=layout.size.width+1f&&box.bottom<=layout.size.height+1f}
                 })
-                compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed()
+                compose.onNodeWithContentDescription("Settings, app updates and usage").assertIsDisplayed()
                 assertEquals("Numeric usage orphaned Page down",bounds("reader-page-up").top,bounds("reader-page-down").top,1f)
                 records.put(JSONObject().put("widthDp",availableWidth).put("fontScale",f).put("ime",false)
                     .put("screenshot","footer-usage-${if(value.remainingPercent==0.0)"credits" else "allowance"}-$f.png").put("usage",primary).put("pageUp",bounds("reader-page-up").toString()).put("pageDown",bounds("reader-page-down").toString()))

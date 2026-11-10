@@ -87,6 +87,10 @@ import java.util.Locale
     UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{
         InterfaceText("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
+    val resets=usage.resetCredits
+    InterfaceText(resets.label(),color=Paper,fontSize=16.sp)
+    if(resets.availableCount!=null&&resets.isStale(now,Pocket.connected&&Pocket.codexOnline))
+        BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=12.sp)
     val credits=usage.credits
     BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
     Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
@@ -125,7 +129,7 @@ import java.util.Locale
     val accountLines=(if(accountFacts?.credits!=null)1 else 0)+(if(accountFacts?.freshness?.isNotBlank()==true)1 else 0)
     val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+accountLines)+12.dp}.coerceAtLeast(58.dp)
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
-    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates and usage";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 SymbolIcon(statusIcon?:"Tune",null,Modifier.size(20.dp),spinning=statusSpinning)
@@ -162,7 +166,6 @@ import java.util.Locale
         if(stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false)
         TextButton({Pocket.retryConnection()}){BilingualLabel("Refresh")}
     }
-    if(conversationOnly)DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
-    else ActivityPopup(open,{open=false},Pocket.selected,controlsFirst=true){details()}
+    DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
     }
 }

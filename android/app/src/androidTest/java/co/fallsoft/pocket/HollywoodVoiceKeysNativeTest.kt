@@ -55,7 +55,7 @@ class HollywoodVoiceKeysNativeTest{
    d.takeScreenshot(c.filesDir.resolve("native-room-mic-ready.png"))
    // Read-only Team stays in the same Activity window. Its presence must not
    // hand volume buttons back to Android or create a second voice controller.
-   d.findObject(By.desc("Settings, app updates, usage and activity")).click()
+   d.findObject(By.desc("Settings, app updates and usage")).click()
    tap("native-room-team")
    await("Team view unavailable"){d.hasObject(By.text("No team updates"))&&d.hasObject(By.text("Earlier room"))}
    d.pressKeyCode(KeyEvent.KEYCODE_VOLUME_DOWN)

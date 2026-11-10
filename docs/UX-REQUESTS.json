@@ -4051,5 +4051,10 @@
     "design": "Manual phrase state is separate from automatic phase; repeated tap switches and holds the opposite language. Content-bound native saveable state and bounded web reading-session choices survive ordinary redraw/scroll. Untouched phrases continue cycling; replacement text does not inherit stale offsets.",
     "status": "Delivered: Android188/alpha170 published on workstation and Mac; web live on both private routes. Actual browser8cases,20native journeys and exact optimized APK passed. Phone install not performed.",
     "evidence": "docs/qualification/immersion-phrase-hold188.json"
+  },
+  "toolbar_settings_resets_20261110": {
+    "requirement": "Remove the obsolete per-chat activity/reply list from the toolbar menu; display available banked Codex resets.",
+    "design": "Settings uses the same anchored menu in list and conversation. Existing account quota cache exposes only provider reset count and its independent observation freshness; missing fields remain unavailable. No new quota polling or redemption. Speech-source popup and actionable Needs you remain intact.",
+    "status": "Implementation and qualification in progress."
   }
 }

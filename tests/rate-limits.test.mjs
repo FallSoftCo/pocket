@@ -58,3 +58,22 @@ test('in-flight reads merge newer partial notifications and cannot restore a cle
   const second=c.refresh({force:true});c.clear();resolve({rateLimits:{primary:week(99)}});await second;
   assert.equal(c.snapshot().weekly,null);
 });
+
+test('reset benefits retain independent freshness and clear at account/full-read boundaries',()=>{
+ let now=1000;const c=new AccountRateLimits({ready:true},()=>{},{clock:()=>now});
+ c.update({accountId:'one',rateLimitResetCredits:{availableCount:2,credits:[{id:'never-public'}]}},{replace:true});
+ assert.deepEqual(c.snapshot().resetCredits,{availableCount:2,updatedAt:1000,stale:false});
+ now+=120001;c.liveUpdate({rateLimits:{primary:week(20)}});
+ assert.equal(c.snapshot().resetCredits.stale,true,'unrelated fresh quota does not refresh old reset count');
+ assert.equal(c.snapshot().resetCredits.updatedAt,1000);
+ c.liveUpdate({rateLimitResetCredits:{availableCount:0}});assert.equal(c.snapshot().resetCredits.availableCount,0);
+ assert.equal(c.snapshot().resetCredits.stale,false);
+ c.disconnected();assert.equal(c.snapshot().resetCredits.stale,true);
+ for(const value of [null,'2',-1,1.5,Number.MAX_SAFE_INTEGER+1]){
+  c.update({rateLimitResetCredits:{availableCount:value}},{replace:true});assert.equal(c.snapshot().resetCredits.availableCount,null);
+ }
+ c.update({accountId:'one',rateLimitResetCredits:{availableCount:2}},{replace:true});
+ c.update({accountId:'two',rateLimits:{primary:week(30)}});assert.equal(c.snapshot().resetCredits.availableCount,null);
+ c.update({rateLimitResetCredits:{availableCount:1}},{replace:true});c.update({},{replace:true});
+ assert.equal(c.snapshot().resetCredits.availableCount,null,'older providers lacking the field cannot retain another full read');
+});
