@@ -34,6 +34,7 @@ import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
 import {OutgoingProjection} from './outgoing-projection.mjs';
 import {queuedDestination} from './queued-destination.mjs';
+import {confirmedFailedTurn} from './manual-turn-admission.mjs';
 import {loadHollywood} from './hollywood.mjs';
 import {teamNotificationFields} from './losangelex-attention.mjs';
 import {computerUseStatus} from './computer-use.mjs';
@@ -483,7 +484,7 @@ async function sendOutgoing(row,initialThread=null){
         }else throw e;
       }
     }else if(isActive(t))throw new Error('The active turn is not ready for replies. Try again shortly.');
-    else if(t.status?.type==='idle')result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+    else if(t.status?.type==='idle'||(row.mode!=='queue'&&await confirmedFailedTurn(codex,t,requireDirectSessionInput)))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
     else throw new Error('The conversation is not confirmed idle. Refresh before sending this message.');
     db.prepare("UPDATE outgoing SET state='accepted',result=?,updated_at=? WHERE id=?").run(JSON.stringify(result),now(),row.id);
     resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());

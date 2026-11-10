@@ -4039,5 +4039,11 @@
     "design": "Source-bound durable local sent presentation separate from canonical ordering; use exact clientId identity only. Preserve unknown/queued controls and newer drafts, never replay because history is late. Accepted local evidence retires after exact stored canonical match; optional missing provider identity stays honest and explicitly dismissible.",
     "status": "Delivered187: both Android update channels; web live on both private routes. Exact delayed-echo native journey, composed DOM, visual and optimized qualification passed. Phone installation unverified.",
     "evidence": "docs/qualification/sent-message-187.json"
+  },
+  "manual_retry_failed_turn_20261110": {
+    "requirement": "An explicit new message or retry must be usable after a confirmed failed Codex turn, including generic provider Bad Request.",
+    "design": "Only explicit immediate input checks the newest native turn in one bounded summary read and rechecks current thread/transport before turn/start. Failure must be terminal; active, missing, unknown and changed transport remain protected. Queued work does not auto-resume; original outgoing identity and provenance remain intact.",
+    "verification": "Real HTTP paired-device admission, SQLite receipt and native socket integration: manual send, retry identity/dedup, pending queue preservation, active race, nonfailed head rejection and lost acknowledgement hold. No generic400 automatic retry or changed runtime settings.",
+    "status": "Qualified candidate; deployment pending."
   }
 }
