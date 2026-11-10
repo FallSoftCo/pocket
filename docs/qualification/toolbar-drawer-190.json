@@ -1,0 +1,78 @@
+{
+  "feature": "Android toolbar bottom drawer",
+  "date": "2026-11-10",
+  "android": {
+    "versionCode": 190,
+    "versionName": "0.5.0-alpha.172",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "sha256": "170c592c9c47977db0ce78994e13daa7f32aec4ce95133daadc933964e14d7fd",
+        "size": 52750467
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "sha256": "648906731181cecce3e5a867172bf78b8b7125c8dd418fa67bbf5d7815463daf",
+        "size": 52750467
+      }
+    ],
+    "productionSourceSha": "3508495f02596a4581eb0d3b21b13c9dd0d235f4cf850b7665806d6918ccde61",
+    "qualificationInputSha": "b79b0e8046b7f39fd6692135cc805ec521a89eeaf005abfe8164474ae22a1244",
+    "unit": {
+      "debug": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "requiredNativeJourneys": 21,
+    "optimizedCatalogAndHistory": {
+      "codexCatalogDrawn": true,
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "optimizedPayloadVerified": true,
+      "catalogSnapshotStable": true
+    },
+    "drawer": {
+      "state": "complete",
+      "versionCode": 190,
+      "apkSha256": "648906731181cecce3e5a867172bf78b8b7125c8dd418fa67bbf5d7815463daf",
+      "fontScale": 1.6,
+      "immersion": true,
+      "reviewed": true,
+      "description": "Exact optimized APK; English and Italian label layouts inspected. Natural word spacing, stable section geometry, readable wrapped credits, contained scrollable surface and no legacy per-chat activity feed. Synthetic account count2. Original emulator preferences and font restored. Native drawer test separately verifies update access, Activity focus, Back, Rename and draft/source retention.",
+      "artifacts": [
+        {
+          "path": "drawer-large-italian.png",
+          "sha256": "46ef148af19a5b3722135f59f7667656437923e743a5e300f721b1e2d51953cc"
+        },
+        {
+          "path": "drawer-large-english.png",
+          "sha256": "da2f6cd4dc6f5b6ba646c537cbbff6260612abcc1357a4cedb6f1492a8158499"
+        }
+      ],
+      "physicalPhone": false
+    }
+  },
+  "publication": {
+    "workstation": "published and authenticated readback verified",
+    "macbook": "published and authenticated readback verified"
+  },
+  "limits": [
+    "No physical-phone install or acoustic test performed. Emulator and exact optimized APK evidence only.",
+    "No backend restart, model setting, account redemption or pairing changes."
+  ],
+  "testReliability": [
+    "Use synchronized Compose semantics for phase-dependent labels and exact keyboard focus; retain physical touch/key input and pixel comparison.",
+    "Wait for returned conversation collapse control before one tap; preserve source/row identity assertions.",
+    "Earlier failed attempts retained privately; no old failure relabeled as passing."
+  ]
+}

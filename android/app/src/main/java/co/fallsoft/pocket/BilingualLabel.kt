@@ -52,6 +52,23 @@ import androidx.compose.ui.unit.*
             overflow=overflow,textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)
         return
     }
+    if(LocalDrawerLabels.current){
+        // Controls are whole targets, not reading exercises made of tappable
+        // tiles. Measure both naturally shaped labels and place only one, so
+        // language changes never move the next action or expose duplicate text.
+        val phase=LocalImmersionFlip.current?.phase?:0
+        val showSupport=expanded||(PocketImmersion.motionEnabled&&phase==1)
+        val forms=listOf(actionText(AnnotatedString(target)),actionText(AnnotatedString(support.takeIf{it!=target}?:text)))
+        androidx.compose.ui.layout.Layout(modifier=modifier.semantics{customActions=listOf(CustomAccessibilityAction(if(expanded)"Chiudi spiegazione" else "Spiega in inglese"){PocketImmersion.revealOriginal(key);true})},content={
+            forms.forEach{label->Text(label,color=color,fontSize=fontSize,fontWeight=fontWeight,
+                maxLines=maxLines,lineHeight=lineHeight,overflow=overflow,
+                textAlign=if(centered)androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start)}
+        }){measurables,constraints->
+            val places=measurables.map{it.measure(constraints)}
+            layout(places.maxOf{it.width},places.maxOf{it.height}){places[if(showSupport)1 else 0].placeRelative(0,0)}
+        }
+        return
+    }
     val readingWave=LocalImmersionReadingWave.current
     if(readingWave!=null&&plan!=null&&support!=target){
         val waveAllowed=LocalImmersionFlip.current!=null||(!expanded&&PocketImmersion.motionEnabled&&immersionTransitionAnimated())

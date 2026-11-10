@@ -21,7 +21,8 @@
     "co.fallsoft.pocket.NativeParityControlsNativeTest#executionInspectionAndTerminationStaySourceBound",
     "co.fallsoft.pocket.NativeParityControlsNativeTest#contextRecoveryRevertAndSettingsPreserveDrafts",
     "co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#backgroundHistoryEligibilityPreservesExplicitReadsAndRecovery",
-    "co.fallsoft.pocket.QueuedMessagesNativeTest#queuedMessagesStayVisibleAndRemoveWithoutHistory"
+    "co.fallsoft.pocket.QueuedMessagesNativeTest#queuedMessagesStayVisibleAndRemoveWithoutHistory",
+    "co.fallsoft.pocket.SettingsDrawerNativeTest#drawerPreservesWindowDraftAndReachableControls"
   ],
   "limits": [
     "All debug/release unit suites and lints remain required; native cases target changed catalog/input paths rather than repeating every historical feature case",

@@ -4057,5 +4057,11 @@
     "design": "Settings uses the same anchored menu in list and conversation. Existing account quota cache exposes only provider reset count and its independent observation freshness; missing fields remain unavailable. No new quota polling or redemption. Speech-source popup and actionable Needs you remain intact.",
     "status": "Delivered: Android189/alpha171 available on both existing channels; web and both backends live. Required native journeys, exact optimized menu/catalog/history and browser checks passed. No phone installation performed.",
     "evidence": "docs/qualification/toolbar-resets-189.json"
+  },
+  "toolbar_drawer_20261110": {
+    "requirement": "Replace the cramped toolbar popup with a coherent bottom drawer; immersion must not distort action spacing.",
+    "design": "Shared list/conversation bottom sheet; full-width natural bilingual action labels with stable whole-label height; grouped session/app/account sections; detailed usage, saved recordings and updates expand in place. Preserve native actions, source identity, update access and reset freshness.",
+    "status": "Delivered: Android190/alpha172 published on workstation and Mac with authenticated exact-APK readback.21 native journeys, optimized catalog/history and enlarged bilingual drawer inspection passed. Phone installation not performed.",
+    "evidence": "docs/qualification/toolbar-drawer-190.json"
   }
 }
