@@ -6,7 +6,7 @@ export class LocalSendPresentation {
  remember(intent,state=intent.state){
   if(!intent?.deviceId||!intent.id||!intent.scope||intent.room||intent.scope==='coordinator'||typeof intent.text!=='string')return;
   const key=this.key(intent.deviceId),rows=this.read(key,[])||[],old=rows.find(r=>r.id===intent.id&&r.scope===intent.scope);
-  const row={deviceId:intent.deviceId,scope:intent.scope,id:intent.id,text:intent.text,state:old?.state==='accepted'?'accepted':state};
+  const row={deviceId:intent.deviceId,scope:intent.scope,id:intent.id,text:old?.state==='accepted'?old.text:intent.text,state:old?.state==='accepted'?'accepted':state};
   this.write(key,old?rows.map(r=>r.id===row.id&&r.scope===row.scope?row:r):[...rows,row]);
  }
  outcome(device,scope,id,state){

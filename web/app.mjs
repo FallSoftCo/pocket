@@ -247,14 +247,16 @@ function observeOutbox(thread,snapshot,paint=true){
 function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const outgoing=cache.entity(scope).outbox?.items??current?.outgoing??[];
  const canonical=localSends.reconcile(deviceId,scope,cache.get(scope)?.rows||[]);
  const local=localSends.list(deviceId,scope);
+ const accepted=new Set(local.filter(r=>r.state==='accepted').map(r=>r.id));
+ for(const row of outgoing){const saved=read('delivered.'+deviceId+'.'+row.id);if(saved?.intent?.scope===scope&&saved.intent.deviceId===deviceId&&(saved.receipt?.state==='accepted'||saved.presentationAccepted===true)&&deliveryAccepted(saved.intent,saved.receipt))accepted.add(row.id);}
  for(const saved of local){
-  if(outgoing.some(o=>o.id===saved.id&&!['accepted','cancelled'].includes(o.state)))continue;
+  if(saved.state!=='accepted'&&outgoing.some(o=>o.id===saved.id&&!['accepted','cancelled'].includes(o.state)))continue;
   const label=saved.state==='accepted'?'Accepted · awaiting conversation history':saved.state==='unknown'?'Delivery uncertain':saved.state==='failed'?'Delivery failed':['queued','held'].includes(saved.state)?'Queued · awaiting delivery update':'Sending…';
   const row=el('div','outbox-row local-send');row.dataset.localSendId=saved.id;row.dataset.deliveryState=saved.state;
-  row.append(el('strong','',label));const body=el('div','local-send-body',saved.text);body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';row.append(body);holder.append(row);
+  row.append(el('strong','',label));const body=el('div','local-send-body',saved.text);body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';row.append(body);if(saved.state==='accepted'){const originalDevice=deviceId,originalScope=scope;row.append(button('Hide local copy',()=>{localSends.remove(originalDevice,originalScope,new Set([saved.id]));if(deviceId===originalDevice&&scope===originalScope)renderOutbox();}));}holder.append(row);
  }
  if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send — ${canonical.has(pending.id)?'message visible; original receipt still needs checking':'check original delivery'}`);row.append(button('Check delivery',reconcilePending));holder.append(row);}for(const o of outgoing){
- if(['accepted','cancelled'].includes(o.state))continue;
+ if(accepted.has(o.id)||['accepted','cancelled'].includes(o.state))continue;
  const origin={thread:scope,device:deviceId,navigation:queueNavigation,authority:queueAuthority};
  const sourceCurrent=()=>authenticated&&deviceId===origin.device&&queueAuthority===origin.authority;
  const uiCurrent=()=>sourceCurrent()&&scope===origin.thread&&queueNavigation===origin.navigation;
@@ -386,9 +388,18 @@ async function send(){const text=$('draft').value.trim();if(!text)return;if(deli
  const measurement=uxSend;
  try{persistPending(message);}catch(error){ux.end(measurement,'failed');throw error;}
  ux.mark(measurement,'send_feedback_committed');try{await deliverPending();}catch(error){ux.end(measurement,'unknown');throw error;}}
+function saveDelivered(message,receipt){
+ const key='delivered.'+message.deviceId+'.'+message.id,previous=read(key);
+ const presentationAccepted=receipt.state==='accepted'||previous?.intent?.scope===message.scope&&previous.intent.deviceId===message.deviceId&&previous.presentationAccepted===true||localSends.list(message.deviceId,message.scope).some(r=>r.id===message.id&&r.state==='accepted');
+ write(key,{intent:message,receipt,...(presentationAccepted?{presentationAccepted:true}:{})});
+}
+function acceptPresentedDelivery(thread,id){
+ const key='delivered.'+deviceId+'.'+id,saved=read(key);
+ if(saved?.intent?.id===id&&saved.intent.deviceId===deviceId&&saved.intent.scope===thread&&deliveryAccepted(saved.intent,saved.receipt)&&!saved.presentationAccepted)write(key,{...saved,presentationAccepted:true});
+}
 function clearDelivered(message,receipt){
  if(pending?.id!==message.id||!deliveryAccepted(message,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
- write('delivered.'+deviceId+'.'+message.id,{intent:message,receipt});
+ saveDelivered(message,receipt);
  const key=message.draftKey||(!isRoom(message.scope)?draftKey(message.scope):null);
  // Legacy journals have no generation: keep their text conservatively.
  if(key&&message.draftRevision!==undefined&&read('revision.'+key,0)===message.draftRevision&&read(key,'').trim()===message.text){write(key,'');if(message.scope===scope&&key===draftKey()&&$('draft').value.trim()===message.text)$('draft').value='';}
@@ -411,9 +422,16 @@ async function checkOriginalPending(p){
  const receipt=await readOriginal(p);
  if(!deliveryAccepted(p,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
  if(pending?.id===p.id&&p.scope===scope)ux.mark(uxSend,'send_admitted_callback');
- write('delivered.'+p.deviceId+'.'+p.id,{intent:p,receipt});localSends.remember(p,receipt.state);renderOutbox();
- // Keep the original local state through a failed refresh, even after a valid
- // acknowledgement. Never turn refresh failure into another submission.
+ saveDelivered(p,receipt);localSends.remember(p,receipt.state);renderOutbox();
+ if(!p.room&&p.scope!=='coordinator'){
+  clearDelivered(p,receipt);
+  // Delivery is complete. These original read-only follow-ups do not own the
+  // send flight, next draft, or original delivery state.
+  const originalDevice=p.deviceId;
+  void (async()=>{try{if(scope===p.scope)await refreshConversation();else await historyReader.read(p.scope);}catch(e){if(deviceId===originalDevice&&scope===p.scope)error(Error('Message accepted. Could not update conversation: '+e.message));}finally{if(deviceId===originalDevice)await refreshList({invalidate:true});}})().catch(e=>{if(deviceId===originalDevice&&scope===p.scope)error(Error('Message accepted. Could not update work list: '+e.message));});
+  return;
+ }
+ // Legacy room/coordinator acknowledgement still uses its existing history checks.
  if(p.room){const page=await rooms.call(p.route,'rooms/'+p.room+'/history?view=conversation&limit=100&before='+Number.MAX_SAFE_INTEGER);new RoomHistory({authorityId:p.route.binding.authorityId,principalId:p.route.binding.principalId,roomId:p.room},{view:'conversation'}).apply(page);}
  else if(p.scope==='coordinator')await api('/api/voice/history?conversationOnly=1');
  else if(scope===p.scope)await refreshConversation();
@@ -476,7 +494,7 @@ function handleEvent(m){
   scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;
  }
  if(['attention','attentionResolved','request'].includes(m.type)){scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;}
- if(m.type==='reply'&&m.outbox){localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
+ if(m.type==='reply'&&m.outbox){if(m.state==='accepted')acceptPresentedDelivery(threadId,m.id);localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
  if(['reply','turnRecovery','message'].includes(m.type)){scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='codex'){
   if(['turn/started','turn/completed','thread/status/changed','serverRequest/resolved'].includes(m.event?.method))scheduleRefresh({head:threadId===scope,catalog:true});
