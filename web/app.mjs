@@ -1,3 +1,4 @@
+import {LocalSendPresentation} from './local-send-presentation.mjs';
 import {UxMeasurements} from './ux-measurements.mjs';
 import {NativeSettingsPanel,addServiceTierControl} from './native-settings.mjs';
 import {commandOutputButton,openTerminals,executionApiFor} from './native-execution.mjs';
@@ -28,6 +29,7 @@ import {deliveryAccepted,bindingMatches,jsonEqual} from './receipt-policy.mjs';
 import {AccountUsageCache} from './account-usage.mjs';
 import {panelFrame,anchoredPanelPlacement} from './anchored-panel.mjs';
 const base=clientBase(import.meta.url);
+const localSends=new LocalSendPresentation({read,write});
 const ux=new UxMeasurements();
 let uxOpen=0,uxFresh=0,uxSend=0,uxFrame=0;
 let queueNavigation=0,queueAuthority=0,queueVerifiedNavigation=-1;const queueActions=new Map();
@@ -92,7 +94,7 @@ const voice=new BrowserVoice(api,(text,p)=>{
 });
 function draftKey(s=scope){if(isRoom(s)){if(!rooms.entries.has(s)&&s===openedScope&&openedDraftKey)return openedDraftKey;const r=rooms.route(s,{requireAvailable:false});return 'draft.'+JSON.stringify([deviceId,r.environment,r.binding.bindingId,r.binding.installationId,r.binding.authorityId,r.binding.principalId,rooms.entry(s).roomId,targetFor(s)]);}return `draft.${deviceId}.${s}`;}
 function saveDraft(edited=false){if(deviceId&&openedScope===scope){const key=openedDraftKey||draftKey(),text=$('draft').value;if(edited||read(key,'')!==text)write('revision.'+key,read('revision.'+key,0)+1);write(key,text);}}
-function persistPending(value){pending=value;write('pending',value);renderOutbox();}
+function persistPending(value){write('pending',value);pending=value;if(value)localSends.remember(value);renderOutbox();}
 function button(label,action){const b=el('button','',label);b.type='button';b.onclick=run(action);return b;}
 function stamp(ms){if(!ms)return 'Recency unknown';const d=Math.max(0,Date.now()-ms);return d<60000?'Just now':d<3600000?`${Math.floor(d/60000)}m ago`:d<86400000?`${Math.floor(d/3600000)}h ago`:new Date(ms).toLocaleDateString();}
 let listReadingUntil=0,lastSeatRefresh=0;const expandedParents=new Set();
@@ -230,6 +232,7 @@ function rowNode(row){let n;if(['turn','turnEnd'].includes(row.kind))return el('
 }
 function renderTranscript(){const data=cache.get(scope);if(!data)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top),anchorId=anchor?.dataset.id,anchorOffset=anchor?anchor.getBoundingClientRect().top-list.getBoundingClientRect().top:0,bottom=list.scrollHeight-list.scrollTop-list.clientHeight<90,previousHeight=list.scrollHeight,previousTop=list.scrollTop;
  const sourceRows=scope==='coordinator'?(data.turns||[]).flatMap(t=>[{id:t.id+'/user',kind:'user',title:'You',text:t.transcript||'',turnId:t.id,startedAtMs:t.created_at},{id:t.id+'/response',kind:'message',title:`Coordinator · ${t.state}`,text:t.response||t.error||'Working…',turnId:t.id,actions:t.actions,startedAtMs:t.timings?.first_response||t.timings?.first_final_response||t.timings?.response_completed}]):data.rows||[];
+ localSends.reconcile(deviceId,scope,sourceRows);renderOutbox();
  const visibleRows=sourceRows;
  const rows=foldRuns(visibleRows);
  const old=new Map([...list.children].map(n=>[n.dataset.id,n]));let cursor=list.firstChild;for(const row of rows){let n=old.get(row.id);if(!samePresentation(n?._row,row)){const previous=n;n=rowNode(row);n.dataset.id=row.id;n._row=row;if(row.actions?.length){const actions=el('div','message-actions');for(const a of row.actions.filter(a=>a.threadId))actions.append(button(`Open ${a.name||'work'}`,()=>open(a.threadId)));n.append(actions);}if(previous){if(previous.open)n.open=true;previous.replaceWith(n);if(cursor===previous)cursor=n;}}old.delete(row.id);if(n!==cursor)list.insertBefore(n,cursor);cursor=n.nextSibling;}
@@ -238,9 +241,19 @@ function renderTranscript(){const data=cache.get(scope);if(!data)return;const li
 function renderRequests(){if(isRoom(scope)){requestList.update(scope,[]);if(rooms.entries.has(scope))renderRoomAttention();return;}requestList.update(scope,scope==='coordinator'?[]:current?.pending||[]);}
 function observeOutbox(thread,snapshot,paint=true){
  if(!cache.outbox(thread,snapshot))return;
+ for(const row of snapshot.items){const saved=localSends.list(deviceId,thread).find(r=>r.id===row.id);if(saved)localSends.remember({...saved,text:row.text},row.state);}
  if(paint&&thread===scope){if(current)Object.assign(current,{outbox:cache.entity(thread).outbox,outgoing:cache.entity(thread).outbox.items});renderOutbox();}
 }
-function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const outgoing=cache.entity(scope).outbox?.items??current?.outgoing??[];if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send · ${pending.text.slice(0,90)} — checking delivery`);row.append(button('Check delivery',reconcilePending));holder.append(row);}for(const o of outgoing){
+function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const outgoing=cache.entity(scope).outbox?.items??current?.outgoing??[];
+ const canonical=localSends.reconcile(deviceId,scope,cache.get(scope)?.rows||[]);
+ const local=localSends.list(deviceId,scope);
+ for(const saved of local){
+  if(outgoing.some(o=>o.id===saved.id&&!['accepted','cancelled'].includes(o.state)))continue;
+  const label=saved.state==='accepted'?'Accepted · awaiting conversation history':saved.state==='unknown'?'Delivery uncertain':saved.state==='failed'?'Delivery failed':['queued','held'].includes(saved.state)?'Queued · awaiting delivery update':'Sending…';
+  const row=el('div','outbox-row local-send');row.dataset.localSendId=saved.id;row.dataset.deliveryState=saved.state;
+  row.append(el('strong','',label));const body=el('div','local-send-body',saved.text);body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';row.append(body);holder.append(row);
+ }
+ if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send — ${canonical.has(pending.id)?'message visible; original receipt still needs checking':'check original delivery'}`);row.append(button('Check delivery',reconcilePending));holder.append(row);}for(const o of outgoing){
  if(['accepted','cancelled'].includes(o.state))continue;
  const origin={thread:scope,device:deviceId,navigation:queueNavigation,authority:queueAuthority};
  const sourceCurrent=()=>authenticated&&deviceId===origin.device&&queueAuthority===origin.authority;
@@ -250,13 +263,14 @@ function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const 
  const active=verified&&(current?.thread?.status?.type==='active'||current?.nativeExecutionTurn?.status==='inProgress');
  const idle=verified&&!active&&current?.thread?.status?.type==='idle';
  const label=active?'Steer now':idle?'Send now':'Checking status';
- const row=el('div','outbox-row',`${flight?.label||(promoted&&o.state==='queued'?'Sending to current work…':o.state)} · ${o.text?.slice(0,100)||'Message'}`);row.dataset.outgoingId=o.id;
+ const row=el('div','outbox-row',`${flight?.label||(promoted&&o.state==='queued'?'Sending to current work…':o.state)} · ${o.text||'Message'}`);row.style.whiteSpace='pre-wrap';row.style.overflowWrap='anywhere';row.dataset.outgoingId=o.id;
  const act=async(action,extra={})=>{
   if(!uiCurrent()||queueActions.has(key))return;
   const label=action==='send'?(active?'Steering…':'Sending…'):'Updating message…';queueActions.set(key,{label});renderOutbox();
   try{
    const result=await api(`/api/threads/${origin.thread}/replies/${o.id}`,{action,...extra},{scope:origin.thread,acceptOutbox:data=>sourceCurrent()&&data.id===o.id&&typeof data.state==='string',paintOutbox:uiCurrent});
    if(result.id!==o.id||typeof result.state!=='string')throw Error('Message update was not acknowledged. Check its original delivery before trying again.');
+   if(sourceCurrent())localSends.outcome(origin.device,origin.thread,o.id,result.state);
    if(uiCurrent()&&!result.outbox)await refreshConversation();
   }catch(e){if(uiCurrent())error(e);}finally{queueActions.delete(key);if(uiCurrent())renderOutbox();}
  };
@@ -397,7 +411,7 @@ async function checkOriginalPending(p){
  const receipt=await readOriginal(p);
  if(!deliveryAccepted(p,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
  if(pending?.id===p.id&&p.scope===scope)ux.mark(uxSend,'send_admitted_callback');
- write('delivered.'+deviceId+'.'+p.id,{intent:p,receipt});
+ write('delivered.'+p.deviceId+'.'+p.id,{intent:p,receipt});localSends.remember(p,receipt.state);renderOutbox();
  // Keep the original local state through a failed refresh, even after a valid
  // acknowledgement. Never turn refresh failure into another submission.
  if(p.room){const page=await rooms.call(p.route,'rooms/'+p.room+'/history?view=conversation&limit=100&before='+Number.MAX_SAFE_INTEGER);new RoomHistory({authorityId:p.route.binding.authorityId,principalId:p.route.binding.principalId,roomId:p.room},{view:'conversation'}).apply(page);}
@@ -462,7 +476,7 @@ function handleEvent(m){
   scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;
  }
  if(['attention','attentionResolved','request'].includes(m.type)){scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;}
- if(m.type==='reply'&&m.outbox){observeOutbox(threadId,m.outbox);scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
+ if(m.type==='reply'&&m.outbox){localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
  if(['reply','turnRecovery','message'].includes(m.type)){scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='codex'){
   if(['turn/started','turn/completed','thread/status/changed','serverRequest/resolved'].includes(m.event?.method))scheduleRefresh({head:threadId===scope,catalog:true});
@@ -495,7 +509,7 @@ function scheduleRefresh({head=true,catalog=false,attention=false}={}){
 async function refreshAttention(){const data=status?.backend==='lax'?{notifications:[]}:await api('/api/attention');attentionItems=data.notifications;renderNotes();renderList();}
 
 function readThemePreference(){try{return JSON.parse(localStorage.getItem('nextcomp.web.theme'));}catch{return null;}}
-async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}const retirement=await api('/web/environments').catch(()=>null);if(retirement?.retiredEnvironmentIds?.length){const ids=new Set(retirement.retiredEnvironmentIds);purgeRetiredStorage(localStorage,retirement.retiredEnvironmentIds);for(const record of await voiceJournal('list'))if(retiredValue(record,ids))await voiceJournal('delete',record.id);scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);}authenticated=true;ux.foreground(document.visibilityState==='visible');$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
+async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}const retirement=await api('/web/environments').catch(()=>null);if(retirement?.retiredEnvironmentIds?.length){const ids=new Set(retirement.retiredEnvironmentIds);purgeRetiredStorage(localStorage,retirement.retiredEnvironmentIds);for(const record of await voiceJournal('list'))if(retiredValue(record,ids))await voiceJournal('delete',record.id);scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);}if(pending?.deviceId===deviceId)localSends.remember(pending);authenticated=true;ux.foreground(document.visibilityState==='visible');$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
 $('pair-form').onsubmit=async e=>{e.preventDefault();const b=$('pair-form').querySelector('button');b.disabled=true;try{await api('/web/pair',Object.fromEntries(new FormData(e.target)));await boot();}catch(err){$('pair-error').textContent=err.message;}finally{b.disabled=false;}};
 $('composer').onsubmit=run(async e=>{e.preventDefault();await send();});$('draft').oninput=()=>saveDraft(true);$('draft').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();void run(send)();}};
 $('send').onpointerdown=e=>{if(document.activeElement===$('draft'))e.preventDefault();};
