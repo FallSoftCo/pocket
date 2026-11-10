@@ -4027,5 +4027,10 @@
     "implementation": "Map failed terminal events to systemError; preserve normal idle after completion/interruption and clear error on the next turn start. No model polling or generic HTTP 400 auto-retry.",
     "verification": "17 focused discovery/real HTTP-native socket integration checks pass, including systemError followed by failed terminal event, stale idle index hydration, Needs you visibility and subsequent active/completed transitions.",
     "status": "Deployed to workstation backend; Android/web185 consume unchanged attention contract. Native Codex process, pairing and outgoing receipts preserved. Mac backend propagation pending."
+  },
+  "needs_you_parent_resolution_20261109": {
+    "requirement": "Needs you must identify subagent ownership and offer usable resolution on Android and web.",
+    "design": "Keep affected children expanded under their named owning task. Offer original-source parent navigation, preserving drafts. Child questions/approvals use existing native decision controls even when direct child text input is unsupported. Runtime errors route guidance to parent; no automatic retry or agent/human impersonation. Missing parent remains explicitly unavailable with same-source identity navigation.",
+    "status": "Implementation and focused native/browser qualification in progress."
   }
 }

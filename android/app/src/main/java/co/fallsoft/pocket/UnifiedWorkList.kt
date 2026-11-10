@@ -89,16 +89,9 @@ private data class UnifiedWorkRow(
         }
     }
     val terms=query.trim().split(Regex("\\s+")).filter{it.isNotBlank()}
-    // Filtering leaves the ordinary catalog order and scroll state intact. A
-    // delegated request appears as its own original source row in this view.
-    val candidates=if(attentionOnly)displayed.flatMap{row->
-        val own=if(row.task?.needsReview()==true)listOf(row.copy(group=row.group?.copy(children=emptyList())))else emptyList()
-        own+row.group?.children.orEmpty().filter{it.needsReview()}.mapNotNull{child->
-            row.source.entries.firstOrNull{it.key.kind==WorkKind.SESSION&&it.key.id==child.id}?.let{entry->
-                UnifiedWorkRow(entry,row.source,child,SessionGroup(child,emptyList()))
-            }
-        }
-    }else displayed
+    // Attention belongs to a work family. Keep the named parent and source;
+    // expose only affected children without changing ordinary expansion state.
+    val candidates=if(attentionOnly)displayed.map{row->row.copy(group=row.group?.let{it.copy(children=it.children.filter{child->child.needsReview()})})}else displayed
     val shown=candidates.filter{row->
         val text=(listOf(row.entry.value.destination.environment.name,row.task?.title,row.task?.preview,row.task?.cwd,row.task?.catalogContext,row.task?.agentNickname,row.room?.s("name"),row.room?.s("purpose"))+
             row.group?.children.orEmpty().flatMap{listOf(it.title,it.preview,it.cwd,it.catalogContext,it.agentNickname,it.agentRole)}).filterNotNull().joinToString(" ")
@@ -123,6 +116,7 @@ private data class UnifiedWorkRow(
                     headerBadge={WorkOriginBadge(entry,row.source.available)},onKeyboard={actions.open(entry,true)}){actions.open(entry,false)}
             }else if(row.group!=null){
                 SessionGroupCard(row.group,System.currentTimeMillis(),
+                    attentionOnly=attentionOnly,onParent={actions.open(entry,true)},
                     onChild={child->row.source.entries.firstOrNull{it.key.kind==WorkKind.SESSION&&it.key.id==child.id}?.let{actions.open(it,false)}},
                     identityScope=identity,preferenceKey=entry.value.destination.environment::key,
                     onArchiveChild={child->row.source.entries.firstOrNull{it.key.id==child.id}?.let{actions.archive(it)}},
@@ -134,7 +128,9 @@ private data class UnifiedWorkRow(
                         onArchive={actions.archive(entry)},onRestore={actions.restore(entry)},onOpen={actions.open(entry,it)},onRename={name,done->actions.rename(entry,name,done)},onWatch={actions.watch(entry,it)})
                 }
             }else if(row.task!=null){
-                AgentResultCard(row.task,onArchive={actions.archive(entry)},onRestore={actions.restore(entry)},onOpen={actions.open(entry,false)},parentTitle=if(row.task.parentThreadId!=null)"Parent task outside this catalog page" else "Parent identity unavailable",headerBadge={WorkOriginBadge(entry,row.source.available)})
+                val parentEntry=row.task.parentThreadId?.let{id->row.source.entries.firstOrNull{it.key.kind==WorkKind.SESSION&&it.key.id==id}
+                    ?:entry.copy(key=entry.key.copy(id=id),value=entry.value.copy(body=JSONObject().put("id",id).toString()))}
+                AgentResultCard(row.task,onArchive={actions.archive(entry)},onRestore={actions.restore(entry)},onOpen={actions.open(entry,false)},parentTitle=if(row.task.parentThreadId!=null)"Parent: ${row.task.parentThreadId}" else "Parent identity unavailable",headerBadge={WorkOriginBadge(entry,row.source.available)},onParent=parentEntry?.let{{actions.open(it,true)}})
             }
         }
         snapshots.filter{it.error!=null}.forEach{source->
