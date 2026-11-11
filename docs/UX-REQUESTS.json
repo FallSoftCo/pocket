@@ -3589,6 +3589,12 @@
       ],
       "verification": "Pending integrated source qualification; inherited180 test counts do not qualify this work.",
       "evidence": "docs/UX-MEASUREMENT-PLAN.md"
+    },
+    {
+      "id": "gallery-all-published-page-forms-20261111",
+      "request": "Gallery previews must work in other sessions, including standalone review pages, not only the single catalog-card example. All gallery links should work.",
+      "status": "193 candidate: catalog/root/index links and standalone review-page previews on Android/web; actual Vipi page format identified; native and rendered qualification pending.",
+      "evidence": "Actual Vipi recent assistant messages use /8bar/vipi-local-release-20261110/live-bot/ and /live-chat-and-candidates/, previously excluded by exact /8bar/#id recognition."
     }
   ],
   "current_state": {

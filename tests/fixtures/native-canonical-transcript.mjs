@@ -8,7 +8,7 @@ const captured=new Map((capture?.pages||[]).map(p=>[p.cursor??'',p.response]));
 let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0,streamFinished=false,streamsSent=0,streamTimer=null;
 let archiveHold=false,archiveError=false,archiveOrigins=[];
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
-const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
+const sockets=new Set(),reads=[];let galleryPageReads=0,galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
 let attentionStudy=false,attentionResolved=false,reportReads=0,attentionChildQuestion=false;const attentionAnswers=[];
 const attentionChild=id=>({...meta(),id,name:id==='attention-error'?'Runtime child':'Question child',agentNickname:id==='attention-error'?'Runtime child':'Question child',parentThreadId:'same-thread',isChild:true,canAcceptDirectInput:false,status:{type:id==='attention-error'?'systemError':'active'},source:{subAgent:{thread_spawn:{parent_thread_id:'same-thread'}}}});
 const attentionRequest=()=>({id:'attention-child-request',method:'item/tool/requestUserInput',_pocketUI:{token:'synthetic-child-request-v1'},params:{threadId:'attention-question',turnId:'native-turn',itemId:'child-question',questions:[{id:'choice',header:'Child choice',question:'Which path should this child take?',options:[{label:'Proceed',description:'Use the synthetic child path'}]}]}});
@@ -45,6 +45,7 @@ const server=http.createServer(async(req,res)=>{
  if(process.env.NEXTCOMP_QA_HISTORY_TRACE==='1')console.log(JSON.stringify({at:Date.now(),method:req.method,path,query:url.search}));
  if(path.startsWith('/8bar/')){
   if(req.headers.authorization){galleryCredentialLeaks++;res.writeHead(403).end();return;}
+  if(path==='/8bar/review/index.html'){galleryPageReads++;res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Standalone review</title><base href="https://wrong.example/"><main><figure><img src="../preview.svg" alt="Review"></figure></main>');return;}
   if(path==='/8bar/showcase-previews.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:1,cards:[{id:'native-preview',title:'Native material study',poster:'preview.svg'}]}));return;}
   if(path==='/8bar/showcase-catalog.json'){res.writeHead(500).end('Full catalog must not be fetched for a preview');return;}
   if(path==='/8bar/preview.svg'){galleryImageReads++;res.setHeader('Content-Type','image/svg+xml');res.end('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#254d50"/><rect x="24" y="24" width="280" height="252" rx="4" fill="#b69972"/><text x="24" y="326" font-size="25" fill="white">Native material study</text></svg>');return;}
@@ -210,7 +211,7 @@ const server=http.createServer(async(req,res)=>{
   replay=true;body={source:'recorded-native-timeline',pages:captured.size,firstBefore:captured.get('')?.nextCursor};
  }else if(path==='/_qa/archive-hold'){archiveHold=true;body={ok:true};}
  else if(path==='/_qa/archive-refuse'){archiveError=true;archiveHold=false;body={ok:true};}
- else if(path==='/_qa/state')body={reads,archived,archiveCalls,archiveOrigins,restoreCalls,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
+ else if(path==='/_qa/state')body={reads,archived,archiveCalls,archiveOrigins,restoreCalls,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryPageReads,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
  else if(path==='/api/notifications')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};

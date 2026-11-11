@@ -21,9 +21,14 @@ import org.json.JSONObject
 
 internal data class GalleryPreviewCard(val title:String,val poster:String)
 internal object GalleryCardLinks {
-    fun card(value:String):URI?=runCatching{URI(value)}.getOrNull()?.takeIf{
-        it.scheme in listOf("http","https")&&it.host!=null&&it.userInfo==null&&it.path=="/8bar/"&&!it.fragment.isNullOrBlank()
+    fun target(value:String):URI?=runCatching{URI(value)}.getOrNull()?.takeIf{
+        it.scheme in listOf("http","https")&&it.host!=null&&it.userInfo==null&&
+        ((it.path in listOf("/8bar","/8bar/","/8bar/index.html"))||
+         (it.normalize().path.startsWith("/8bar/")&&it.path!="/8bar/"&&
+          (it.path.endsWith("/")||it.path.endsWith(".html",ignoreCase=true))))
     }
+    fun isCard(uri:URI)=uri.path in listOf("/8bar","/8bar/","/8bar/index.html")
+    fun page(uri:URI)=URI(uri.scheme,null,uri.host,uri.port,uri.path,null,null)
     fun asset(base:URI,value:String):String?=runCatching{base.resolve(value)}.getOrNull()?.takeIf{
         value.isNotBlank()&&it.scheme==base.scheme&&it.host==base.host&&it.port==base.port&&it.userInfo==null&&it.normalize().path.startsWith("/8bar/")
     }?.toString()
@@ -37,7 +42,8 @@ internal object GalleryPreviewCatalog {
     private val cache=LinkedHashMap<String,Entry>()
     private val http=Pocket.http.newBuilder().followRedirects(false).followSslRedirects(false).callTimeout(12,TimeUnit.SECONDS).build()
     suspend fun resolve(destination:String):GalleryPreviewCard? {
-        val uri=GalleryCardLinks.card(destination)?:return null
+        val uri=GalleryCardLinks.target(destination)?:return null
+        if(!GalleryCardLinks.isCard(uri))return GalleryPagePreviews.resolve(uri)
         val base=uri.resolve("/8bar/");val key=base.toString();val now=System.currentTimeMillis()
         val job=lock.withLock{
             cache[key]?.takeIf{now-it.at<60_000}?.job?:scope.async{permits.withPermit{
@@ -59,9 +65,10 @@ internal object GalleryPreviewCatalog {
                 }
             }}.also{cache[key]=Entry(now,it);while(cache.size>4){val oldest=cache.keys.first();cache.remove(oldest)}}
         }
-        return job.await()[uri.fragment]
+        val cards=job.await()
+        return if(uri.fragment.isNullOrBlank())cards.values.firstOrNull() else cards[uri.fragment]
     }
-    suspend fun invalidate(destination:String){val uri=GalleryCardLinks.card(destination)?:return;lock.withLock{cache.remove(uri.resolve("/8bar/").toString())}}
+    suspend fun invalidate(destination:String){val uri=GalleryCardLinks.target(destination)?:return;if(!GalleryCardLinks.isCard(uri)){GalleryPagePreviews.invalidate(uri);return};lock.withLock{cache.remove(uri.resolve("/8bar/").toString())}}
 }
 @Composable internal fun GalleryCardPreview(image:MarkdownImage){
     var card by remember(image.destination){mutableStateOf<GalleryPreviewCard?>(null)}

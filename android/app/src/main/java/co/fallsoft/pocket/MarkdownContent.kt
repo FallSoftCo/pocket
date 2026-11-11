@@ -87,15 +87,15 @@ internal object MarkdownContent {
                 is HtmlInline->text.append(node.literal)
                 else->{var child=node.firstChild;while(child!=null){visit(child);child=child.next}}
             }
-            if(node is Image)images.add(MarkdownImage(node.destination,text.substring(start),position=text.length,gallery=GalleryCardLinks.card(node.destination)!=null))
-            if(node is Link&&(LinkedImagePolicy.isImageUrl(node.destination)||GalleryCardLinks.card(node.destination)!=null))images.add(MarkdownImage(node.destination,text.substring(start),LinkedImagePolicy.isOpaqueFileLink(node.destination),text.length,gallery=GalleryCardLinks.card(node.destination)!=null))
+            if(node is Image)images.add(MarkdownImage(node.destination,text.substring(start),position=text.length,gallery=GalleryCardLinks.target(node.destination)!=null))
+            if(node is Link&&(LinkedImagePolicy.isImageUrl(node.destination)||GalleryCardLinks.target(node.destination)!=null))images.add(MarkdownImage(node.destination,text.substring(start),LinkedImagePolicy.isOpaqueFileLink(node.destination),text.length,gallery=GalleryCardLinks.target(node.destination)!=null))
             val kind=when(node){is StrongEmphasis->"bold";is Emphasis->"italic";is Code->"code";is Link,is Image->"link";else->null}
             if(kind!=null&&text.length>start)spans.add(MarkdownSpan(start,text.length,kind,when(node){is Link->node.destination;is Image->node.destination;else->""}))
         }
         var child=parent.firstChild;while(child!=null){visit(child);child=child.next}
         Regex("https?://[^\\s<>]+",RegexOption.IGNORE_CASE).findAll(text).forEach{match->
             val url=match.value.trimEnd('.',',',')',';','!')
-            if(spans.none{it.kind in listOf("code","link")&&it.start<=match.range.first&&it.end>match.range.first}&&(LinkedImagePolicy.isImageUrl(url)||GalleryCardLinks.card(url)!=null))images.add(MarkdownImage(url,"Image",LinkedImagePolicy.isOpaqueFileLink(url),match.range.first+url.length,gallery=GalleryCardLinks.card(url)!=null))
+            if(spans.none{it.kind in listOf("code","link")&&it.start<=match.range.first&&it.end>match.range.first}&&(LinkedImagePolicy.isImageUrl(url)||GalleryCardLinks.target(url)!=null))images.add(MarkdownImage(url,"Image",LinkedImagePolicy.isOpaqueFileLink(url),match.range.first+url.length,gallery=GalleryCardLinks.target(url)!=null))
         }
         return MarkdownInline(text.toString(),spans,images.distinctBy{it.destination}.take(8))
     }

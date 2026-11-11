@@ -232,7 +232,23 @@ class NativeReadingParityNativeTest {
    assertTrue("Keyboard activation did not switch the focused phrase",waitPhrase("La correzione"))
    assertEquals("Keyboard activation changed phrase geometry",enlarged,boxes.get())
    assertEquals("Keyboard phrase activation fired the unrelated link",1,linkTaps.get())
-   val state=qa("state");assertEquals(1,state.optInt("galleryMetadataReads"));assertTrue(state.optInt("galleryImageReads")>=1);assertEquals(0,state.optInt("galleryCredentialLeaks"));assertEquals(0,state.optInt("workSubmissions"))
+   // Exercise the actual Markdown link path used by standalone review pages,
+   // not a direct component invocation or a substituted catalog-card link.
+   main{val activity=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>().single();activity.setContent{
+    MaterialTheme{Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp)){
+     RichText("Here is the review.\n\n[Standalone review](http://127.0.0.1:18880/8bar/review/index.html#details)\n\nThe original conversation continues below.")
+    }}
+   }}
+   await("Standalone page did not load its original image"){qa("state").optInt("galleryPageReads")==1&&device.hasObject(By.desc("Standalone review"))}
+   compose.waitForIdle()
+   assertFalse("Standalone preview failed",device.hasObject(By.text("Preview unavailable")))
+   assertFalse("Standalone image failed",device.hasObject(By.text("Image unavailable")))
+   capture("native-gallery-page.png")
+   click(By.desc("Standalone review"))
+   assertTrue("Inline page image did not open native viewer",device.wait(Until.hasObject(By.text("Close image")),10000))
+   click(By.text("Close image"))
+   assertTrue(device.wait(Until.hasObject(By.text("The original conversation continues below.")),10000))
+   val state=qa("state");assertEquals(1,state.optInt("galleryMetadataReads"));assertEquals(1,state.optInt("galleryPageReads"));assertTrue(state.optInt("galleryImageReads")>=1);assertEquals(0,state.optInt("galleryCredentialLeaks"));assertEquals(0,state.optInt("workSubmissions"))
   }catch(error:Throwable){
    java.io.File(c.cacheDir,"native-reading-focus-observation.json").writeText(focusEvidence.put("failure",error.message).toString())
    phraseLayout.get()?.let{java.io.File(c.cacheDir,"native-reading-phrase-layout.json").writeText(it.put("containerWidth",phraseWidth.get()).toString())}

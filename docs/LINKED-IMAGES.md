@@ -22,7 +22,7 @@ Ordinary Markdown links and bare URLs ending in PNG, JPEG, GIF, WebP, BMP, AVIF 
 
 Images remain next to their surrounding prose, including within a paragraph. Image presentation does not alter the canonical text or offsets used by optional inline immersion. Italian phrase taps still switch the text in place; viewing an image does not introduce a translated line or help modal.
 
-To show an image stored only on the execution host, an agent should share that exact file through the existing authenticated attachment path, or link to an HTTPS image resource the phone can reach. The notification tool's `files` argument supports explicitly requested local attachments. A raw workstation filesystem path is not a phone-download URL. Links to a gallery card (`/8bar/#card-id`) resolve its published preview directly. Other gallery pages remain ordinary links. The original link remains available beside the preview.
+To show an image stored only on the execution host, an agent should share that exact file through the existing authenticated attachment path, or link to an HTTPS image resource the phone can reach. The notification tool's `files` argument supports explicitly requested local attachments. A raw workstation filesystem path is not a phone-download URL. Gallery-card links (`/8bar/#card-id` or `/8bar/index.html#card-id`) resolve their published preview. A gallery homepage link previews its first published card. Standalone review directories and HTML pages under `/8bar/` preview their declared Open Graph image or first review image. Their scripts and styles are never executed; a preview is not an embedded web page. Pages without an accessible image retain an explicit unavailable/retry state. The original link remains available beside the preview.
 
 ## Loading and access
 
@@ -56,3 +56,12 @@ route. The browser maps only canonical HTTPS links on its own hostname to that
 same-origin mirror. Other hosts, arbitrary ports and credential-bearing links
 are not rewritten. The gallery remains tailnet-only; no CORS wildcard, new
 public listener or application authentication exception is needed.
+
+
+Standalone page metadata is capped at512KiB, cached for60seconds with up to16
+pages, and uses credential-free reads with redirects disabled. Relative image
+paths resolve against the requested page, ignoring HTML `base` tags. Only images
+on the same gallery origin under `/8bar/` qualify. This supports existing agent
+review pages without requiring authors to copy images into a catalog card or
+change previously sent messages. Android uses jsoup’s detached HTML parser;
+web uses a detached DOM document. Neither embeds the page’s executable content.
