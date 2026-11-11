@@ -45,7 +45,8 @@ const server=http.createServer(async(req,res)=>{
  if(process.env.NEXTCOMP_QA_HISTORY_TRACE==='1')console.log(JSON.stringify({at:Date.now(),method:req.method,path,query:url.search}));
  if(path.startsWith('/8bar/')){
   if(req.headers.authorization){galleryCredentialLeaks++;res.writeHead(403).end();return;}
-  if(path==='/8bar/showcase-catalog.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify([{id:'native-preview',title:'Native material study',poster:'preview.svg'}]));return;}
+  if(path==='/8bar/showcase-previews.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:1,cards:[{id:'native-preview',title:'Native material study',poster:'preview.svg'}]}));return;}
+  if(path==='/8bar/showcase-catalog.json'){res.writeHead(500).end('Full catalog must not be fetched for a preview');return;}
   if(path==='/8bar/preview.svg'){galleryImageReads++;res.setHeader('Content-Type','image/svg+xml');res.end('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#254d50"/><rect x="24" y="24" width="280" height="252" rx="4" fill="#b69972"/><text x="24" y="326" font-size="25" fill="white">Native material study</text></svg>');return;}
   res.writeHead(404).end();return;
  }

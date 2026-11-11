@@ -17,6 +17,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.Request
 import org.json.JSONArray
+import org.json.JSONObject
 
 internal data class GalleryPreviewCard(val title:String,val poster:String)
 internal object GalleryCardLinks {
@@ -40,13 +41,18 @@ internal object GalleryPreviewCatalog {
         val base=uri.resolve("/8bar/");val key=base.toString();val now=System.currentTimeMillis()
         val job=lock.withLock{
             cache[key]?.takeIf{now-it.at<60_000}?.job?:scope.async{permits.withPermit{
-                val request=Request.Builder().url(base.resolve("showcase-catalog.json").toString()).get().build()
-                http.newCall(request).execute().use{response->
+                fun request(name:String)=http.newCall(Request.Builder().url(base.resolve(name).toString()).get().build()).execute()
+                var response=request("showcase-previews.json")
+                val legacy=response.code==404
+                if(legacy){response.close();response=request("showcase-catalog.json")}
+                response.use{
                     check(response.isSuccessful){"Gallery metadata unavailable"}
-                    val body=requireNotNull(response.body);val limit=16L*1024*1024
+                    val body=requireNotNull(response.body);val limit=if(legacy)16L*1024*1024 else 4L*1024*1024
                     check(body.contentLength()<=limit){"Gallery metadata exceeds preview limit"}
                     val output=java.io.ByteArrayOutputStream();val buffer=ByteArray(16384);val input=body.byteStream();while(true){val count=input.read(buffer);if(count<0)break;check(output.size()+count<=limit);output.write(buffer,0,count)};val bytes=output.toByteArray()
-                    val cards=JSONArray(String(bytes,Charsets.UTF_8));check(cards.length()<=20_000)
+                    val text=String(bytes,Charsets.UTF_8)
+                    val cards=if(legacy)JSONArray(text)else JSONObject(text).let{check(it.optInt("version")==1);it.getJSONArray("cards")}
+                    check(cards.length()<=20_000)
                     buildMap{cards.objects().forEach{card->
                         val poster=GalleryCardLinks.asset(base,card.s("poster"));if(poster!=null)put(card.s("id"),GalleryPreviewCard(card.s("title"),poster))
                     }}

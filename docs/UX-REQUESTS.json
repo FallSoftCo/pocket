@@ -4063,5 +4063,11 @@
     "design": "Shared list/conversation bottom sheet; full-width natural bilingual action labels with stable whole-label height; grouped session/app/account sections; detailed usage, saved recordings and updates expand in place. Preserve native actions, source identity, update access and reset freshness.",
     "status": "Delivered: Android190/alpha172 published on workstation and Mac with authenticated exact-APK readback.21 native journeys, optimized catalog/history and enlarged bilingual drawer inspection passed. Phone installation not performed.",
     "evidence": "docs/qualification/toolbar-drawer-190.json"
+  },
+  "inline_gallery_preview_20261110": {
+    "requirement": "Restore inline gallery views on Android and web.",
+    "cause": "Full gallery metadata grew to20.5MB, above Android16MiB limit; web compatibility origin skipped canonical443 links.",
+    "design": "Version1 small preview projection, credential-free bounded reads and single-flight cache;404-only legacy fallback; same-host canonical-to-private-mirror mapping and explicit web retry. Gallery originals/full metadata unchanged.",
+    "status": "Implemented; live public-on-tailnet projection verified; Android release qualification pending."
   }
 }

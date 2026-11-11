@@ -22,7 +22,7 @@ Ordinary Markdown links and bare URLs ending in PNG, JPEG, GIF, WebP, BMP, AVIF 
 
 Images remain next to their surrounding prose, including within a paragraph. Image presentation does not alter the canonical text or offsets used by optional inline immersion. Italian phrase taps still switch the text in place; viewing an image does not introduce a translated line or help modal.
 
-To show an image stored only on the execution host, an agent should share that exact file through the existing authenticated attachment path, or link to an HTTPS image resource the phone can reach. The notification tool's `files` argument supports explicitly requested local attachments. A raw workstation filesystem path is not a phone-download URL. A link to a gallery **page** remains a page link; use its actual image URL when the picture should be visible in the conversation.
+To show an image stored only on the execution host, an agent should share that exact file through the existing authenticated attachment path, or link to an HTTPS image resource the phone can reach. The notification tool's `files` argument supports explicitly requested local attachments. A raw workstation filesystem path is not a phone-download URL. Links to a gallery card (`/8bar/#card-id`) resolve its published preview directly. Other gallery pages remain ordinary links. The original link remains available beside the preview.
 
 ## Loading and access
 
@@ -37,3 +37,22 @@ Opaque file links use a HEAD MIME check, falling back to a Range GET when HEAD i
 [Markdown parsing](../android/app/src/main/java/co/fallsoft/pocket/MarkdownContent.kt) retains image positions, [rendering](../android/app/src/main/java/co/fallsoft/pocket/MarkdownRenderer.kt) slices already annotated text, and [native image loading/viewing](../android/app/src/main/java/co/fallsoft/pocket/LinkedImage.kt) handles access and bounds. The same image flow is used in [immersion content](../android/app/src/main/java/co/fallsoft/pocket/BilingualMessage.kt) and explicit image attachments.
 
 Runtime observations are recorded separately from source claims in the release qualification. Synthetic emulator images establish UI/transport behavior with controlled inputs; they do not establish access to arbitrary private image services or a permanent fix for phone DNS.
+
+## Gallery-card metadata
+
+The gallery publishes `showcase-previews.json` alongside its full catalog:
+`{"version":1,"cards":[{"id":"card-id","title":"Title","poster":"card/poster.png","video":"card/preview.mp4","width":800,"height":600}]}`.
+Only those six fields belong in this projection; downloads, production notes and
+source archives remain in the full gallery catalog. The publisher integration
+patch is retained in `integrations/gallery/preview-projection.patch`.
+
+Android and web bound this metadata to4MiB/20,000cards, coalesce concurrent reads
+and cache briefly. Only a404 uses the old16MiB full-catalog fallback. No pairing
+credential is sent to gallery metadata or media. Failed browser previews expose
+Retry; they do not silently disappear or poll in the background.
+
+The private compatibility web origin must mirror the existing `/8bar/` static
+route. The browser maps only canonical HTTPS links on its own hostname to that
+same-origin mirror. Other hosts, arbitrary ports and credential-bearing links
+are not rewritten. The gallery remains tailnet-only; no CORS wildcard, new
+public listener or application authentication exception is needed.
