@@ -239,7 +239,7 @@ class NativeReadingParityNativeTest {
      RichText("Here is the review.\n\n[Standalone review](http://127.0.0.1:18880/8bar/review/index.html#details)\n\nThe original conversation continues below.")
     }}
    }}
-   await("Standalone page did not load its original image"){qa("state").optInt("galleryPageReads")==1&&device.hasObject(By.desc("Standalone review"))}
+   await("Standalone page did not load its original image"){compose.waitForIdle();qa("state").optInt("galleryPageReads")==1&&device.hasObject(By.desc("Standalone review"))}
    compose.waitForIdle()
    assertFalse("Standalone preview failed",device.hasObject(By.text("Preview unavailable")))
    assertFalse("Standalone image failed",device.hasObject(By.text("Image unavailable")))
