@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -16,7 +17,9 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class QueuedMessagesNativeTest {
- @get:Rule val compose=createEmptyComposeRule()
+ // Queue resumed effects on the test clock; an unconfined clock can run a frame
+ // from the image-decoder IO callback and mutate semantics off the UI thread.
+ @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
  private val i=InstrumentationRegistry.getInstrumentation()
  private val device get()=UiDevice.getInstance(i)
  private val c get()=i.targetContext
