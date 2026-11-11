@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-09",
+  "updated": "2026-11-11",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -3593,8 +3593,8 @@
     {
       "id": "gallery-all-published-page-forms-20261111",
       "request": "Gallery previews must work in other sessions, including standalone review pages, not only the single catalog-card example. All gallery links should work.",
-      "status": "193 candidate: catalog/root/index links and standalone review-page previews on Android/web; actual Vipi page format identified; native and rendered qualification pending.",
-      "evidence": "Actual Vipi recent assistant messages use /8bar/vipi-local-release-20261110/live-bot/ and /live-chat-and-candidates/, previously excluded by exact /8bar/#id recognition."
+      "status": "Delivered: Android193/alpha175 published on both update channels; web live on both entry points. Native message/image journey and actual rendered standalone pages passed. Physical-phone installation not claimed.",
+      "evidence": "docs/qualification/gallery-page-previews-193.json"
     }
   ],
   "current_state": {

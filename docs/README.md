@@ -12,6 +12,8 @@ The current controls include native session branching/context actions, configura
 
 [187 sent-message visibility](qualification/sent-message-187.json) keeps accepted typed input visible until its exact canonical history entry arrives. History failures leave acceptance and the next draft intact. Android is published on both update channels; web is live on both private entry points. Phone installation remains separately unverified.
 
+[193 gallery previews](qualification/gallery-page-previews-193.json) extends inline previews to standalone review pages, gallery-home links and catalog-card aliases. Existing messages need no sender edits. Android193/alpha175 is published on both channels and web is live; handset installation is separately unverified. Native image open/close and actual rendered page previews are recorded with their limits.
+
 ## Understand and evaluate
 
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.
