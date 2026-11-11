@@ -8,12 +8,16 @@ const captured=new Map((capture?.pages||[]).map(p=>[p.cursor??'',p.response]));
 let revision=1,hold=false,holdOlder=false,offline=false,replay=false,legacyReads=0,positionReads=0,workSubmissions=0,question=false,answers=0,streamFinished=false,streamsSent=0,streamTimer=null;
 let archiveHold=false,archiveError=false,archiveOrigins=[];
 let retainedResult=false,legacyHistoryReads=0,archived=false,archiveCalls=0,restoreCalls=0;
-const sockets=new Set(),reads=[];let galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
+const sockets=new Set(),reads=[];let galleryPageReads=0,galleryMetadataReads=0,galleryImageReads=0,galleryCredentialLeaks=0;
+let attentionStudy=false,attentionResolved=false,reportReads=0,attentionChildQuestion=false;const attentionAnswers=[];
+const attentionChild=id=>({...meta(),id,name:id==='attention-error'?'Runtime child':'Question child',agentNickname:id==='attention-error'?'Runtime child':'Question child',parentThreadId:'same-thread',isChild:true,canAcceptDirectInput:false,status:{type:id==='attention-error'?'systemError':'active'},source:{subAgent:{thread_spawn:{parent_thread_id:'same-thread'}}}});
+const attentionRequest=()=>({id:'attention-child-request',method:'item/tool/requestUserInput',_pocketUI:{token:'synthetic-child-request-v1'},params:{threadId:'attention-question',turnId:'native-turn',itemId:'child-question',questions:[{id:'choice',header:'Child choice',question:'Which path should this child take?',options:[{label:'Proceed',description:'Use the synthetic child path'}]}]}});
+let sentStudy=false,sentAccepted=false,sentEcho=false,sentIntent=null,sentSubmissions=0;
 let queueStudy=false,queueRevision=1,queueHold=false;const queueCalls=[];let queueItems=[];
 const queueSnapshot=()=>({version:1,revision:queueRevision,items:structuredClone(queueItems)});
 const meta=()=>({id:'same-thread',name:'Native canonical work',cwd:'/synthetic',status:{type:queueStudy?'active':'idle'},updatedAt:1,recencyAt:1,canAcceptDirectInput:true});
 // Opt-in repository lifecycle evidence; all identities/content remain synthetic.
-let historyLifecycle=false;const lifecycleReads=[],lifecycleThreads=new Map();
+let historyLifecycle=false,historyCatalogHold=false,historyCatalogReads=0;const lifecycleReads=[],lifecycleThreads=new Map();
 const lifecycleMeta=(id,state)=>({...meta(),id,name:'History '+id,archived:state.archived===true,ephemeral:state.ephemeral===true,path:state.ephemeral?null:'/synthetic/retained-rollout',status:{type:state.status||'idle'},updatedAt:state.revision||1,activityAt:state.revision||1});
 const item=(position,id,type,text)=>({type:'item',position,turnId:'native-turn',item:{id,type,startedAtMs:1794017100000+position*60000,...(type==='userMessage'?{content:[{type:'text',text}]}:{text})}});
 function page(){
@@ -41,7 +45,9 @@ const server=http.createServer(async(req,res)=>{
  if(process.env.NEXTCOMP_QA_HISTORY_TRACE==='1')console.log(JSON.stringify({at:Date.now(),method:req.method,path,query:url.search}));
  if(path.startsWith('/8bar/')){
   if(req.headers.authorization){galleryCredentialLeaks++;res.writeHead(403).end();return;}
-  if(path==='/8bar/showcase-catalog.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify([{id:'native-preview',title:'Native material study',poster:'preview.svg'}]));return;}
+  if(path==='/8bar/review/index.html'){galleryPageReads++;res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>Standalone review</title><base href="https://wrong.example/"><main><figure><img src="../preview.svg" alt="Review"></figure></main>');return;}
+  if(path==='/8bar/showcase-previews.json'){galleryMetadataReads++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:1,cards:[{id:'native-preview',title:'Native material study',poster:'preview.svg'}]}));return;}
+  if(path==='/8bar/showcase-catalog.json'){res.writeHead(500).end('Full catalog must not be fetched for a preview');return;}
   if(path==='/8bar/preview.svg'){galleryImageReads++;res.setHeader('Content-Type','image/svg+xml');res.end('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#254d50"/><rect x="24" y="24" width="280" height="252" rx="4" fill="#b69972"/><text x="24" y="326" font-size="25" fill="white">Native material study</text></svg>');return;}
   res.writeHead(404).end();return;
  }
@@ -49,8 +55,51 @@ const server=http.createServer(async(req,res)=>{
  if(!String(req.headers.authorization||'').startsWith('Bearer synthetic-system76')){res.writeHead(401).end('{}');return;}
  let raw='';for await(const chunk of req)raw+=chunk;
  let body={};res.setHeader('Content-Type','application/json');
+ if(path==='/_qa/sent-setup'){sentStudy=true;sentAccepted=false;sentEcho=false;sentIntent=null;sentSubmissions=0;queueStudy=false;queueItems=[];queueRevision++;revision++;res.end(JSON.stringify({ok:true}));return;}
+ if(path==='/_qa/sent-state'){res.end(JSON.stringify({intent:sentIntent,submissions:sentSubmissions,accepted:sentAccepted,echo:sentEcho}));return;}
+ if(path==='/_qa/sent-accept'||path==='/_qa/sent-echo'){
+  if(path.endsWith('sent-accept'))sentAccepted=true;else sentEcho=true;
+  revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});res.end(JSON.stringify({ok:true}));return;
+ }
+ if(path==='/_qa/sent-end'){sentAccepted=true;sentStudy=false;res.end(JSON.stringify({ok:true}));return;}
+ if(sentStudy&&path==='/api/threads/same-thread/reply'&&req.method==='POST'){
+  const value=JSON.parse(raw||'{}');sentSubmissions++;
+  if(req.headers.authorization!=='Bearer synthetic-system76-queue'||sentIntent){res.writeHead(409).end('{"error":"Duplicate or foreign synthetic send"}');return;}
+  sentIntent={id:value.id,text:value.text,mode:value.mode,threadId:'same-thread',origin:'original'};
+  while(!sentAccepted&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
+  if(!res.destroyed)res.end(JSON.stringify({id:value.id,state:'accepted',outbox:queueSnapshot()}));return;
+ }
+ if(sentStudy&&sentIntent&&path==='/api/replies/'+sentIntent.id){res.end(JSON.stringify({id:sentIntent.id,thread_id:'same-thread',state:sentAccepted?'accepted':'sending',outbox:queueSnapshot()}));return;}
+ if(path==='/_qa/attention-setup'){
+  attentionStudy=true;attentionResolved=false;attentionChildQuestion=true;attentionAnswers.length=0;queueStudy=true;queueRevision++;queueHold=false;queueCalls.length=0;
+  queueItems=[{id:'needs-review-original',threadId:'same-thread',text:'Delivery needs checking',state:'unknown',mode:'steer'}];
+  res.end(JSON.stringify({ok:true}));return;
+ }
+ if(path==='/_qa/attention-state'){res.end(JSON.stringify({answers:attentionAnswers,workSubmissions,calls:queueCalls,reportReads}));return;}
+ if(attentionStudy&&path==='/api/requests/attention-child-request/answer'){
+  const answer=JSON.parse(raw||'{}'),origin=req.headers.authorization==='Bearer synthetic-system76-queue'?'original':'other';
+  if(!attentionChildQuestion||origin!=='original'||answer.requestToken!=='synthetic-child-request-v1'||answer.answers?.choice!=='Proceed'){res.writeHead(409).end('{"error":"Wrong original child request"}');return;}
+  attentionAnswers.push({threadId:'attention-question',requestId:'attention-child-request',origin,answer:answer.answers.choice});attentionChildQuestion=false;revision++;
+  broadcast({type:'timeline',threadId:'attention-question',version:revision,reload:true,historyHead:{threadId:'attention-question',epoch,version:revision}});
+  res.end(JSON.stringify({ok:true,submitted:true}));return;
+ }
+ if(attentionStudy&&/^\/api\/threads\/attention-(error|question)(?:\/native-timeline|\/head)?$/.test(path)){
+  const id=path.split('/')[3];res.end(JSON.stringify({thread:attentionChild(id),timeline:projectNativeTimeline(page(),{threadId:id,revision}),revision,historyHead:{threadId:id,epoch,version:revision},pending:id==='attention-question'&&attentionChildQuestion?[attentionRequest()]:[],outgoing:[],notifications:[],notes:[]}));return;
+ }
+ if(path==='/_qa/attention-resolve'){
+  attentionResolved=true;queueItems=[];queueRevision++;
+  broadcast({type:'reply',threadId:'same-thread',id:'needs-review-original',state:'accepted',outbox:queueSnapshot()});
+  res.end(JSON.stringify({ok:true,reportReads,calls:queueCalls}));return;
+ }
+ if(path==='/_qa/attention-end'){attentionStudy=false;queueStudy=false;queueItems=[];res.end(JSON.stringify({ok:true,reportReads,calls:queueCalls}));return;}
+ if(path==='/api/coordinator/reports'){reportReads++;res.end(JSON.stringify({reports:[],unreadCount:0,hasEarlier:false}));return;}
+ if(attentionStudy&&path==='/api/threads'){
+  const evidence={version:1,verified:true,items:attentionResolved?[]:[{kind:'deliveryUnknown',id:'outgoing:needs-review-original',label:'Check message delivery'}]};
+  res.end(JSON.stringify({threads:[{...meta(),attention:evidence,preview:'Review this original message'},...['attention-error','attention-question'].map(id=>({...attentionChild(id),attention:{version:1,verified:true,items:attentionResolved||id==='attention-question'&&!attentionChildQuestion?[]:[{kind:id==='attention-error'?'runtimeError':'question',id:'reason:'+id,label:id==='attention-error'?'Review runtime error':'Answer question'}]}})),{...meta(),id:'ordinary-work',name:'Ordinary completed work',status:{type:'idle'},preview:'Completed result',attention:{version:1,verified:true,items:[]}}]}));return;
+ }
  if(path==='/_qa/queue-setup'){
-  queueStudy=true;queueHold=true;queueRevision=1;queueCalls.length=0;
+  // Scenarios share one source/outbox lifetime: revisions must never rewind.
+  queueStudy=true;queueHold=true;queueRevision++;queueCalls.length=0;
   queueItems=[{id:'queue-keep',threadId:'same-thread',text:'Keep this queue held',state:'held',mode:'queue'},{id:'queue-remove',threadId:'same-thread',text:'Remove only this queued message',state:'queued',mode:'queue'},{id:'queue-promote',threadId:'same-thread',text:'Original queued steering text',state:'held',mode:'queue'}];
   res.end(JSON.stringify({ok:true}));return;
  }
@@ -69,12 +118,17 @@ const server=http.createServer(async(req,res)=>{
  }
  if(path==='/_qa/history-lifecycle'){
   historyLifecycle=true;const change=JSON.parse(raw||'{}');
-  if(change.releaseHolds)for(const state of lifecycleThreads.values()){state.holdNative=false;state.holdHead=false;}
+  if(typeof change.holdCatalog==='boolean')historyCatalogHold=change.holdCatalog;
+  if(change.releaseHolds){historyCatalogHold=false;for(const state of lifecycleThreads.values()){state.holdNative=false;state.holdHead=false;}}
   if(change.id)lifecycleThreads.set(change.id,{...lifecycleThreads.get(change.id),...change});
-  res.end(JSON.stringify({reads:lifecycleReads,threads:[...lifecycleThreads.entries()].map(([id,state])=>lifecycleMeta(id,state)),workSubmissions}));return;
+  res.end(JSON.stringify({reads:lifecycleReads,catalogReads:historyCatalogReads,threads:[...lifecycleThreads.entries()].map(([id,state])=>lifecycleMeta(id,state)),workSubmissions}));return;
  }
  if(historyLifecycle&&path==='/api/threads'){
-  res.end(JSON.stringify({threads:[...lifecycleThreads.entries()].filter(([,state])=>state.catalog!==false&&!!state.archived===(url.searchParams.get('archived')==='true')).map(([id,state])=>lifecycleMeta(id,state))}));return;
+  const threads=[...lifecycleThreads.entries()].filter(([,state])=>state.catalog!==false&&!!state.archived===(url.searchParams.get('archived')==='true')).map(([id,state])=>lifecycleMeta(id,state));
+  historyCatalogReads++;
+  while(historyCatalogHold&&!res.destroyed)await new Promise(r=>setTimeout(r,20));
+  if(res.destroyed)return;
+  res.end(JSON.stringify({threads}));return;
  }
  if(historyLifecycle&&/^\/api\/threads\/[^/]+(?:\/native-timeline|\/head)?$/.test(path)){
   const id=decodeURIComponent(path.split('/')[3]),state=structuredClone(lifecycleThreads.get(id)||{code:'THREAD_HISTORY_UNAVAILABLE'});
@@ -114,10 +168,15 @@ const server=http.createServer(async(req,res)=>{
   while((hold||holdOlder&&cursor)&&!res.destroyed)await new Promise(resolve=>setTimeout(resolve,20));
   if(res.destroyed)return;
   if(offline){res.writeHead(503).end('{"error":"Synthetic native outage"}');return;}
-  const source=replay?captured.get(cursor):page();
+  let source=replay?captured.get(cursor):page();
+  if(sentStudy&&sentAccepted&&sentIntent&&!req.headers.authorization.endsWith('-beta'))source={...source,data:[...source.data,
+   {type:'turnStarted',position:20,turnId:'sent-turn',startedAt:3},
+   {type:'item',position:21,turnId:'sent-turn',item:{id:'unrelated-sent-item',type:'userMessage',clientId:'unrelated-same-text',content:[{type:'text',text:sentIntent.text}]}},
+   ...(sentEcho?[{type:'item',position:22,turnId:'sent-turn',item:{id:'original-sent-item',type:'userMessage',clientId:sentIntent.id,content:[{type:'text',text:sentIntent.text}]}}]:[]),
+   {type:'turnCompleted',position:23,turnId:'sent-turn',status:'completed'}]};
   if(!source){res.writeHead(409).end('{"error":"Capture boundary, not end of history"}');return;}
   body={thread:meta(),timeline:projectNativeTimeline(source,{threadId:'same-thread',revision}),revision,
-   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:queueStudy?queueSnapshot().items:[],...(queueStudy?{outbox:queueSnapshot()}:{}),notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
+   historyHead:{threadId:'same-thread',epoch,version:revision},pending:question?[{id:'native-question',method:'item/tool/requestUserInput',params:{threadId:'same-thread',turnId:'native-turn',itemId:'question',questions:[{id:'choice',header:'Choice',question:'Native pending question',options:[{label:'Proceed',description:'Proceed in the synthetic fixture'}]}]}}]:[],outgoing:queueStudy?queueSnapshot().items:[],...((queueStudy||sentStudy)?{outbox:queueSnapshot()}:{}),notes:retainedResult?[{id:'answer-one',text:'Native answer one'},{id:'request-one',text:'Native request one'}]:[],notifications:[]};
  }else if(path==='/api/threads/same-thread'||path==='/api/threads/same-thread/head'){
   legacyReads++;res.writeHead(500).end('{"error":"Native source used legacy history"}');return;
  }else if(path==='/_qa/result'){retainedResult=true;revision++;broadcast({type:'timeline',threadId:'same-thread',version:revision,reload:true,historyHead:{threadId:'same-thread',epoch,version:revision}});body={ok:true};
@@ -152,7 +211,7 @@ const server=http.createServer(async(req,res)=>{
   replay=true;body={source:'recorded-native-timeline',pages:captured.size,firstBefore:captured.get('')?.nextCursor};
  }else if(path==='/_qa/archive-hold'){archiveHold=true;body={ok:true};}
  else if(path==='/_qa/archive-refuse'){archiveError=true;archiveHold=false;body={ok:true};}
- else if(path==='/_qa/state')body={reads,archived,archiveCalls,archiveOrigins,restoreCalls,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
+ else if(path==='/_qa/state')body={reads,archived,archiveCalls,archiveOrigins,restoreCalls,legacyReads,legacyHistoryReads,positionReads,workSubmissions,answers,streamsSent,galleryPageReads,galleryMetadataReads,galleryImageReads,galleryCredentialLeaks};
  else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
  else if(path==='/api/notifications')body={notifications:[]};
  else if(path==='/api/activity')body={items:[]};

@@ -112,14 +112,14 @@ class RoomAccountUsageNativeTest {
                 compose.onNodeWithText(PocketImmersion.label("Account · CPU"),useUnmergedTree=true).assertIsDisplayed()
                 val root=compose.onNodeWithTag("usage-test-root").fetchSemanticsNode().boundsInRoot
                 for(selector in listOf(hasTestTag("reader-page-up"),hasTestTag("reader-page-down"),
-                    hasContentDescription("Speech volume"),hasContentDescription("Settings, app updates, usage and activity"))){
+                    hasContentDescription("Speech volume"),hasContentDescription("Settings, app updates and usage"))){
                     val bounds=compose.onNode(selector).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
                     assertTrue("Shrunk control at $w/$f/$ime",bounds.width>=48*density-1&&bounds.height>=48*density-1)
                     assertTrue("Clipped control at $w/$f/$ime",bounds.left>=root.left-1&&bounds.right<=root.right+1&&bounds.top>=root.top-1&&bounds.bottom<=root.bottom+1)
                 }
                 compose.onNodeWithText("Latest").assertIsDisplayed()
                 // Real pointer interaction with the original non-focusable menu.
-                compose.onNodeWithContentDescription("Settings, app updates, usage and activity").performTouchInput{click()}
+                compose.onNodeWithContentDescription("Settings, app updates and usage").performTouchInput{click()}
                 compose.onNodeWithText("Original room action").assertIsDisplayed()
                 compose.runOnIdle{menu.value=false}
                 compose.onNodeWithTag("usage-test-editor").assertIsFocused()
@@ -141,7 +141,7 @@ class RoomAccountUsageNativeTest {
             // Default session component keeps its existing exhausted-credit primary mode.
             compose.runOnIdle{room.value=false;usage.value=known.copy(remainingPercent=0.0)}
             textVisible(requireNotNull(known.credits.compact()))
-            val semantics=compose.onNodeWithContentDescription("Settings, app updates, usage and activity").fetchSemanticsNode().config[SemanticsProperties.StateDescription]
+            val semantics=compose.onNodeWithContentDescription("Settings, app updates and usage").fetchSemanticsNode().config[SemanticsProperties.StateDescription]
             assertTrue(semantics.contains("0% left"));assertTrue(semantics.contains("Resets"))
             assertEquals("Retained room draft",draft.value.text)
         }

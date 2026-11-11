@@ -274,7 +274,9 @@ internal object CodexConversations {
         if(update.has("turn")||input.newInput)invalidate()
     }
     val snapshot:CodexConversationSnapshot get(){
-        val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList();val d=detail
+        val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList()
+        val local=PocketReplies.presentation(selected.orEmpty(),rows,detail)
+        val d=local.detail
         val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
         val task=Pocket.tasks.firstOrNull{it.id==selected}
         val turn=if(PocketTranscript.canonicalMode)d?.optJSONObject("nativeExecutionTurn")else rows.lastOrNull{it.s("kind")=="turn"}
@@ -294,6 +296,6 @@ internal object CodexConversations {
             CodexCoverage(PocketTranscript.earlier,PocketTranscript.before,PocketTranscript.browsingEarlier),
             conversationRunState(pending,task?.status.orEmpty(),d?.optJSONObject("thread")?.optJSONObject("status")?.s("type").orEmpty(),
                 if(verified)turn?.s("status").orEmpty()else "",d!=null&&verified,PocketTranscript.loading),
-            verified,pending,PocketReplies.visible(selected.orEmpty()))
+            verified,pending,local.deliveries)
     }
 }

@@ -6,27 +6,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.util.Date
 
-@Composable internal fun WorkUpdatesEntry(){
-    LaunchedEffect(Pocket.local,Pocket.token){while(true){PocketWorkUpdates.refresh();delay(60000)}}
-    TextButton({PocketWorkUpdates.open()},modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),contentPadding=PaddingValues(horizontal=20.dp)){
-        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp)){
-            BilingualLabel("Work updates"+(if(PocketWorkUpdates.unreadCount>0)" · ${PocketWorkUpdates.unreadCount} unread" else ""),centered=false)
-            val preview=PocketWorkUpdates.latest?.response?.lineSequence()?.filter{it.isNotBlank()&&it.trim()!="Check-in"}?.take(2)?.joinToString(" · ").orEmpty()
-            if(preview.isNotBlank())WorkflowText(preview,color=Muted,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-        }
-    }
-}
+// Compatibility reader for existing report notification deep links; no catalog entry or polling.
 @Composable internal fun WorkUpdatesScreen(){
     val list=rememberLazyListState();val lifecycle=androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val coverage=remember(Pocket.local,Pocket.token,BlackoutVisibility.active){CoordinatorReadingCoverage()}

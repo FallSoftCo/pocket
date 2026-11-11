@@ -72,6 +72,11 @@ internal fun authoredImmersionScaffold(source:String,units:List<Pair<String,Stri
 internal object InterfaceGrammarScaffolds {
     // Authored equivalents retain Italian order in the vocabulary support phase.
     private val rows=mapOf(
+        "Account usage" to "Utilizzo|Usage dell’account|of-the-account",
+        "Usage details" to "Dettagli|Details di~utilizzo|of~usage",
+        "App" to "Applicazione|App",
+        "Session" to "Sessione|Session",
+        "More actions" to "Altre|More azioni|actions",
         "NextComp server address" to "Indirizzo|Address del|of-the server NextComp",
         "Runs" to "Esecuzioni|Runs",
         "Collapse runs" to "Comprimi|Collapse le~esecuzioni|the~runs",

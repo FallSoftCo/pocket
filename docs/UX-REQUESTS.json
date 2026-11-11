@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-09",
+  "updated": "2026-11-11",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -3589,6 +3589,12 @@
       ],
       "verification": "Pending integrated source qualification; inherited180 test counts do not qualify this work.",
       "evidence": "docs/UX-MEASUREMENT-PLAN.md"
+    },
+    {
+      "id": "gallery-all-published-page-forms-20261111",
+      "request": "Gallery previews must work in other sessions, including standalone review pages, not only the single catalog-card example. All gallery links should work.",
+      "status": "Delivered: Android193/alpha175 published on both update channels; web live on both entry points. Native message/image journey and actual rendered standalone pages passed. Physical-phone installation not claimed.",
+      "evidence": "docs/qualification/gallery-page-previews-193.json"
     }
   ],
   "current_state": {
@@ -4012,5 +4018,68 @@
     "behavior": "Steer now for active work; Send now for confirmed idle work. Retain the original outgoing identity, text, environment and receipt. Do not delete/recreate the message, replay unknown delivery, resume unrelated held messages, or send twice on repeated taps. Keep drafts and keyboard intact.",
     "status": "Delivered184: Android published to both channels; web and both backends live. Physical-phone installation unverified.",
     "verification": "27 focused real HTTP/native-socket checks, composed DOM/browser queue interactions,20 native journeys and exact optimized release review passed. Native queue test verifies direct promotion, repeated tap protection, same original identity, draft/IME retention and source-bound late ACK. See qualification/queued-steering-apps-184.json."
+  },
+  "needs_you_catalog_20261109": {
+    "requirement": "Replace redundant Work updates UX with useful actionable work, across Android and web.",
+    "design": "Needs you filters the existing source-bound session catalog; original session cards show current request/delivery reason. Count sessions, expose affected delegated children, retain ordinary list position/query, return to all sessions after resolution. No separate report feed, automatic resume/retry or model polling. Routine progress/results remain in conversations/cards.",
+    "evidenceContract": "Additive per-session attention v1 from current native pending requests, original failed/unknown delivery records, valid explicit input requests and verified runtime systemError. Missing/stale data is not all-clear; idle/interrupted work is not inferred broken.",
+    "preservation": "Retain stored reports, preferences, notification deep-link reader and source/delivery identities. Remove report-entry polling; questions and safe original delivery actions stay in conversation.",
+    "status": "Delivered185: both Android channels published, web and both backends live; phone installation unverified.",
+    "verification": "Real HTTP/native socket projection, browser DOM and narrow/wide rendered journeys,20 native journeys and exact optimized APK review passed. Qualification caught and fixed a native-preview/catalog feedback read using forced overlap. No worker submission or original uncertain delivery replay. See qualification/needs-you-185.json."
+  },
+  "failed_turn_catalog_20261109": {
+    "requirement": "A failed Codex turn must stay visible as a runtime error in the session list and Needs you, rather than silently becoming idle.",
+    "cause": "SessionDiscovery mapped every turn/completed event to idle, including failed turns; this could override the preceding native systemError status.",
+    "implementation": "Map failed terminal events to systemError; preserve normal idle after completion/interruption and clear error on the next turn start. No model polling or generic HTTP 400 auto-retry.",
+    "verification": "17 focused discovery/real HTTP-native socket integration checks pass, including systemError followed by failed terminal event, stale idle index hydration, Needs you visibility and subsequent active/completed transitions.",
+    "status": "Deployed to workstation backend; Android/web185 consume unchanged attention contract. Native Codex process, pairing and outgoing receipts preserved. Mac backend now carries the fix in the186 immutable closure; native Codex preserved."
+  },
+  "needs_you_parent_resolution_20261109": {
+    "requirement": "Needs you must identify subagent ownership and offer usable resolution on Android and web.",
+    "design": "Keep affected children expanded under their named owning task. Offer original-source parent navigation, preserving drafts. Child questions/approvals use existing native decision controls even when direct child text input is unsupported. Runtime errors route guidance to parent; no automatic retry or agent/human impersonation. Missing parent remains explicitly unavailable with same-source identity navigation.",
+    "status": "Delivered: Android186 available from workstation and Mac channels; web and both backends live.20 current-source native journeys and exact optimized APK passed; parent/child native and browser captures reviewed. Phone installation not independently verified.",
+    "evidence": "docs/qualification/needs-you-parent-186.json"
+  },
+  "sent_message_visibility_20261109": {
+    "requirement": "Sent input must appear immediately and remain visible across verified acceptance until matching canonical history arrives. A history read failure must not revoke acceptance or block further input.",
+    "design": "Source-bound durable local sent presentation separate from canonical ordering; use exact clientId identity only. Preserve unknown/queued controls and newer drafts, never replay because history is late. Accepted local evidence retires after exact stored canonical match; optional missing provider identity stays honest and explicitly dismissible.",
+    "status": "Delivered187: both Android update channels; web live on both private routes. Exact delayed-echo native journey, composed DOM, visual and optimized qualification passed. Phone installation unverified.",
+    "evidence": "docs/qualification/sent-message-187.json"
+  },
+  "manual_retry_failed_turn_20261110": {
+    "requirement": "An explicit new message or retry must be usable after a confirmed failed Codex turn, including generic provider Bad Request.",
+    "design": "Only explicit immediate input checks the newest native turn in one bounded summary read and rechecks current thread/transport before turn/start. Failure must be terminal; active, missing, unknown and changed transport remain protected. Queued work does not auto-resume; original outgoing identity and provenance remain intact.",
+    "verification": "Real HTTP paired-device admission, SQLite receipt and native socket integration: manual send, retry identity/dedup, pending queue preservation, active race, nonfailed head rejection and lost acknowledgement hold. No generic400 automatic retry or changed runtime settings.",
+    "status": "Deployed to workstation and Mac backends; existing Android/web clients use unchanged API. Native Codex processes, pairing, queued work and uncertain receipts preserved. No APK required."
+  },
+  "immersion_phrase_hold_20261110": {
+    "requirement": "Tapped phrases hold the explicitly chosen language rather than rejoining the global flip phase.",
+    "design": "Manual phrase state is separate from automatic phase; repeated tap switches and holds the opposite language. Content-bound native saveable state and bounded web reading-session choices survive ordinary redraw/scroll. Untouched phrases continue cycling; replacement text does not inherit stale offsets.",
+    "status": "Delivered: Android188/alpha170 published on workstation and Mac; web live on both private routes. Actual browser8cases,20native journeys and exact optimized APK passed. Phone install not performed.",
+    "evidence": "docs/qualification/immersion-phrase-hold188.json"
+  },
+  "toolbar_settings_resets_20261110": {
+    "requirement": "Remove the obsolete per-chat activity/reply list from the toolbar menu; display available banked Codex resets.",
+    "design": "Settings uses the same anchored menu in list and conversation. Existing account quota cache exposes only provider reset count and its independent observation freshness; missing fields remain unavailable. No new quota polling or redemption. Speech-source popup and actionable Needs you remain intact.",
+    "status": "Delivered: Android189/alpha171 available on both existing channels; web and both backends live. Required native journeys, exact optimized menu/catalog/history and browser checks passed. No phone installation performed.",
+    "evidence": "docs/qualification/toolbar-resets-189.json"
+  },
+  "toolbar_drawer_20261110": {
+    "requirement": "Replace the cramped toolbar popup with a coherent bottom drawer; immersion must not distort action spacing.",
+    "design": "Shared list/conversation bottom sheet; full-width natural bilingual action labels with stable whole-label height; grouped session/app/account sections; detailed usage, saved recordings and updates expand in place. Preserve native actions, source identity, update access and reset freshness.",
+    "status": "Delivered: Android190/alpha172 published on workstation and Mac with authenticated exact-APK readback.21 native journeys, optimized catalog/history and enlarged bilingual drawer inspection passed. Phone installation not performed.",
+    "evidence": "docs/qualification/toolbar-drawer-190.json"
+  },
+  "inline_gallery_preview_20261110": {
+    "requirement": "Restore inline gallery views on Android and web.",
+    "cause": "Full gallery metadata grew to20.5MB, above Android16MiB limit; web compatibility origin skipped canonical443 links.",
+    "design": "Version1 small preview projection, credential-free bounded reads and single-flight cache;404-only legacy fallback; same-host canonical-to-private-mirror mapping and explicit web retry. Gallery originals/full metadata unchanged.",
+    "status": "Delivered: Android191/alpha173 published; web live; qualification docs/qualification/inline-gallery-191.json."
+  },
+  "drawer_direct_controls_20261111": {
+    "requirement": "Reduce accordion overuse in the otherwise improved settings drawer. Provide a real inline gallery example in this conversation.",
+    "design": "Updates and ordinary session actions stay directly visible. Saved recording controls omit empty state and retain only their existing history disclosure. Extended usage remains optional but no longer repeats allowance, reset and credit summary.",
+    "status": "Delivered: Android192/alpha174 published on workstation and Mac; direct-action native journey and exact optimized bilingual drawer review passed. Phone install not claimed.",
+    "evidence": "docs/qualification/direct-drawer-192.json"
   }
 }

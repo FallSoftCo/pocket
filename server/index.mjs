@@ -21,6 +21,7 @@ import {LocalFleetAccess,enrollmentKey} from './fleet-enrollment.mjs';
 import {BackendArtifacts,mountBackendArtifacts} from './backend-artifacts.mjs';
 import {CreditObservations} from './credit-observations.mjs';
 import {CatalogContext} from './catalog-context.mjs';
+import {workAttention} from './work-attention.mjs';
 import {WorkObservations} from './work-observations.mjs';
 import {InternalSessions} from './internal-sessions.mjs';
 import {RecoveryQueue} from './recovery-queue.mjs';
@@ -33,6 +34,7 @@ import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
 import {OutgoingProjection} from './outgoing-projection.mjs';
 import {queuedDestination} from './queued-destination.mjs';
+import {confirmedFailedTurn} from './manual-turn-admission.mjs';
 import {loadHollywood} from './hollywood.mjs';
 import {teamNotificationFields} from './losangelex-attention.mjs';
 import {computerUseStatus} from './computer-use.mjs';
@@ -482,7 +484,7 @@ async function sendOutgoing(row,initialThread=null){
         }else throw e;
       }
     }else if(isActive(t))throw new Error('The active turn is not ready for replies. Try again shortly.');
-    else if(t.status?.type==='idle')result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+    else if(t.status?.type==='idle'||(row.mode!=='queue'&&await confirmedFailedTurn(codex,t,requireDirectSessionInput)))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
     else throw new Error('The conversation is not confirmed idle. Refresh before sending this message.');
     db.prepare("UPDATE outgoing SET state='accepted',result=?,updated_at=? WHERE id=?").run(JSON.stringify(result),now(),row.id);
     resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
@@ -732,19 +734,22 @@ app.get('/api/threads',route(async(req,res)=>{
     if(!cursor&&!includeChildren&&!archived)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
       const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
     }
-    return res.json({threads:[...found.values()].map(thread=>({id:thread.id,name:catalogName(thread),preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,discoveryPending:!!thread.discoveryPending,...catalogFields(thread)})),nextCursor:result.nextCursor||null,refreshPending:false});
+    const attention=workAttention({db,pending,codex,threads:[...found.values()]});
+    return res.json({threads:[...found.values()].map(thread=>({attention:attention.get(thread.id),id:thread.id,name:catalogName(thread),preview:thread.preview||'',cwd:thread.cwd,status:thread.status,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,discoveryPending:!!thread.discoveryPending,...catalogFields(thread)})),nextCursor:result.nextCursor||null,refreshPending:false});
   }
   const r=await sessionDiscovery.list({archived:req.query.archived==='true',cursor:typeof req.query.cursor==='string'?req.query.cursor:null,searchTerm:typeof req.query.search==='string'?req.query.search.slice(0,200):null});
+  const listedThreads=(r.data||[]).filter(t=>!internalSessions.owns(t.id,t)&&!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id));
+  const attention=workAttention({db,pending,codex,threads:listedThreads,refreshPending:!!r.refreshPending});
   const watches=db.prepare('SELECT * FROM watches').all();
   const unread=new Map(db.prepare("SELECT n.thread_id,COUNT(*) AS total FROM notifications n LEFT JOIN notification_reads r ON r.device_id=? AND r.thread_id=n.thread_id WHERE n.kind!='coordinator_report' AND (n.id>COALESCE(r.through_id,0) OR EXISTS(SELECT 1 FROM notification_attention a WHERE a.notification_id=n.id AND a.resolved_at IS NULL)) GROUP BY n.thread_id").all(req.device.id).map(row=>[row.thread_id,row.total]));
   for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
-  res.json({threads:(r.data||[]).filter(t=>!internalSessions.owns(t.id,t)&&!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)).map(t=>{
+  res.json({threads:listedThreads.map(t=>{
     const followed=!!watches.find(w=>w.thread_id===t.id&&w.enabled);
     const updatedMs=sessionWorkTime(t);
     const preview=threadPreviews.get(t,{hydrate:followed||t.status?.type==='active'||Date.now()-updatedMs<15*60000});
     const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
     const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
-    return {...catalogContext.get(t),unreadCount:unread.get(t.id)||0,id:t.id,name:catalogName(t),...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed,...catalogFields(t)};
+    return {...catalogContext.get(t),attention:attention.get(t.id),unreadCount:unread.get(t.id)||0,id:t.id,name:catalogName(t),...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed,...catalogFields(t)};
   }),nextCursor:r.nextCursor||null,refreshPending:!!r.refreshPending});
 }));
 app.post('/api/threads/:id/recovery',route(async(req,res)=>{

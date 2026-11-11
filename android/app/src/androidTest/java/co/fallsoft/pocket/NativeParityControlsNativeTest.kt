@@ -56,7 +56,7 @@ class NativeParityControlsNativeTest {
     private fun editor()=compose.onNode(hasSetTextAction())
     private fun editorText()=editor().fetchSemanticsNode().config[SemanticsProperties.EditableText].text
     private fun menu(action:String,captureMenu:Boolean=false){
-        compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Settings, app updates and usage").assertIsDisplayed().performClick()
         // These work controls must be in the initial viewport, before any
         // performScrollTo in tap() could hide an ordering regression.
         for(label in listOf("Context & files","Background terminals","Model, effort, tier & mode","Codex settings & agents"))
@@ -265,6 +265,9 @@ class NativeParityControlsNativeTest {
             navigate("parity_beta");absent("Command output")
             qa("output-release",JSONObject());openOutput();await{outputStarts("Beta retained output page one")}
             assertFalse(outputText().contains("Alpha"));assertEquals("Beta",calls("/api/threads/$thread/command-output","GET").last().s("origin"))
+            assertTrue("Beta output HTTP response did not finish",qa("state").getJSONArray("outputResponses").objects().any{
+                it.s("origin")=="Beta"&&it.s("path")=="/api/threads/$thread/command-output"&&it.s("phase")=="finish"&&it.optInt("status")==200&&it.optBoolean("writableFinished")
+            })
             tap("Close",inDialog=true)
             qa("output-mode",JSONObject().put("mode","unavailable"),origin=1)
             val readsBeforeUnavailable=calls("/api/threads/$thread/command-output","GET").size

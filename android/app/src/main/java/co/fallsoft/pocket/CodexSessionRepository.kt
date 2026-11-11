@@ -79,7 +79,10 @@ internal object CodexSessionRepository {
                 response.optLong("_catalogObserved")== (invalidations[key]?:0L)&&
                 response.optLong("_notificationObserved")>= (known[key]?:0L))dirty.remove(key)
             save(source,id,null,key in dirty)
-            withContext(Dispatchers.Main.immediate){if(current(source))publishPreview(id,value,source.destination)}
+            withContext(Dispatchers.Main.immediate){if(current(source)){
+                PocketReplies.transcriptCommitted(source.destination,id,value.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty())
+                publishPreview(id,value,source.destination)
+            }}
         }
     }
     private fun publishPreview(id:String,value:JSONObject,destination:EnvironmentRequest){
@@ -532,6 +535,7 @@ internal object CodexSessionRepository {
                         if(next!=null){
                             putLatest(key,next)
                             withContext(Dispatchers.Main.immediate){if(current(source)){
+                                PocketReplies.transcriptCommitted(source.destination,id,next.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty())
                                 publishPreview(id,next,source.destination)
                                 CodexConversations.repositoryUpdated(id,next)
                             }}
@@ -697,6 +701,10 @@ internal object CodexSessionRepository {
             db.beginTransaction()
             try{batch.forEach{(entry,write)->persist(write.first,entry.second,write.second,write.third)};db.setTransactionSuccessful()}
             finally{db.endTransaction()}
+            withContext(Dispatchers.Main.immediate){batch.forEach{(entry,write)->
+                if(current(write.first)&&write.second!=null)PocketReplies.transcriptCommitted(write.first.destination,entry.second,
+                    write.second?.optJSONObject("timeline")?.optJSONArray("rows")?.objects().orEmpty())
+            }}
         }
     }
     private fun persist(source:Source,id:String,value:JSONObject?,dirty:Boolean){

@@ -70,26 +70,59 @@ import java.util.Locale
 
 @Composable fun UsageDetails(onNavigate:()->Unit={}){
     val context=androidx.compose.ui.platform.LocalContext.current
-    TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
-    ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
-    PocketUpdateControl()
-    TextButton({onNavigate();context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
-    AccountUsageDetails()
+    DrawerSection("Account usage") { AccountUsageSummary() }
+    DrawerSection("App") {
+        DrawerAction(if(Pocket.tab==1)"Work" else "Settings",{
+            onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask()
+            if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1
+        })
+        ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
+        DrawerAction("Blackout",{onNavigate();context.nextCompActivity()?.enterBlackout()})
+        PocketUpdateControl()
+        // These controls already omit empty queues and disclose only the long
+        // recording history. Do not put a second expander around them.
+        SavedVoiceRecordingControls()
+    }
+}
+
+@Composable private fun AccountUsageSummary(){
+    val usage=Pocket.weeklyUsage
+    val now=System.currentTimeMillis()
+    Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+        Text(usage.remainingLabel(),color=if(usage.isStale(now,Pocket.connected&&Pocket.codexOnline))Muted else NextGreen,
+            fontSize=24.sp,fontWeight=FontWeight.SemiBold)
+        usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=14.sp)}
+        InterfaceText(usage.resetCredits.label(),color=Paper,fontSize=16.sp)
+        if(usage.resetCredits.availableCount!=null&&usage.resetCredits.isStale(now,Pocket.connected&&Pocket.codexOnline))
+            BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=13.sp,maxLines=2)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically){
+            BilingualLabel("Codex credits",Modifier.weight(1f),centered=false,color=Muted,maxLines=2)
+            BilingualLabel(usage.credits.label(),Modifier.weight(1f),centered=false,color=Paper,fontSize=16.sp,maxLines=3,fontWeight=FontWeight.Medium)
+        }
+    }
+    DrawerDisclosure("Usage details"){AccountUsageDetails(includeSummary=false)}
 }
 
 /** Account facts only; each backend retains its own navigation and controls. */
-@Composable internal fun AccountUsageDetails(){
-    SavedVoiceRecordingControls()
+@Composable internal fun AccountUsageDetails(includeSummary:Boolean=true){
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
-    Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
-    usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    if(includeSummary){
+        Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+        usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    }
     UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{
         InterfaceText("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
     val credits=usage.credits
-    BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
-    Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    if(includeSummary){
+        val resets=usage.resetCredits
+        InterfaceText(resets.label(),color=Paper,fontSize=16.sp)
+        if(resets.availableCount!=null&&resets.isStale(now,Pocket.connected&&Pocket.codexOnline))
+            BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=12.sp)
+        BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
+        Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    }
     BilingualLabel(usage.continuationLabel,centered=false,maxLines=3,color=if(usage.continuationState=="spending-blocked")Coral else Muted,fontSize=13.sp)
     if(credits.updatedAt>0){
         val checked=SimpleDateFormat("MMM d · HH:mm:ss",Locale.getDefault()).format(Date(credits.updatedAt))
@@ -125,7 +158,7 @@ import java.util.Locale
     val accountLines=(if(accountFacts?.credits!=null)1 else 0)+(if(accountFacts?.freshness?.isNotBlank()==true)1 else 0)
     val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+accountLines)+12.dp}.coerceAtLeast(58.dp)
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
-    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates and usage";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 SymbolIcon(statusIcon?:"Tune",null,Modifier.size(20.dp),spinning=statusSpinning)
@@ -157,12 +190,10 @@ import java.util.Locale
             }
         }
     }
-    val details:@Composable ()->Unit={
+    SettingsDrawer(open,{open=false}){
         UsageDetails(onNavigate={open=false})
-        if(stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false)
-        TextButton({Pocket.retryConnection()}){BilingualLabel("Refresh")}
+        if(stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false,maxLines=2)
+        DrawerAction("Refresh",{Pocket.retryConnection()})
     }
-    if(conversationOnly)DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
-    else ActivityPopup(open,{open=false},Pocket.selected,controlsFirst=true){details()}
     }
 }

@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "versionCode": 186,
+  "versionName": "0.5.0-alpha.168",
+  "state": "published-android-both-channels-web-and-backends-live",
+  "sourceCommit": "6c66b76a6987116ce8a06aeb221b44fe4b9891e6",
+  "changes": [
+    "Needs you keeps affected subagents under their named parent task",
+    "Original-source Open parent/Guide parent preserves drafts and submits nothing",
+    "Managed children retain original question and approval actions even when direct text input is unavailable",
+    "Missing parent identity is explicit; navigation stays within the original environment",
+    "Failed native turn completion remains a runtime error until subsequent work starts, instead of appearing idle"
+  ],
+  "evidence": {
+    "parentJourney": "Actual native child review, named parent, retained editable draft, original child question answered exactly once, zero work submissions",
+    "web": "Composed app DOM journey plus rendered 390px and1100px screenshots",
+    "nativeGate": "All20 current-source native journeys passed",
+    "optimized": "Exact compatible optimized APK qualified: original pair order, one original pair after reconnect/reopen, one question answer, actual catalog/history screenshots visually inspected",
+    "backends": "system76 and macbook-pro active; shared native runtimes/pairing/outgoing preserved",
+    "webAssets": "Both private entry points match immutable source",
+    "unit": "Debug and release suites passed;485 tests each,2 skipped; both lints passed"
+  },
+  "limits": [
+    "Native UI uses synthetic tasks; not physical phone or provider execution proof.",
+    "A managed child that cannot accept direct text is guided through its parent; no fabricated child resume action.",
+    "Missing parents are not inferred from another host.",
+    "The app does not automatically replay failed or uncertain commands."
+  ],
+  "runtimeDigest": "ace6f21426ba05f51372e219dd63f2c7e88dcd0e44ded9c3ff0e6ef8a51c22b3",
+  "apk": {
+    "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf": {
+      "sha256": "6b634fcef41ab716901b03da4ff64f780552aaf6c19d122fde1365a042762573",
+      "bytes": 52698051
+    },
+    "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31": {
+      "sha256": "6dfafc559e2280d10f27c43c2977544558123e4c3d049cdcb66dd274ec570233",
+      "bytes": 52698051
+    }
+  },
+  "phoneInstalled": "unverified",
+  "clientQualificationSourceCommit": "0da4ee77",
+  "publishedAt": 1794272887.515078,
+  "retainedFailure": "R01 stopped before native test input because owned emulator app was absent; exact saved QA preferences restored. Later R01 recovery test immediately dereferenced a not-yet-composed dialog control; test now waits for the actual enabled confirmation before one tap. Both original failures preserved. R02 production source and signed APKs are byte-identical to R01; all20 native checks passed with corrected test package.",
+  "announcement": {
+    "channel": "system76 only",
+    "notificationId": 2892,
+    "announced": 1,
+    "phoneDisplay": "unverified"
+  }
+}

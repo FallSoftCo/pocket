@@ -378,11 +378,23 @@ class NativeCanonicalTranscriptNativeTest{
             control("empty-progress","THREAD_NOT_MATERIALIZED")
             catalog();await("Initial empty refusal was not persisted"){refusal("empty-progress")!=null}
             val emptyReads=reads("empty-progress").size
-            control("empty-progress")
+            control("empty-progress",extra=JSONObject().put("holdNative",true))
+            val beforeCatalog=control(extra=JSONObject().put("holdCatalog",true)).getInt("catalogReads")
             main{CodexSessionRepository.timeline(destination,JSONObject().put("threadId","empty-progress")
                 .put("nativeMethod","item/completed").put("turnId","new-turn").put("nativeItemId","new-item").put("version",1))}
-            await("Native progress did not admit a repair"){reads("empty-progress").size==emptyReads+1&&refusal("empty-progress")==null}
+            await("Native progress did not admit a repair"){reads("empty-progress").size==emptyReads+1}
+            // Hold the catalog across native preview publication: a merged
+            // local preview must not feed back as fresh server work evidence.
+            val overlappingCatalog=inspectionScope.async{catalog()}
+            await("Overlapping catalog did not reach the source"){control().getInt("catalogReads")>beforeCatalog}
+            control("empty-progress",extra=JSONObject().put("holdNative",false))
+            await("Native repair did not publish its preview"){
+                refusal("empty-progress")==null&&CodexCatalog.source(destination).tasks.any{it.id=="empty-progress"&&it.preview=="Native answer one"}
+            }
+            control(extra=JSONObject().put("holdCatalog",false))
+            runBlocking{kotlinx.coroutines.withTimeout(5000){overlappingCatalog.await()}}
             catalog()
+            Thread.sleep(500) // Allow the existing120ms background admission lane to run.
             assertEquals("Unchanged state repeated initial-empty repair",emptyReads+1,reads("empty-progress").size)
             assertEquals("Retained archive draft",prefs.getString("draft:archive-history",null))
             context.openOrCreateDatabase("codex-session-messages-v1.sqlite",Context.MODE_PRIVATE,null).use{db->

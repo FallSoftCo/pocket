@@ -16,7 +16,9 @@ export class SessionDiscovery {
   observe(event,clock=Date.now){
     const p=event.params||{},id=p.threadId||p.thread?.id;if(!id||this.hidden(id,p.thread))return null;
     if(event.method==='thread/started'&&p.thread)this.remember(p.thread);
-    const status=event.method==='thread/status/changed'?p.status:event.method==='turn/started'?{type:'active'}:event.method==='turn/completed'?{type:'idle'}:null;
+    // turn/completed is a terminal event, not a successful-completion signal.
+    // Native may publish systemError before this event; never overwrite it with idle.
+    const status=event.method==='thread/status/changed'?p.status:event.method==='turn/started'?{type:'active'}:event.method==='turn/completed'?{type:p.turn?.status==='failed'?'systemError':'idle'}:null;
     const activity=/^item\/(?:started|completed|agentMessage\/delta|commandExecution\/outputDelta|reasoning\/summaryTextDelta|reasoning\/summaryPartAdded)$/.test(event.method)||['turn/started','turn/completed'].includes(event.method);
     if(!status&&!activity)return null;
     const old=this.live.get(id)||{},change={...(activity?{activityAt:clock()}:{}),...(status?{status,discoveryPending:false}:{})};

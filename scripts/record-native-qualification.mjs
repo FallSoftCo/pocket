@@ -66,7 +66,7 @@ let liveAudioPreferences;
 // All remaining cases use reviewed synthetic services.
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
-const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
+const environmentCase=name.startsWith('co.fallsoft.pocket.SettingsDrawerNativeTest#')||name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
 const canonicalCase=name.startsWith('co.fallsoft.pocket.QueuedMessagesNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeReadingParityNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
 const parityCase=name.startsWith('co.fallsoft.pocket.NativeParityControlsNativeTest#');
 const mixedCase=name.startsWith('co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#');

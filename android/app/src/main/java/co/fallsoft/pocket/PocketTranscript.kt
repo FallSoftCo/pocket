@@ -671,6 +671,9 @@ object PocketTranscript {
             parseHead(value.optJSONObject("historyHead"),id)?.let{observedHead=it;headSnapshotsSupported=true}
         }
         if(changed)revision++
+        // The stored canonical row and selected projection now own the same
+        // body. Retire local sent evidence only after this atomic UI handoff.
+        Pocket.captureEnvironment()?.let{PocketReplies.transcriptCommitted(it,id,rows)}
     }
     private suspend fun readNativePage(id:String,older:Boolean,bridgeCursor:String?,retryAttempt:Int,beforeApply:suspend()->Unit,onLegacy:(JSONObject)->Unit):Boolean{
         if(owner!=id||ownerScope!=scopeKey())return true

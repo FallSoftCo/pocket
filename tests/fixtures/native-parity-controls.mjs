@@ -16,7 +16,7 @@ import {requestPresentation} from '../../server/native-request-contract.mjs';
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
 const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[],appsHold:false,appsWaiters:[]}));
-const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[],nativeReloadStarts=[];
+const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[],nativeReloadStarts=[],outputResponses=[];
 const pluginCount=10074,pluginKey=crypto.createHash('sha256').update('synthetic-plugin').digest('hex');
 for(const origin of origins)origin.pluginCatalog=new PluginCatalogPages({secret:'synthetic-catalog-'+origin.name,capture:()=>({origin:origin.name,installed:origin.pluginInstalled}),check:source=>{if(source.origin!==origin.name||source.installed!==origin.pluginInstalled)throw Object.assign(Error('Synthetic plugin catalog changed'),{status:409});},load:async view=>{
  nativeReads.push({origin:origin.name,method:view==='browse'?'plugin/list':'plugin/installed'});
@@ -88,16 +88,21 @@ for(const origin of origins){
   const url=new URL(req.url,'http://localhost'),path=url.pathname;
   // Retain transport completion separately from request admission. A received
   // GET alone cannot explain a native dialog that remains in its loading state.
-  if(process.env.NEXTCOMP_QA_LOG&&(path==='/api/native/plugins/detail'||req.method==='GET'&&path==='/api/native/mcp-auth')){
+  const outputRead=req.method==='GET'&&path.endsWith('/command-output');
+  if(outputRead||process.env.NEXTCOMP_QA_LOG&&(path==='/api/native/plugins/detail'||req.method==='GET'&&path==='/api/native/mcp-auth')){
    const requestId=crypto.randomUUID(),startedAt=Date.now();
-   const trace=phase=>fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished})+'\n',{mode:0o600});
+   const trace=phase=>{
+    const observation={at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished};
+    if(outputRead){outputResponses.push(observation);if(outputResponses.length>100)outputResponses.shift();}
+    if(process.env.NEXTCOMP_QA_LOG)fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify(observation)+'\n',{mode:0o600});
+   };
    trace('request');res.once('finish',()=>trace('finish'));res.once('close',()=>trace('close'));
   }
   let raw='';for await(const chunk of req)raw+=chunk;
   const input=raw?JSON.parse(raw):{};
   calls.push({origin:origin.name,path,query:url.search,method:req.method,input});
   let body={};
-  if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()],nativeAnswers,nativeReads,nativeAuthStarts,nativeReloadStarts,reloadReceipts:authDb.prepare('SELECT id,state,native_outcome FROM native_mcp_reload').all()};
+  if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()],nativeAnswers,nativeReads,nativeAuthStarts,nativeReloadStarts,outputResponses,reloadReceipts:authDb.prepare('SELECT id,state,native_outcome FROM native_mcp_reload').all()};
   else if(path==='/_qa/mcp-account'){
    if(!['original','secondary'].includes(input.account)){res.writeHead(400).end('{"error":"Unknown synthetic account"}');return;}
    account=input.account;authCodex.emit('event',{method:'account/updated',params:{}});for(const socket of origin.sockets)frame(socket,{type:'nativeAuthBoundary'});body={ok:true};

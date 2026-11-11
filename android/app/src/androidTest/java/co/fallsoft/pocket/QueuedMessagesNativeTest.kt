@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -16,7 +17,9 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class QueuedMessagesNativeTest {
- @get:Rule val compose=createEmptyComposeRule()
+ // Queue resumed effects on the test clock; an unconfined clock can run a frame
+ // from the image-decoder IO callback and mutate semantics off the UI thread.
+ @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
  private val i=InstrumentationRegistry.getInstrumentation()
  private val device get()=UiDevice.getInstance(i)
  private val c get()=i.targetContext
@@ -31,9 +34,66 @@ class QueuedMessagesNativeTest {
   main{Pocket.init(c);PocketImmersion.setEnabled(false)}
   val destination=requireNotNull(Pocket.captureEnvironment())
   fun qa(action:String)=kotlinx.coroutines.runBlocking{Pocket.apiEnvironment(destination,"/_qa/$action",org.json.JSONObject())}
-  assertTrue("Owned queue fixture setup missing",qa("queue-setup").optBoolean("ok"))
+  assertTrue(qa("attention-setup").optBoolean("ok"))
   try{
-   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));Pocket.open(tid)}
+   main{c.startActivity(Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))}
+   await{Pocket.tasks.any{it.id==tid&&it.needsReview()}&&Pocket.tasks.any{it.id=="ordinary-work"}}
+   compose.onNodeWithText("Work updates",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithTag("needs-you-filter").performClick()
+   compose.onNodeWithText("Ordinary completed work",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText("All sessions",useUnmergedTree=true).assertIsDisplayed()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"needs-you-native-list.png")))
+   // Needs you keeps the named parent and expands both affected child rows.
+   prefs.edit().putString(Pocket.key("draft:$tid"),"Preserve parent guidance draft").commit()
+   compose.onNodeWithText("Review runtime error",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+   compose.onNodeWithText("Review agent",useUnmergedTree=true).performScrollTo().performClick()
+   await{Pocket.selected=="attention-error"&&Pocket.detail?.optJSONObject("thread")?.s("id")=="attention-error"}
+   compose.onNodeWithText("Parent: Native canonical work",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText("Keyboard",useUnmergedTree=true).assertDoesNotExist()
+   compose.onNodeWithText("Open parent task",useUnmergedTree=true).performClick()
+   await{Pocket.selected==tid&&PocketTranscript.currentHistoryVerified}
+   assertTrue(requireNotNull(Pocket.captureEnvironment()).matches(destination))
+   assertEquals("Preserve parent guidance draft",prefs.getString(Pocket.key("draft:$tid"),null))
+   compose.onNode(hasSetTextAction()).assertTextEquals("Preserve parent guidance draft")
+   val parentOpened=qa("attention-state")
+   assertEquals("Opening parent must not send guidance",0,parentOpened.optInt("workSubmissions"))
+   assertEquals(0,parentOpened.getJSONArray("calls").length())
+   assertEquals(0,parentOpened.getJSONArray("answers").length())
+   device.pressBack() // Hide the parent's keyboard before returning to the catalog.
+   main{Pocket.closeTask();UnifiedWorkCatalog.refresh()}
+   await{Pocket.selected==null&&Pocket.tasks.any{it.id=="attention-question"&&it.needsReview()}}
+   compose.onNodeWithText("Review request",useUnmergedTree=true).performScrollTo().performClick()
+   await{Pocket.selected=="attention-question"&&Pocket.detail?.optJSONArray("pending")?.length()==1}
+   compose.onNodeWithText("Parent: Native canonical work",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText("Which path should this child take?",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithText("Keyboard",useUnmergedTree=true).assertDoesNotExist()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"needs-you-child-request.png")))
+   compose.onNodeWithText("Proceed",useUnmergedTree=true).performScrollTo().performClick()
+   compose.onNodeWithText("Send answers",useUnmergedTree=true).performScrollTo().performClick()
+   await{qa("attention-state").getJSONArray("answers").length()==1&&Pocket.detail?.optJSONArray("pending")?.length()==0}
+   val childReceipt=qa("attention-state")
+   val answer=childReceipt.getJSONArray("answers").getJSONObject(0)
+   assertEquals("attention-question",answer.getString("threadId"))
+   assertEquals("attention-child-request",answer.getString("requestId"))
+   assertEquals("original",answer.getString("origin"));assertEquals("Proceed",answer.getString("answer"))
+   assertEquals(0,childReceipt.optInt("workSubmissions"));assertEquals(0,childReceipt.getJSONArray("calls").length())
+   assertEquals("Preserve parent guidance draft",prefs.getString(Pocket.key("draft:$tid"),null))
+   java.io.File(c.cacheDir,"needs-you-child-receipt.json").writeText(childReceipt.toString())
+   main{Pocket.closeTask();UnifiedWorkCatalog.refresh()}
+   await{Pocket.selected==null&&Pocket.tasks.firstOrNull{it.id=="attention-question"}?.needsReview()==false}
+   compose.onNodeWithContentDescription("Open Chat for Native canonical work").performScrollTo().performClick()
+   await{Pocket.selected==tid&&PocketTranscript.currentHistoryVerified&&Pocket.detail?.optJSONArray("outgoing")?.length()==1}
+   compose.onNodeWithTag("outgoing-needs-review-original").assertIsDisplayed()
+   assertEquals("Review opened without resubmitting",0,qa("queue-state").getJSONArray("calls").length())
+   val resolved=qa("attention-resolve");assertEquals(0,resolved.optInt("reportReads"))
+   main{Pocket.closeTask();UnifiedWorkCatalog.refresh()}
+   await{Pocket.tasks.firstOrNull{it.id==tid}?.needsReview()==false}
+   compose.onNodeWithText("All sessions",useUnmergedTree=true).assertIsDisplayed()
+   compose.onNodeWithTag("needs-you-filter").performClick()
+   await{compose.onAllNodesWithText("Ordinary completed work",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+   assertEquals(0,qa("attention-end").optInt("reportReads"))
+   assertTrue("Owned queue fixture setup missing",qa("queue-setup").optBoolean("ok"))
+   main{Pocket.open(tid)}
    await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==3}
    fun row(id:String)=compose.onNodeWithTag("outgoing-$id")
    fun action(id:String,label:String)=compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("outgoing-$id")))
@@ -74,9 +134,60 @@ class QueuedMessagesNativeTest {
    assertEquals("Keep my unsent draft",prefs.getString(Pocket.key("draft:$tid"),null))
    java.io.File(c.cacheDir,"queued-message-native.json").writeText(org.json.JSONObject().put("syntheticUiFixture",true).put("nativeRpcDeliveryProven",false).put("calls",calls).put("originalAckRemovedPromotion",true).put("otherQueueRemainsHeld",true).put("draftAndImePreservedBeforeNavigation",true).put("lateAckDidNotReopen",true).toString())
    assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native.png")))
+   // Original POST acceptance and canonical history echo are separate boundaries.
+   main{Pocket.closeTask()};assertTrue(qa("sent-setup").optBoolean("ok"))
+   main{Pocket.open(tid,keyboard=true)}
+   await{PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating&&Pocket.detail?.optJSONArray("outgoing")?.length()==0}
+   val sentText="Keep this sent message visible"
+   compose.onNode(hasSetTextAction()).performTextReplacement(sentText)
+   // The preceding active queue may retain its current execution status. Both
+   // composer labels submit the original steer-mode input through the same UI.
+   val sendAction=hasContentDescription("Send message") or hasContentDescription("Steer running turn")
+   await{compose.onAllNodes(sendAction).fetchSemanticsNodes().size==1}
+   compose.onNode(sendAction).assertIsEnabled().performClick()
+   await{qa("sent-state").optInt("submissions")==1}
+   val sentIntent=qa("sent-state").getJSONObject("intent")
+   val sentId=sentIntent.getString("id")
+   assertEquals("steer",sentIntent.getString("mode"))
+   assertEquals(sentText,sentIntent.getString("text"))
+   compose.onNode(hasText(sentText) and !hasSetTextAction(),useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+   assertFalse(qa("sent-state").optBoolean("accepted"))
+   qa("sent-accept")
+   await{PocketReplies.entries(tid).isEmpty()&&CodexConversations.snapshot.deliveries.any{it.id==sentId&&it.state=="accepted"}}
+   // An unrelated canonical user input with identical words cannot retire ours.
+   await{PocketTranscript.rows.any{it.s("clientId")=="unrelated-same-text"}}
+   assertTrue(CodexConversations.snapshot.deliveries.any{it.id==sentId})
+   compose.onNodeWithText("Sent",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"sent-awaiting-history.png")))
+   main{Pocket.closeTask();Pocket.open(tid)}
+   await{PocketTranscript.currentHistoryVerified&&CodexConversations.snapshot.deliveries.any{it.id==sentId&&it.state=="accepted"}}
+   val beta=EnvironmentIdentity("qa_sent_beta","Synthetic alternate source")
+   val profiles=org.json.JSONArray(prefs.getString("environments:v1","[]"))
+   profiles.put(org.json.JSONObject().put("id",beta.id).put("name",beta.name))
+   prefs.edit().putString("environments:v1",profiles.toString()).putString(beta.key("server"),destination.endpoint)
+    .putString(beta.key("token"),"synthetic-system76-beta").putString(beta.key("deviceId"),"synthetic-device-beta").commit()
+   main{Pocket.activateEnvironment(beta.id);Pocket.open(tid)}
+   await{Pocket.environmentId==beta.id&&PocketTranscript.currentHistoryVerified}
+   assertTrue(CodexConversations.snapshot.deliveries.none{it.id==sentId})
+   assertTrue(PocketTranscript.rows.none{it.s("clientId")==sentId||it.s("text")==sentText})
+   compose.onNodeWithText(sentText,useUnmergedTree=true).assertDoesNotExist()
+   main{Pocket.activateEnvironment(destination.environment.id);Pocket.open(tid)}
+   await{PocketTranscript.currentHistoryVerified&&CodexConversations.snapshot.deliveries.any{it.id==sentId&&it.state=="accepted"}}
+   qa("sent-echo")
+   await{PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("clientId")==sentId}==1&&CodexConversations.snapshot.deliveries.none{it.id==sentId}}
+   assertEquals(1,PocketTranscript.rows.count{it.s("clientId")=="unrelated-same-text"})
+   assertEquals(2,PocketTranscript.rows.count{it.s("kind")=="user"&&it.s("text")==sentText})
+   assertTrue(PocketReplies.entries(tid).isEmpty())
+   compose.onNodeWithText("Sent",useUnmergedTree=true).assertDoesNotExist()
+   val sentReceipt=qa("sent-state");assertEquals(1,sentReceipt.optInt("submissions"))
+   assertEquals("original",sentReceipt.getJSONObject("intent").getString("origin"))
+   java.io.File(c.cacheDir,"sent-delayed-echo-receipt.json").writeText(sentReceipt.put("exactCanonicalCount",1).put("unrelatedSameTextPreserved",true).put("sourceIsolation",true).put("syntheticUiFixture",true).toString())
+   assertTrue(device.takeScreenshot(java.io.File(c.cacheDir,"sent-canonical-echo.png")))
+   qa("sent-end")
+
   }catch(error:Throwable){
    device.takeScreenshot(java.io.File(c.cacheDir,"queued-message-native-failure.png"));device.dumpWindowHierarchy(java.io.File(c.cacheDir,"queued-message-native-failure.xml"));throw error
-  }finally{qa("queue-release");main{Pocket.closeTask();PocketLive.stop()}}
+  }finally{qa("queue-release");qa("sent-end");main{Pocket.closeTask();PocketLive.stop()}}
 
  }
 }

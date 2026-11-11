@@ -4,7 +4,7 @@ android {
     compileSdk = 36
     testBuildType = "qualification"
     defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 184; versionName = "0.5.0-alpha.166" }
+        versionCode = 193; versionName = "0.5.0-alpha.175" }
     signingConfigs {
         // Retained QA devices may already use the maintained release identity.
         // Configure that existing signer explicitly; never erase their data or
@@ -56,6 +56,7 @@ android {
 kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 dependencies {
     implementation("org.commonmark:commonmark:0.27.1")
+    implementation("org.jsoup:jsoup:1.24.1")
     implementation("org.commonmark:commonmark-ext-gfm-tables:0.27.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

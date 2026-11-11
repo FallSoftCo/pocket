@@ -1,0 +1,45 @@
+{
+  "feature": "Manual language choice holds independently of automatic immersion flips",
+  "versionCode": 188,
+  "versionName": "0.5.0-alpha.170",
+  "sourceCommit": "5e37f7d12df78d184ec46b4ade0050906b32bf2d",
+  "state": "published",
+  "behavior": [
+    "Tap switches and holds that phrase; a later tap switches and holds the other language.",
+    "Untouched phrases continue automatic cycling. No new timer, translation request or model work is introduced.",
+    "Android uses saveable local phrase choices; web retains bounded content-keyed choices through ordinary DOM redraws within the reading session."
+  ],
+  "evidence": {
+    "browserCases": 8,
+    "browserState": "complete",
+    "nativeJourneys": 20,
+    "nativePhraseHold": "Four global phase changes preserve the manual choice; untouched linked phrase still changes; second tap holds English; stable normal/2x layout and keyboard activation.",
+    "productionSourceSha": "530238a32ccb457819a8b50459ebad4bca20816b80c9bbc7cfe7079ba44dd4a4",
+    "qualificationInputSha": "9843aa8d85e0212e57edc6a7042f75548ba81885043b1198e51cb329b161ef2d",
+    "exactOptimizedApk": "Canonical catalog/history/reopen/question journey passed; screenshots inspected and original QA preferences restored."
+  },
+  "delivery": {
+    "android": "Both authenticated workstation and Mac update channels offer compatible188 with exact qualified hash. One update announcement.",
+    "web": "Both private web routes verified serving new immersion assets. Reload existing tabs.",
+    "phoneInstalled": false,
+    "backendOrNativeRestarted": false
+  },
+  "limitations": [
+    "Physical phone install/interaction not performed.",
+    "This change does not fix existing excess reserved whitespace or translation quality.",
+    "Browser language holds are reading-session state, not account-synced preferences.",
+    "Review images prepared; full gallery index rebuild blocked by an unrelated existing missing poster."
+  ],
+  "variants": [
+    {
+      "sha256": "2ae1bf302402ca10bf539d0c4cf8f57ff9410c46acb0f926d3f847b3fa453e7b",
+      "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+      "size": 52714431
+    },
+    {
+      "sha256": "cf49a3f83dbf5f5fd76b8a6a9efbd0125567a060323f504f9569d561e58525bf",
+      "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+      "size": 52714431
+    }
+  ]
+}
