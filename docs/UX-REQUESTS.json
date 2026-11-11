@@ -4073,6 +4073,7 @@
   "drawer_direct_controls_20261111": {
     "requirement": "Reduce accordion overuse in the otherwise improved settings drawer. Provide a real inline gallery example in this conversation.",
     "design": "Updates and ordinary session actions stay directly visible. Saved recording controls omit empty state and retain only their existing history disclosure. Extended usage remains optional but no longer repeats allowance, reset and credit summary.",
-    "status": "Implemented; native preflight and signed release pending."
+    "status": "Delivered: Android192/alpha174 published on workstation and Mac; direct-action native journey and exact optimized bilingual drawer review passed. Phone install not claimed.",
+    "evidence": "docs/qualification/direct-drawer-192.json"
   }
 }
