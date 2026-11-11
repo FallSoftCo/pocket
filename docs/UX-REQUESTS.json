@@ -4069,5 +4069,10 @@
     "cause": "Full gallery metadata grew to20.5MB, above Android16MiB limit; web compatibility origin skipped canonical443 links.",
     "design": "Version1 small preview projection, credential-free bounded reads and single-flight cache;404-only legacy fallback; same-host canonical-to-private-mirror mapping and explicit web retry. Gallery originals/full metadata unchanged.",
     "status": "Delivered: Android191/alpha173 published; web live; qualification docs/qualification/inline-gallery-191.json."
+  },
+  "drawer_direct_controls_20261111": {
+    "requirement": "Reduce accordion overuse in the otherwise improved settings drawer. Provide a real inline gallery example in this conversation.",
+    "design": "Updates and ordinary session actions stay directly visible. Saved recording controls omit empty state and retain only their existing history disclosure. Extended usage remains optional but no longer repeats allowance, reset and credit summary.",
+    "status": "Implemented; native preflight and signed release pending."
   }
 }

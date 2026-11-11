@@ -30,8 +30,10 @@ class SettingsDrawerNativeTest {
   open()
   compose.onNodeWithText("2 banked resets available",useUnmergedTree=true).assertIsDisplayed()
   assertTrue("Settings must retain the Activity window for voice keys",AppWindowVisibility.focused)
-  compose.onNodeWithText("App updates",useUnmergedTree=true).performScrollTo().performClick()
+  // The primary update action is reachable without expanding a section.
   compose.onNodeWithText("Check for updates",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
+  compose.onNodeWithText("Usage details",useUnmergedTree=true).performScrollTo().performClick()
+  compose.onAllNodesWithText("2 banked resets available",useUnmergedTree=true).assertCountEquals(1)
   // Inspecting the drawer never downloads/installs an update or submits work.
   device.pressBack()
   await{compose.onAllNodesWithTag("settings-drawer-content").fetchSemanticsNodes().isEmpty()}
@@ -39,6 +41,8 @@ class SettingsDrawerNativeTest {
   await{Pocket.selected=="same-thread"&&PocketTranscript.rows.isNotEmpty()}
   val original=Pocket.captureEnvironment()
   open()
+  compose.onNodeWithText("More actions",useUnmergedTree=true).assertDoesNotExist()
+  compose.onNodeWithText("Queue message",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
   compose.onNodeWithText("Rename",useUnmergedTree=true).performScrollTo().performClick()
   compose.onNode(hasSetTextAction()).assertExists()
   device.pressBack()

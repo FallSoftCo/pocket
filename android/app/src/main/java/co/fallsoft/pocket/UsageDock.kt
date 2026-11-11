@@ -78,8 +78,10 @@ import java.util.Locale
         })
         ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
         DrawerAction("Blackout",{onNavigate();context.nextCompActivity()?.enterBlackout()})
-        DrawerDisclosure("App updates"){PocketUpdateControl()}
-        DrawerDisclosure("Saved recordings"){SavedVoiceRecordingControls()}
+        PocketUpdateControl()
+        // These controls already omit empty queues and disclose only the long
+        // recording history. Do not put a second expander around them.
+        SavedVoiceRecordingControls()
     }
 }
 
@@ -98,25 +100,29 @@ import java.util.Locale
             BilingualLabel(usage.credits.label(),Modifier.weight(1f),centered=false,color=Paper,fontSize=16.sp,maxLines=3,fontWeight=FontWeight.Medium)
         }
     }
-    DrawerDisclosure("Usage details"){AccountUsageDetails()}
+    DrawerDisclosure("Usage details"){AccountUsageDetails(includeSummary=false)}
 }
 
 /** Account facts only; each backend retains its own navigation and controls. */
-@Composable internal fun AccountUsageDetails(){
+@Composable internal fun AccountUsageDetails(includeSummary:Boolean=true){
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
-    Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
-    usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    if(includeSummary){
+        Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+        usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    }
     UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{
         InterfaceText("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
-    val resets=usage.resetCredits
-    InterfaceText(resets.label(),color=Paper,fontSize=16.sp)
-    if(resets.availableCount!=null&&resets.isStale(now,Pocket.connected&&Pocket.codexOnline))
-        BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=12.sp)
     val credits=usage.credits
-    BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
-    Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    if(includeSummary){
+        val resets=usage.resetCredits
+        InterfaceText(resets.label(),color=Paper,fontSize=16.sp)
+        if(resets.availableCount!=null&&resets.isStale(now,Pocket.connected&&Pocket.codexOnline))
+            BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=12.sp)
+        BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
+        Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    }
     BilingualLabel(usage.continuationLabel,centered=false,maxLines=3,color=if(usage.continuationState=="spending-blocked")Coral else Muted,fontSize=13.sp)
     if(credits.updatedAt>0){
         val checked=SimpleDateFormat("MMM d · HH:mm:ss",Locale.getDefault()).format(Date(credits.updatedAt))

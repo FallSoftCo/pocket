@@ -495,10 +495,8 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             DrawerAction(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow",{Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false})
             DrawerAction("Rename",{actionsOpen=false;taskName=t?.s("name").orEmpty().let{TextFieldValue(it,TextRange(0,it.length))};renameOpen=true})
             DrawerAction("Archive",{actionsOpen=false;confirmArchive=true},enabled=!active)
-            DrawerDisclosure("More actions"){
-                DrawerAction("Keep latest reply in notes",{rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"})
-                DrawerAction("Queue message",{actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending)
-            }
+            DrawerAction("Keep latest reply in notes",{rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"})
+            DrawerAction("Queue message",{actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending)
         }
         UsageDetails(onNavigate={actionsOpen=false})
     }
