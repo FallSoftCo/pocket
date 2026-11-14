@@ -1,6 +1,44 @@
 from pathlib import Path
 import os,json,time,subprocess,urllib.request,xml.etree.ElementTree as ET,uuid,hashlib,re,socket
 
+# Package replacement can start Application from install broadcasts. Stop it
+# AFTER every install before touching preferences or claiming a cold launch.
+def install_stopped(adb,apk_path):
+ adb('shell','am','force-stop','co.fallsoft.pocket')
+ adb('install','-r',str(apk_path))
+ adb('shell','am','force-stop','co.fallsoft.pocket')
+def read_stopped_preferences(adb):
+ adb('shell','am','force-stop','co.fallsoft.pocket')
+ values={}
+ for name in ('pocket.xml','pocket.xml.bak'):
+  command="run-as co.fallsoft.pocket sh -c 'if [ -e shared_prefs/"+name+" ]; then printf \"present\\n\"; cat shared_prefs/"+name+"; else printf \"absent\\n\"; fi'"
+  raw=adb('shell','-T',command)
+  marker,separator,value=raw.partition(b'\n')
+  if not separator or marker not in (b'present',b'absent'):raise RuntimeError('Cannot read retained QA preference '+name)
+  values[name]=value if marker==b'present' else None
+ return values
+def write_stopped_preferences(adb,values):
+ if set(values)!= {'pocket.xml','pocket.xml.bak'}:raise ValueError('Provide both main and AtomicFile backup preference states')
+ adb('shell','am','force-stop','co.fallsoft.pocket')
+ adb('shell','run-as','co.fallsoft.pocket','mkdir','-p','shared_prefs')
+ # Android gives the AtomicFile backup precedence over the main file.
+ adb('shell','run-as','co.fallsoft.pocket','rm','-f','shared_prefs/pocket.xml.bak')
+ for name,value in values.items():
+  if value is None:adb('shell','run-as','co.fallsoft.pocket','rm','-f','shared_prefs/'+name)
+  else:adb('shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/"+name+"'",input=value)
+ if read_stopped_preferences(adb)!=values:raise RuntimeError('QA main/AtomicFile backup preference readback differs')
+
+def save_stopped_preferences(adb,q):
+ retained=read_stopped_preferences(adb)
+ for value in retained.values():
+  if value is not None:assert ET.fromstring(value).tag=='map','Retained QA preferences must be XML maps'
+ # Keep exact private recovery bytes even if a later ADB restore fails.
+ backup=q/('retained-qa-preferences-'+uuid.uuid4().hex);backup.mkdir(mode=0o700)
+ for name,value in retained.items():
+  if value is not None:(backup/name).write_bytes(value);(backup/name).chmod(0o600)
+ evidence={name:None if value is None else {'path':str((backup/name).relative_to(q)),'sha256':hashlib.sha256(value).hexdigest()} for name,value in retained.items()}
+ return retained,evidence
+
 def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",signer_sha="22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",room_capture=None,room_evidence=None):
  assert re.fullmatch(r'(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)',avd_name)
  assert adb('shell','getprop','ro.boot.qemu.avd_name').decode().strip()==avd_name,'Owned NextComp emulator required'
@@ -51,12 +89,13 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
    except Exception:
     if time.monotonic()>deadline:raise
     time.sleep(.1)
-  adb('shell','am','force-stop','co.fallsoft.pocket');adb('install','-r',str(data/'qualification.apk'))
-  original=adb('exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml');assert ET.fromstring(original).tag=='map'
+  install_stopped(adb,data/'qualification.apk')
+  original,result['retainedQaPreferenceFiles']=save_stopped_preferences(adb,q);save()
   prefs=ET.Element('map')
   for key,value in {'server':'http://127.0.0.1:18880','token':'synthetic-system76-'+str(uuid.uuid4()),'deviceId':'synthetic-device-a','draft:same-thread':'Native optimized retained draft'}.items():ET.SubElement(prefs,'string',name=key).text=value
-  adb('shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'",input=ET.tostring(prefs,encoding='utf-8',xml_declaration=True))
-  adb('reverse','tcp:18880','tcp:'+str(port));adb('install','-r',str(apk))
+  write_stopped_preferences(adb,{'pocket.xml':ET.tostring(prefs,encoding='utf-8',xml_declaration=True),'pocket.xml.bak':None})
+  result['isolatedQaPreferencesVerified']=True;save()
+  adb('reverse','tcp:18880','tcp:'+str(port));install_stopped(adb,apk)
   package=adb('shell','pm','path','co.fallsoft.pocket').decode().strip().removeprefix('package:')
   assert adb('shell','sha256sum',package).decode().split()[0]==variant['sha256']
   start=time.monotonic();adb('shell','am','start','-n','co.fallsoft.pocket/.MainActivity','--es','thread','same-thread')
@@ -110,12 +149,16 @@ def qualify_native_stock(*,root,q,data,adb,launch,avd_name="nextcomp_env_qa",sig
   raise
  finally:
   try:
-   if fixture is not None and fixture.poll()is None:qa('release')
-   if original is not None:
-    adb('shell','am','force-stop','co.fallsoft.pocket');adb('install','-r',str(data/'qualification.apk'))
-    adb('shell','-T',"run-as co.fallsoft.pocket sh -c 'cat > shared_prefs/pocket.xml'",input=original)
-    result['retainedQaPreferencesRestored']=adb('exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml')==original
-    if not result['retainedQaPreferencesRestored']:result['state']='failed';save();raise RuntimeError('Native optimized probe did not restore retained QA preferences')
+   try:
+    if fixture is not None and fixture.poll()is None:qa('release')
+   finally:
+    if original is not None:
+     result['retainedQaPreferencesRestored']=False;save()
+     install_stopped(adb,data/'qualification.apk')
+     write_stopped_preferences(adb,original)
+     result['retainedQaPreferencesRestored']=True;save()
+  except BaseException as error:
+   result.update(state='failed',cleanupError=str(error));save();raise
   finally:
    if fixture is not None and fixture.poll()is None:
     fixture.terminate();fixture.wait(timeout=15)
