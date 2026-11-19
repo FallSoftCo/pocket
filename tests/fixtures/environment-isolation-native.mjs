@@ -1,3 +1,4 @@
+const resetRequests=[];
 import http from 'node:http';
 import crypto from 'node:crypto';
 const qaBase=Number(process.env.PORT||19995);
@@ -15,6 +16,8 @@ for(const profile of profiles){
   if(path==='/api/backends'&&profile.host==='Phone'){res.writeHead(404,{'Content-Type':'text/html'});res.end('<html>Cannot GET /api/backends</html>');return;}
   if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
   else if(path==='/api/status')body={host:profile.host,capabilities:{readOnlyTimeline:profile.host!=='Phone'},connected:true,usage:{weekly:{remainingPercent:72,resetsAt:2000000000},updatedAt:Date.now(),resetCredits:{availableCount:profile.host==='System76'?2:0,updatedAt:Date.now(),stale:false}},local:profile.host==='Phone',deviceId:profile.device};
+  else if(path==='/api/account/reset'&&req.method==='GET')body={available:true,accountToken:'synthetic-account-token',pendingId:null,automatic:false};
+  else if(path==='/api/account/reset'&&req.method==='POST'){const input=JSON.parse(raw);resetRequests.push({host:profile.host,id:input.id});body={state:resetRequests.length===1?'pending':'acknowledged',message:resetRequests.length===1?'Reset acknowledgement pending.':'Reset applied. Refreshing account usage.'};}
   else if(path==='/api/threads')body={threads:[thread(),thread('second-thread')]};
   else if(/^\/api\/threads\/[^/]+(?:\/head)?$/.test(path)){const t=thread(path.split('/')[3]);body={thread:{...t,turns:[]},timeline:{rows:[{id:t.id+'/answer',turnId:'synthetic',kind:'message',text:t.preview}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],notifications:[],outgoing:[]};}
   else if(/^\/api\/threads\/[^/]+\/reply$/.test(path)){const input=JSON.parse(raw);sent.push({host:profile.host,thread:path.split('/')[3],id:input.id});body={id:input.id,state:'accepted'};}
@@ -32,7 +35,7 @@ for(const profile of profiles){
    body={turns:[{id:'history-'+profile.host,transcript:profile.host+' voice input',response:profile.host+' voice response'}],hasEarlier:false};
   }
   else if(path.startsWith('/api/voice/')){res.statusCode=503;body={error:'Synthetic fixture blocks voice execution and speech'};}
-  else if(path==='/_qa/state')body={sent,notes,voiceReads,voiceReturns,updateChecks};
+  else if(path==='/_qa/state')body={sent,notes,voiceReads,voiceReturns,updateChecks,resetRequests};
   res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));
  });
  server.on('upgrade',(req,socket)=>{if(req.headers.authorization!=='Bearer '+profile.token){socket.destroy();return;}socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: '+crypto.createHash('sha1').update(req.headers['sec-websocket-key']+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').digest('base64')+'\r\n\r\n');sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>sockets.delete(socket));event(socket,{type:'status',connected:true});});

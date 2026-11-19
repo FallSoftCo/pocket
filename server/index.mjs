@@ -1,3 +1,4 @@
+import {registerAccountResetRoutes} from './account-reset-routes.mjs';
 import {registerNativeConfigurationRoutes} from './native-configuration.mjs';
 import {requestPresentation} from './native-request-contract.mjs';
 import {mountNativeExecution} from './native-execution.mjs';
@@ -826,6 +827,7 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   res.json(response);
 }));
 app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
+registerAccountResetRoutes(app,{dir,root,secrets,rateLimits,route,admissions:humanIngress});
 registerNativeConfigurationRoutes(app,{codex,db,admissions:humanIngress,accountEvidence:boundaryAt=>codex.ready&&!rateLimits.failed&&!rateLimits.loading&&!rateLimits.inflight&&rateLimits.updatedAt>=boundaryAt&&Date.now()-rateLimits.updatedAt<=rateLimits.ttl&&typeof rateLimits.accountId==='string'&&rateLimits.accountId.trim()?{accountId:rateLimits.accountId,generation:rateLimits.generation}:null,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
 const conversationTools=new ConversationTools({db,codex,supports:method=>supportsNativeMethod(codex,method),publish:emit,
  checkSource:id=>{terminalForkImports?.inputAllowed(id);terminalForks?.inputRole(id);},

@@ -29,6 +29,20 @@ class SettingsDrawerNativeTest {
   fun open(){compose.onNodeWithContentDescription("Settings, app updates and usage").performClick();compose.onNodeWithTag("settings-drawer-content").assertIsDisplayed()}
   open()
   compose.onNodeWithText("2 banked resets available",useUnmergedTree=true).assertIsDisplayed()
+  await{compose.onAllNodesWithText("Use a banked reset",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithText("Use a banked reset",useUnmergedTree=true).performScrollTo().performClick()
+  compose.onNodeWithText("Cancel",useUnmergedTree=true).performClick()
+  compose.onNodeWithText("Use a banked reset",useUnmergedTree=true).performClick()
+  compose.onNodeWithText("Use reset now",useUnmergedTree=true).performClick()
+  await{compose.onAllNodesWithText("Check reset result",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithText("Check reset result",useUnmergedTree=true).performClick()
+  await{compose.onAllNodesWithText("Reset applied. Refreshing account usage.",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  val resetState=(java.net.URL("http://127.0.0.1:18880/_qa/state").openConnection() as java.net.HttpURLConnection).run{
+   setRequestProperty("Authorization","Bearer synthetic-system76");inputStream.bufferedReader().use{org.json.JSONObject(it.readText())}
+  }.getJSONArray("resetRequests")
+  assertEquals(2,resetState.length())
+  assertEquals(resetState.getJSONObject(0).getString("id"),resetState.getJSONObject(1).getString("id"))
+  assertFalse(prefs.contains("manualResetRequest"))
   assertTrue("Settings must retain the Activity window for voice keys",AppWindowVisibility.focused)
   // The primary update action is reachable without expanding a section.
   compose.onNodeWithText("Check for updates",useUnmergedTree=true).performScrollTo().assertIsDisplayed()

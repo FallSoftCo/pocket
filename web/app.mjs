@@ -1,3 +1,4 @@
+import {createAccountResetControl} from './account-reset.mjs';
 import {LocalSendPresentation} from './local-send-presentation.mjs';
 import {UxMeasurements} from './ux-measurements.mjs';
 import {NativeSettingsPanel,addServiceTierControl} from './native-settings.mjs';
@@ -560,12 +561,14 @@ async function refreshAccountUsage(){
  const key=owner+'/'+source.environment;if(accountFlights.has(key))return accountFlights.get(key);
  const work=(async()=>{try{const value=await api(sourcePath(source.environment,'/api/status'),undefined,{timeout:4000});if(deviceId===owner)accountUsage.status(source.environment,value,source.name);}catch{if(deviceId===owner)accountUsage.unavailable(source.environment);}finally{accountFlights.delete(key);if(deviceId===owner)renderUsage();}})();accountFlights.set(key,work);return work;
 }
+const accountResetControl=createAccountResetControl({api,onUsage:(environment,usage)=>{accountUsage.limits(environment,usage);renderUsage();}});
 function renderUsage(){
  accountUsage.profile(deviceId);if(status?.deviceId===deviceId&&!accountUsage.observations.has('current'))accountUsage.status('current',status,status.host);
  const source=accountSource(),usage=accountUsage.view(source.environment,source.name);
  setLabel($('usage'),usage.label);$('usage').title=usage.provenance+' · '+usage.reset+' · '+usage.freshness;
  const toolbarUsage=$('conversation-usage');if(toolbarUsage){setLabel(toolbarUsage.querySelector('.account-allowance'),usage.label);setLabel(toolbarUsage.querySelector('.account-source'),' · '+usage.source);toolbarUsage.dataset.usageState=usage.state;toolbarUsage.dataset.usageEnvironment=usage.environment||'';toolbarUsage.title=usage.reset+' · '+usage.freshness;toolbarUsage.setAttribute('aria-label',usage.provenance+'; '+usage.label+'; '+usage.reset+'; '+usage.freshness);}
  const box=$('account-usage');box.replaceChildren(el('strong','',usage.label),el('p','',usage.provenance),el('p','',usage.reset),el('p','',usage.resetCredits),el('p','',usage.credits),el('p','muted',usage.creditStale?'Last known or unavailable credit observation':'Current credit observation'),el('p','muted',usage.continuation),el('p','muted',usage.freshness));
+ if(source.environment&&deviceId)box.append(accountResetControl({owner:deviceId,environment:source.environment,path:sourcePath(source.environment,'/api/account/reset')}));
 }
 $('usage').onclick=()=>{$('settings-dialog').showModal();renderUsage();};
 

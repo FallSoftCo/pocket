@@ -93,6 +93,7 @@ import java.util.Locale
             fontSize=24.sp,fontWeight=FontWeight.SemiBold)
         usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=14.sp)}
         InterfaceText(usage.resetCredits.label(),color=Paper,fontSize=16.sp)
+        AccountResetControl()
         if(usage.resetCredits.availableCount!=null&&usage.resetCredits.isStale(now,Pocket.connected&&Pocket.codexOnline))
             BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=13.sp,maxLines=2)
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically){
