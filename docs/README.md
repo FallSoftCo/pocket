@@ -14,6 +14,8 @@ The current controls include native session branching/context actions, configura
 
 [193 gallery previews](qualification/gallery-page-previews-193.json) extends inline previews to standalone review pages, gallery-home links and catalog-card aliases. Existing messages need no sender edits. Android193/alpha175 is published on both channels and web is live; handset installation is separately unverified. Native image open/close and actual rendered page previews are recorded with their limits.
 
+[194 manual banked resets](qualification/manual-banked-reset-194.json) adds an explicit account drawer action, confirmation and recovery of the original request after a lost acknowledgement. Android194/alpha176 is published; web is live. Automatic reset settings remain unchanged.
+
 ## Understand and evaluate
 
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.

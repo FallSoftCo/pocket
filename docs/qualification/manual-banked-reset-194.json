@@ -1,0 +1,64 @@
+{
+  "feature": "Explicit manual banked reset controls",
+  "date": "2026-11-19",
+  "android": {
+    "versionCode": 194,
+    "versionName": "0.5.0-alpha.176",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-194-b28f55b44c93.apk",
+        "sha256": "4872655a6d544958a76c88c861d88445220c3ebe60d19a0ae2f6817700f7ac7a",
+        "size": 52947855
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-194-22ecabe28e15.apk",
+        "sha256": "f3421cde4881fb811b731de6845121ae284e0838372b7966e97d1fea38200baf",
+        "size": 52947855
+      }
+    ],
+    "productionSourceSha": "0ee5565a658981698cb9a859378f9d7a1f8619643482c349252d0d87716594d5",
+    "qualificationInputSha": "8d5f986008d25e46355adb9bdbe5b04e656dfef105d0e574c919dfe5cced1e1c",
+    "requiredNativeJourneys": 21,
+    "manualResetJourney": {
+      "apkSha256": "f3421cde4881fb811b731de6845121ae284e0838372b7966e97d1fea38200baf",
+      "confirmationVisible": true,
+      "pendingOriginalRequestChecked": true,
+      "remainingCountUpdated": true,
+      "noTaskSent": true,
+      "providerConsumeCalls": 0,
+      "retainedQaPreferencesRestored": true
+    },
+    "visualReview": "Exact optimized APK confirmation has visible Cancel and Use reset now controls. Pending account card exposes Check reset result. Acknowledged screen shows 100% left and one remaining reset. Account card and buttons remain within drawer width; lower app options remain scrollable. Synthetic account only; no real benefit consumed."
+  },
+  "web": {
+    "deployed": true,
+    "review": "Actual native browser clicks and screenshots at desktop and narrow widths, exact candidate module with production styles and synthetic account transport. Confirmation, pending acknowledgement and same-request result verified."
+  },
+  "semantics": [
+    "User confirms one existing banked benefit; no purchase, credit top-up or automatic reset enablement.",
+    "Original account/device/source and persisted provider idempotency key survive lost acknowledgement and runner restart.",
+    "The manual runner shares the standing reset lock and receipt history, preserving deliberate automatic stops and unrelated spending controls.",
+    "Unchanged pre-reset usage cannot spend another benefit.",
+    "After acknowledgement, read-only verification records recovered usage while automatic resets remain paused; verification failure retains the acknowledgement.",
+    "Real account metadata is read without starting model work. Zero available benefits are reported honestly."
+  ],
+  "verification": [
+    "Native optimized drawer confirmation, original pending request check, count update and draft preservation.",
+    "Required existing Android messaging, navigation, account drawer and native voice journeys passed.",
+    "Backend real socket/CLI integration covers process restart, lost acknowledgement, concurrent lock admission, account mismatch and spending blocks.",
+    "Synthetic provider tests verify immediate usage recovery and verification outage with automatic policy paused."
+  ],
+  "publication": {
+    "workstation": "194 published and authenticated compatible APK readback passed",
+    "macbook": "194 published and authenticated compatible APK readback passed",
+    "announcement": "One updater announcement; handset install not asserted"
+  },
+  "limits": [
+    "No real banked reset was consumed in qualification.",
+    "Current manual redemption owner is the workstation. A Mac-only backend without reset ownership reports unavailable and directs the user to the workstation account.",
+    "Physical phone install and real earned-benefit redemption are not claimed.",
+    "Gallery review assets staged; main gallery index rebuild is blocked by an unrelated missing pre-existing poster."
+  ]
+}
