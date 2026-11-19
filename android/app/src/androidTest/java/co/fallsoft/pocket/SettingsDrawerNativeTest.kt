@@ -47,7 +47,7 @@ class SettingsDrawerNativeTest {
   // The primary update action is reachable without expanding a section.
   compose.onNodeWithText("Check for updates",useUnmergedTree=true).performScrollTo().assertIsDisplayed()
   compose.onNodeWithText("Usage details",useUnmergedTree=true).performScrollTo().performClick()
-  compose.onAllNodesWithText("2 banked resets available",useUnmergedTree=true).assertCountEquals(1)
+  compose.onAllNodesWithText("1 banked reset available",useUnmergedTree=true).assertCountEquals(1)
   // Inspecting the drawer never downloads/installs an update or submits work.
   device.pressBack()
   await{compose.onAllNodesWithTag("settings-drawer-content").fetchSemanticsNodes().isEmpty()}

@@ -7,6 +7,7 @@ const sent=[],notes=[],updateChecks=[];let holdVoiceHistory=false;const voiceRea
 function event(socket,value){const b=Buffer.from(JSON.stringify(value));socket.write(Buffer.concat([b.length<126?Buffer.from([129,b.length]):Buffer.from([129,126,b.length>>8,b.length&255]),b]));}
 for(const profile of profiles){
  const sockets=new Set();
+ const usage=()=>({weekly:{remainingPercent:resetRequests.length>=2?100:72,resetsAt:2000000000},updatedAt:Date.now(),resetCredits:{availableCount:profile.host==='System76'?(resetRequests.length>=2?1:2):0,updatedAt:Date.now(),stale:false}});
  const thread=(id='same-thread')=>({id,name:profile.host+' synthetic work'+(id==='second-thread'?' two':''),cwd:'/synthetic',status:{type:'idle'},canAcceptDirectInput:true,preview:profile.host+(id==='second-thread'?' second':'')+' answer only',previewRole:'codex',previewKind:'message',activityAt:id==='second-thread'?2000:1000,updatedAt:1000});
  const server=http.createServer(async(req,res)=>{
   if(req.headers.authorization!=='Bearer '+profile.token){res.writeHead(401);res.end('{}');return;}
@@ -15,9 +16,9 @@ for(const profile of profiles){
   console.log(JSON.stringify({host:profile.host,path,method:req.method}));
   if(path==='/api/backends'&&profile.host==='Phone'){res.writeHead(404,{'Content-Type':'text/html'});res.end('<html>Cannot GET /api/backends</html>');return;}
   if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
-  else if(path==='/api/status')body={host:profile.host,capabilities:{readOnlyTimeline:profile.host!=='Phone'},connected:true,usage:{weekly:{remainingPercent:72,resetsAt:2000000000},updatedAt:Date.now(),resetCredits:{availableCount:profile.host==='System76'?2:0,updatedAt:Date.now(),stale:false}},local:profile.host==='Phone',deviceId:profile.device};
-  else if(path==='/api/account/reset'&&req.method==='GET')body={available:true,accountToken:'synthetic-account-token',pendingId:null,automatic:false};
-  else if(path==='/api/account/reset'&&req.method==='POST'){const input=JSON.parse(raw);resetRequests.push({host:profile.host,id:input.id});body={state:resetRequests.length===1?'pending':'acknowledged',message:resetRequests.length===1?'Reset acknowledgement pending.':'Reset applied. Refreshing account usage.'};}
+  else if(path==='/api/status')body={host:profile.host,capabilities:{readOnlyTimeline:profile.host!=='Phone'},connected:true,usage:usage(),local:profile.host==='Phone',deviceId:profile.device};
+  else if(path==='/api/account/reset'&&req.method==='GET')body={available:true,accountToken:'synthetic-account-token',pendingId:null,automatic:false,usage:usage()};
+  else if(path==='/api/account/reset'&&req.method==='POST'){const input=JSON.parse(raw);resetRequests.push({host:profile.host,id:input.id});body={usage:usage(),state:resetRequests.length===1?'pending':'acknowledged',message:resetRequests.length===1?'Reset acknowledgement pending.':'Reset applied. Refreshing account usage.'};}
   else if(path==='/api/threads')body={threads:[thread(),thread('second-thread')]};
   else if(/^\/api\/threads\/[^/]+(?:\/head)?$/.test(path)){const t=thread(path.split('/')[3]);body={thread:{...t,turns:[]},timeline:{rows:[{id:t.id+'/answer',turnId:'synthetic',kind:'message',text:t.preview}],hasEarlier:false,before:null},revision:0,notes:[],pending:[],notifications:[],outgoing:[]};}
   else if(/^\/api\/threads\/[^/]+\/reply$/.test(path)){const input=JSON.parse(raw);sent.push({host:profile.host,thread:path.split('/')[3],id:input.id});body={id:input.id,state:'accepted'};}

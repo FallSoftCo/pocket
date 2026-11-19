@@ -42,7 +42,7 @@ import java.util.UUID
                 val result=Pocket.apiEnvironment(destination,"/api/account/reset",request)
                 message=result.optString("message")
                 if(result.optString("state")!="pending")Pocket.prefs.edit().remove(storageKey).commit()
-                Pocket.acceptUsage(result.optJSONObject("usage"),destination)
+                result.optJSONObject("usage")?.let{Pocket.acceptUsage(it,destination)}
                 try{data=Pocket.apiEnvironment(destination,"/api/account/reset")}catch(_:Exception){}
             }catch(_:Exception){message="Reset result not confirmed. Check the same request; no replacement will be sent."}
             finally{busy=false}
@@ -50,8 +50,9 @@ import java.util.UUID
     }
     LaunchedEffect(identity){inspect()}
     val pending=saved()!=null||data?.optString("pendingId")?.let{it.isNotBlank()&&it!="null"}==true
+    val resetCount=data?.optJSONObject("usage")?.optJSONObject("resetCredits")?.optInt("availableCount",-1)
     Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp)){
-        Button(onClick={if(data?.optBoolean("available")==true){if(pending)submit() else confirm=true}else inspect()},enabled=!busy,modifier=Modifier.fillMaxWidth()){
+        Button(onClick={if(data?.optBoolean("available")==true){if(pending)submit() else confirm=true}else inspect()},enabled=!busy&&(pending||resetCount!=0),modifier=Modifier.fillMaxWidth()){
             InterfaceText(if(busy)"Checking reset…" else if(pending)"Check reset result" else if(data?.optBoolean("available")==true)"Use a banked reset" else "Refresh reset controls")
         }
         if(data?.optBoolean("available")==false)InterfaceText(data?.optString("message").orEmpty(),color=Muted)
