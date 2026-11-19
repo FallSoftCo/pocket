@@ -111,3 +111,5 @@ owning Linux backend; other environments explicitly report this action
 unavailable. Do not silently establish a second reset scheduler or copy private
 account policy across hosts. When publishing a runner revision, keep a disabled
 timer disabled and pin both paths to the reviewed runner semantics.
+
+After a manual acknowledgement, the original locked runner reads usage once to retain the observed reset even when automatic resets are paused. A failed verification preserves the acknowledged result and exact pending observation; it does not consume a second benefit or enable a timer.

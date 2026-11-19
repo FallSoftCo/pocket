@@ -159,12 +159,20 @@ export async function runManualAccountReset({state,call,save,request,now=Date.no
  const persist=async patch=>{const next={...state,...patch};await save(next);Object.assign(state,next);};
  const previous=state.manualRequests?.[request.id];
  if(previous&&previous.deviceId!==request.deviceId)throw Error('Reset request belongs to another device.');
- if(previous?.result)return previous.result;
  const resultFor=attempt=>({state:attempt.outcome==='reset'||attempt.outcome==='alreadyRedeemed'?'acknowledged':'not-reset',
   message:({reset:'Reset applied. Refreshing account usage.',alreadyRedeemed:'This reset was already applied.',noCredit:'That banked reset is no longer available.',nothingToReset:'The provider found no allowance to reset.'})[attempt.outcome]});
  const finish=async result=>{await persist({...(state.enabled===false&&state.status==='armed'?{status:'paused'}:{}),manualRequests:{...state.manualRequests,[request.id]:{...state.manualRequests?.[request.id],deviceId:request.deviceId,result,updatedAt:now}}});return result;};
+ // Verify an acknowledged manual reset while its original lock is held. This
+ // read-only pass also works while the automatic policy is deliberately paused.
+ // Failed verification retains the acknowledged receipt and exact attempt.
+ const verify=async()=>{
+  if(state.status==='awaitingUsageDrop'&&state.attempt?.manualId===request.id)
+   await runStandingReset({state,call,save,now,manualId:request.id});
+ };
+ if(previous?.result){if(previous.result.state==='acknowledged')await verify();return finish(previous.result);}
+ const acknowledge=async attempt=>{await verify();return finish(resultFor(attempt));};
  const old=[state.attempt,...state.receipts].find(a=>a?.manualId===request.id&&a.outcome);
- if(old)return finish(resultFor(old));
+ if(old)return acknowledge(old);
  if(!previous){
   if(state.status==='awaitingUsageDrop')await runStandingReset({state,call,save,now,manualId:request.id});
   // A second tap/device must not inherit or replace an unresolved reset.
@@ -174,7 +182,7 @@ export async function runManualAccountReset({state,call,save,request,now=Date.no
  }
  await runStandingReset({state,call,save,now,manualId:request.id});
  const attempt=[state.attempt,...state.receipts].find(a=>a?.manualId===request.id);
- if(attempt?.outcome)return finish(resultFor(attempt));
+ if(attempt?.outcome)return acknowledge(attempt);
  if(attempt)return {state:'pending',message:'The reset acknowledgement is pending. Check this same request; do not start another.'};
  // No provider mutation was admitted. A later deliberate action can recheck.
  return finish({state:'not-reset',message:state.reason||'No eligible banked reset is currently available.'});

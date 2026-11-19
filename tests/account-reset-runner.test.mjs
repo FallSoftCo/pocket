@@ -34,6 +34,8 @@ async function fixture(t){
   assert.deepEqual(m.params,{creditId:persisted.attempt.creditId,idempotencyKey:persisted.attempt.idempotencyKey},'exact intent must be on disk before native dispatch');
   f.consume.push(m.params);const duplicate=f.seen.has(m.params.idempotencyKey);f.seen.add(m.params.idempotencyKey);
   if(f.loseAck){f.loseAck=false;ws.close();return;}
+  if(f.afterConsumeUsed!==undefined)f.used=f.afterConsumeUsed;
+  if(f.afterConsumeReadFailure)f.readFailure=true;
   reply({outcome:duplicate?'alreadyRedeemed':f.outcome});
  }));
  f.invoke=request=>invokeReset({root:process.cwd(),path,lock:join(dir,'reset.lock'),socket,request});
@@ -119,4 +121,26 @@ test('concurrent HTTP runner invocations share one process lock and do not spend
  const results=await Promise.all(['manual-parallel-one','manual-parallel-two'].map(id=>f.invoke({id,deviceId:'phone',accountId:'fixture-account'})));
  assert.equal(f.consume.length,1);assert.equal(results.filter(r=>r.state==='acknowledged').length,1);assert.equal(results.filter(r=>r.state==='not-reset').length,1);
  assert.equal((await f.state()).enabled,false);
+});
+
+
+test('manual acknowledgement records usage recovery without an enabled timer before a later deliberate reset',async t=>{
+ const f=await fixture(t);f.used=30;f.credits=[f.credit('one'),f.credit('two')];f.afterConsumeUsed=0;
+ const request={id:'manual-observe-one',deviceId:'phone',accountId:'fixture-account'};
+ let s=await f.tick({enabled:false,status:'paused'},request);
+ assert.equal(s.status,'paused');assert.equal(s.attempt,null);assert.equal(s.receipts[0].afterHighestUsedPercent,0);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(f.consume.length,1);
+ f.used=80;f.credits=[f.credit('two')];s=await f.tick({}, {...request,id:'manual-observe-two'});
+ assert.equal(f.consume.length,2);assert.equal(s.enabled,false);assert.equal(s.status,'paused');
+});
+
+
+test('manual acknowledgement survives verification outage and same-request observation later restores paused state',async t=>{
+ const f=await fixture(t);f.used=40;f.credits=[f.credit('one')];f.afterConsumeReadFailure=true;
+ const request={id:'manual-verify-outage',deviceId:'phone',accountId:'fixture-account'};
+ let s=await f.tick({enabled:false,status:'paused'},request);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(s.status,'awaitingUsageDrop');
+ f.readFailure=false;f.used=0;s=await f.tick({},request);
+ assert.equal(s.status,'paused');assert.equal(s.enabled,false);assert.equal(f.consume.length,1);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(s.receipts[0].afterHighestUsedPercent,0);
 });
