@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -15,7 +16,8 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class SettingsDrawerNativeTest {
- @get:Rule val compose=createEmptyComposeRule()
+ // Async drawer effects must advance on the controlled test clock.
+ @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
  @Test fun drawerPreservesWindowDraftAndReachableControls(){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
   requireOwnedNativeTarget(device)
