@@ -22,9 +22,8 @@ inference to test credentials. There is no automatic fallback to another provide
 Provider selection applies to **new sessions**. Existing sessions, including
 queued replies, keep their original provider. Configuration IDs already in use
 cannot be overwritten in this setup form; choose a new ID for a different
-endpoint or credential configuration. Cross-provider continuation is implemented in candidate 196 through
-**Context & files → Continue with another provider**; delivery qualification is
-separate from the published 195 provider selector. Provider selection, model and optional effort
+endpoint or credential configuration. Cross-provider continuation is available in Android and web196 through
+**Context & files → Continue with another provider**, extending the195 provider selector. Provider selection, model and optional effort
 are persisted with a new-task request before dispatch and survive backend
 restart. Reopening an original request does not consult a changed host default.
 
@@ -43,21 +42,23 @@ offer an invented OpenAI model picker. Provider setup is unavailable on runtime
 versions outside the qualified profile; opening the controls never upgrades or
 restarts a daemon.
 
-## Cross-provider continuation follow-up
+## Cross-provider continuation architecture
 
 Codex 0.171 exposes `thread/fork` with `modelProvider`, `model` and a completed
 `lastTurnId`. An isolated native proof preserved source user/assistant messages,
 but a further probe also forwarded opaque source-provider reasoning to the new
 provider. Raw native fork therefore cannot be assumed portable across providers.
 
-The proposed handoff creates a fresh native destination session from a durable
+The implemented handoff creates a fresh native destination session from a durable
 work checkpoint, accompanied by a reference export of public conversation and
-tool results. The checkpoint records task intent, constraints, decisions,
-completed artifacts, next steps, blockers and unresolved external effects.
+tool results. The checkpoint records the latest request and update, source settings, instruction
+evidence, prior handoffs and unresolved operation identities. The linked public
+history supplies the evidence for decisions, artifacts, next steps and blockers;
+this version does not invent a model-generated semantic summary.
 Provider-specific reasoning is excluded. Source/destination linkage and original
 operation receipts survive restart, and uncertain actions are never replayed.
-Candidate 196 implements this workflow. It remains separate from the already
-delivered 195 provider selector until its release qualification is complete.
+196 implements this workflow. Backend and web delivery are live; Android delivery
+is recorded separately in the qualification receipt below.
 
 The handoff should be one durable operation in the existing conversation-actions
 workflow, rather than a second memory service:
@@ -66,11 +67,11 @@ workflow, rather than a second memory service:
    An active source must reach that boundary, or be explicitly interrupted; a
    provider change must not silently leave two workers doing the same task.
 2. Save an immutable checkpoint and a reference transcript with stable turn/item
-   IDs. Preserve the original logs. The checkpoint includes the current objective,
-   latest scope corrections, completed work, decisions, paths/commits, verification,
-   pending questions, active subagent identities, deliberate stops and uncertain
-   external effects. Existing child work is referenced, not recreated. A summary
-   is an index into this evidence, not a replacement for it.
+   IDs. Preserve the original logs. The checkpoint and linked history preserve evidence for the current objective,
+   scope corrections, work, decisions, paths/commits, verification, questions,
+   child identities, stops and uncertain effects. Existing child work is
+   referenced, not recreated. The checkpoint indexes this evidence; the new
+   agent must read and reconcile it rather than assume every item is current.
 3. Create a fresh native thread with the explicitly selected provider and model,
    in the same environment and workspace, preserving the authorized permissions
    and task constraints. Its initial context includes the
@@ -95,7 +96,7 @@ existing checkpoints remain readable without starting a source-provider turn.
 The destination can read further evidence on demand. Persisting a checkpoint
 cannot promise that every model will understand or obey it identically.
 
-## Continue with — candidate 196
+## Continue with — 196
 
 Android and web use the existing conversation-operation receipt path. Choose
 a provider and explicit model, optionally add handoff instructions, then confirm
@@ -138,3 +139,5 @@ Export bounds are 3,000 turns / 64 MiB of public history and 512 MiB of scanned
 instruction lineage. Exceeding them fails before creating a destination rather
 than silently omitting earlier context. Checkpoints use private file permissions
 and are not public gallery assets. No new model polling or memory service exists.
+
+[196 delivery and qualification](qualification/provider-continuation196.json) distinguishes live web/backend support from Android publication and physical installation.

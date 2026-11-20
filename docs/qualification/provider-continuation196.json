@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "feature": "Continue with another provider",
+  "versionCode": 196,
+  "versionName": "0.5.0-alpha.178",
+  "sourceCommit": "7dc0f80eb60607b2dd2bfd88eecb1b7455557c63",
+  "backendReleaseDigest": "da4c9fefa9031c8cb5677976ee2303a068a92ca90ef2968bc40822142a4330de",
+  "delivery": {
+    "workstationBackend": "live",
+    "macBackend": "live; native runtime unchanged, continuation unavailable on unqualified 0.163",
+    "web": "live on both existing private routes",
+    "android": "Published196/alpha178 on both signed updater channels; authenticated compatible SHA readback passed",
+    "phoneInstalled": false,
+    "announcement": "One workstation announcement3109; handset install not asserted"
+  },
+  "verification": {
+    "nativeProtocol": "Real Codex 0.171, isolated two-provider Responses fixture; checkpoint/public history preserved, opaque reasoning excluded, exact sandbox/approval preserved, one original receipt; zero paid provider requests",
+    "web": "DOM integration, lost response without duplicate POST, actual native-browser desktop and 500px review",
+    "androidContinuation": "Real MainActivity DeepSeek selection, original receipt recovery, destination open and retained source draft; 32.528s test",
+    "backendSuite": {
+      "tests": 811,
+      "passed": 808,
+      "failed": 1,
+      "skipped": 2,
+      "retainedFailure": "One five-second synthetic fixture startup deadline during Android compilation; both tests from that exact file passed separately afterward"
+    },
+    "domLane": "All required lanes complete",
+    "androidBuild": "Both unit variants and both lints passed; optimized signing variants verified",
+    "nativeCases": {
+      "required": 22,
+      "passed": 22
+    },
+    "optimizedApk": "Exact phone-compatible optimized APK: catalog/history/reopen/question journey, real native Continue form with DeepSeek and reachable Save; preserved preferences",
+    "audio": "Real account input finalization and streaming output passed on isolated same0.171 runtime without MCP configuration; no business task routes"
+  },
+  "limits": [
+    "Physical phone install and provider audio are not established by emulator evidence.",
+    "Existing real DeepSeek key/tool proof is recorded in provider195 evidence;196 cross-provider inference qualification uses synthetic providers and real native Codex.",
+    "External TUI writers remain independent; this is not a distributed lock across arbitrary clients.",
+    "Common structured credentials are redacted; arbitrary secrets in free-form history cannot be reliably detected.",
+    "History export is bounded and refuses partial handoffs.",
+    "Shared live native daemon was replaced outside this release during QA. Its thread/start requests timed out while MCP services reported429; isolated audio qualification does not establish current shared-runtime startup health."
+  ],
+  "retainedFailures": [
+    "Owned emulator256-thread cap caused QEMU resource failure; corrected only owned QA service to1024; unchanged reading test then passed.",
+    "Android screenshot Binder timeout retained.",
+    "Shared-runtime thread/start audio preparation timed out; no business input sent. Same shipped audio code passed with isolated same-version native account transport."
+  ],
+  "apkSha256": "406ea4176854207e25b8b77fc515f4f6722f4c36eff050b96780cc1256f3d081"
+}

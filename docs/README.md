@@ -18,6 +18,8 @@ The current controls include native session branching/context actions, configura
 
 [195 model providers](qualification/model-providers-195.json) adds native provider setup and explicit provider/model selection for new sessions in Android and web. The workstation is configured with the existing DeepSeek key and real native text/tool checks passed. Existing sessions retain their provider; [persistent cross-provider handoff](MODEL-PROVIDERS.md#cross-provider-continuation-follow-up) is a separate, recorded follow-up. Mac provider setup remains unavailable on its older native runtime.
 
+[196 provider continuation](qualification/provider-continuation196.json) adds durable contextual handoff to a fresh explicitly selected provider session, retaining the original conversation and send receipt.
+
 ## Understand and evaluate
 
 - [NextComp briefing for Tibo and agent reviewers](NEXTCOMP-BRIEF.md): the complete account of what a person can do, how the system fits personal-agent computing, and what warrants a technical conversation.
