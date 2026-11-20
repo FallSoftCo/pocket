@@ -79,6 +79,7 @@ import { WorkRecord } from './work-record.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
 import { modelCatalogue,validateTurnSettings,turnOverrides } from './turn-settings.mjs';
+import {registerModelProviderRoutes} from './model-providers.mjs';
 import { VoiceSpeech } from './voice-speech.mjs';
 import { VoiceController } from './voice-controller.mjs';
 
@@ -713,13 +714,15 @@ app.post('/api/device/disconnect',(req,res)=>{
 });
 app.get('/api/notifications/:id/delivery',owner,(req,res)=>res.json({deliveries:db.prepare('SELECT p.device_id,d.name,p.state,p.attempts,p.message_id,p.error,p.updated_at FROM push_deliveries p JOIN devices d ON d.id=p.device_id WHERE p.notification_id=?').all(req.params.id)}));
 app.get('/api/projects',route(async(_req,res)=>{
-  await codex.connect();const r=await codex.call('thread/list',{limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true});
+  await codex.connect();const r=await codex.call('thread/list',{modelProviders:[],limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true});
   res.json({projects:recentProjects(r.data||[])});
 }));
-app.post('/api/threads',(req,res)=>{
-  try{const row=sessionStarts.enqueue(req.body,req.humanPrincipal);res.status(row.state==='started'?200:202).json(row);}
-  catch(e){res.status(e.status||500).json({error:e.message});}
-});
+app.post('/api/threads',route(async(req,res)=>{
+  // Resolve once at admission, not after waiting in the creation queue. An
+  // original receipt is inspected without consulting a changed host default.
+  const selection=sessionStarts.get(req.body.id)?req.body.selection:await modelProviders.selection(req.body.selection);
+  const row=sessionStarts.enqueue({...req.body,selection},req.humanPrincipal);res.status(row.state==='started'?200:202).json(row);
+}));
 app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
 app.get('/api/work-record',(req,res)=>res.json({...workRecord.list({before:req.query.before,limit:req.query.limit}),team:workRecord.teamList(req.device.id),voice:voiceController.history(req.device.id).turns.slice(-30).reverse().map(turn=>({id:turn.id,status:turn.state,request:turn.transcript,output:turn.response,createdAt:turn.created_at,evidence:'agent-reported',source:{backend:'voice',turnId:turn.id}}))}));
 app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
@@ -828,6 +831,7 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
 }));
 app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
 registerAccountResetRoutes(app,{dir,root,secrets,rateLimits,route,admissions:humanIngress});
+const modelProviders=registerModelProviderRoutes(app,{codex,route});
 registerNativeConfigurationRoutes(app,{codex,db,admissions:humanIngress,accountEvidence:boundaryAt=>codex.ready&&!rateLimits.failed&&!rateLimits.loading&&!rateLimits.inflight&&rateLimits.updatedAt>=boundaryAt&&Date.now()-rateLimits.updatedAt<=rateLimits.ttl&&typeof rateLimits.accountId==='string'&&rateLimits.accountId.trim()?{accountId:rateLimits.accountId,generation:rateLimits.generation}:null,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
 const conversationTools=new ConversationTools({db,codex,supports:method=>supportsNativeMethod(codex,method),publish:emit,
  checkSource:id=>{terminalForkImports?.inputAllowed(id);terminalForks?.inputRole(id);},
@@ -836,14 +840,29 @@ const conversationTools=new ConversationTools({db,codex,supports:method=>support
  onChanged:(id,kind)=>{if(kind==='revert'){timeline.dropThread(id);history.positions.clear();historyHeads.invalidate(id);if(['waiting','awaitingAssessment'].includes(turnRecovery.get(id)?.state))turnRecovery.set(id,'cancelled');}emit('conversationChanged',{threadId:id,kind,historyHead:historyHeads.snapshot(id)});return historyHeads.snapshot(id);}
 });
 registerConversationTools(app,conversationTools,route);
-app.get('/api/models',route(async(_req,res)=>{
-  await codex.connect();res.json({models:(await modelCatalogue(codex)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts,serviceTiers:m.serviceTiers||[],defaultServiceTier:m.defaultServiceTier||null}))});
+async function modelContext(threadId){
+ await codex.connect();
+ if(!threadId)return {providerId:null};
+ const id=requireId(threadId),{thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+ if(thread?.id!==id)throw Object.assign(Error('Session identity changed.'),{status:409});
+ return {providerId:thread.modelProvider||null};
+}
+app.get('/api/models',route(async(req,res)=>{
+  const {providerId}=await modelContext(req.query.threadId);
+  const manual=!!providerId&&providerId!=='openai';
+  res.json({providerId,manual,models:manual?[]:(await modelCatalogue(codex,providerId)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts,serviceTiers:m.serviceTiers||[],defaultServiceTier:m.defaultServiceTier||null}))});
 }));
 app.post('/api/threads/:id/notes',(req,res)=>{try{const id=requireId(req.params.id);conversationNotes.put(id,{...req.body,manual:true});res.json({notes:conversationNotes.list(id)});}catch(e){res.status(e.status||400).json({error:e.message});}});
 app.post('/api/threads/:id/notes/remove',(req,res)=>{const id=requireId(req.params.id);conversationNotes.remove(id,String(req.body.id||''));res.json({notes:conversationNotes.list(id)});});
 app.post('/api/threads/:id/settings',route(async(req,res)=>{
   const threadId=requireId(req.params.id);await codex.connect();
-  const settings=validateTurnSettings(req.body,await modelCatalogue(codex));
+  const {providerId}=await modelContext(threadId);
+  let settings;
+  if(providerId&&providerId!=='openai'){
+    const selected=await modelProviders.selection({providerId,model:req.body.model,effort:req.body.effort});
+    if(!['default','plan'].includes(req.body.mode))throw Object.assign(Error('Choose Build or Plan mode.'),{status:400});
+    settings={model:selected.model,effort:selected.effort,mode:req.body.mode};
+  }else settings=validateTurnSettings(req.body,await modelCatalogue(codex,providerId));
   db.prepare('INSERT INTO turn_settings(thread_id,settings) VALUES(?,?) ON CONFLICT(thread_id) DO UPDATE SET settings=excluded.settings').run(threadId,JSON.stringify(settings));
   res.json({settings});
 }));

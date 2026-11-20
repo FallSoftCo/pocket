@@ -17,6 +17,9 @@ test('same-thread steering, idle continuation, and exact pending request respons
  let peer;const calls=[],answers=[];let active=true;
  const thread=()=>({id:'thread-live',name:'Routing test',status:{type:active?'active':'idle'},turns:[{id:'turn-original',status:active?'inProgress':'completed',items:[{type:'userMessage',content:[{type:'text',text:'Please fix notification speech'}]}]}]});
  wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{const m=JSON.parse(raw);if(m.result){answers.push(m);return;}if(!m.id)return;calls.push(m);let result={};
+ // This retained older protocol has no provider registry. Unknown methods must
+ // reject like native Codex, rather than return a malformed successful catalog.
+ if(m.method==='modelProvider/list'){ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:'Method not found'}}));return;}
  if(m.method==='thread/resume'||m.method==='thread/read')result={thread:thread()};
  if(m.method==='turn/steer')result={turnId:'turn-original'};
  if(m.method==='turn/start')result={turn:{id:'turn-next'}};

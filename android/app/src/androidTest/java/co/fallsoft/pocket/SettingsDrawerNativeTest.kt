@@ -66,5 +66,30 @@ class SettingsDrawerNativeTest {
   main{Pocket.closeTask()}
   assertEquals("Drawer preserves my unsent work",prefs.getString("draft:same-thread",null))
   assertTrue(requireNotNull(Pocket.captureEnvironment()).matches(requireNotNull(original)))
+  main{Pocket.composeTask()}
+  await{compose.onAllNodesWithText("Provider: OpenAI",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithText("Manage providers",useUnmergedTree=true).performScrollTo().performClick()
+  await{compose.onAllNodesWithText("API key",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNode(hasSetTextAction().and(hasText("API key"))).performScrollTo().performTextInput("synthetic-native-provider-key")
+  compose.onNodeWithText("Save provider",useUnmergedTree=true).performScrollTo().performClick()
+  await{compose.onAllNodesWithText("Provider saved.",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithText("Done",useUnmergedTree=true).performClick()
+  compose.onNodeWithText("Provider: OpenAI",useUnmergedTree=true).performScrollTo().performClick()
+  compose.onNodeWithText("DeepSeek",useUnmergedTree=true).performClick()
+  compose.onNode(hasSetTextAction().and(hasText("Provider model ID"))).assertTextContains("deepseek-flash")
+  compose.onNode(hasSetTextAction().and(hasText("Project folder"))).performScrollTo().performTextReplacement("/synthetic")
+  compose.onNode(hasSetTextAction().and(hasText("What would you like Codex to do?"))).performScrollTo().performTextInput("Synthetic provider task")
+  compose.onNodeWithText("Start task",useUnmergedTree=true).performClick()
+  await{Pocket.selected=="provider-thread"}
+  val providerState=(java.net.URL("http://127.0.0.1:18880/_qa/state").openConnection() as java.net.HttpURLConnection).run{
+   setRequestProperty("Authorization","Bearer synthetic-system76");inputStream.bufferedReader().use{org.json.JSONObject(it.readText())}
+  }
+  assertEquals(1,providerState.getJSONArray("providerWrites").length())
+  val tasks=providerState.getJSONArray("taskRequests");assertEquals(1,tasks.length())
+  assertEquals("System76",tasks.getJSONObject(0).getString("host"))
+  assertEquals("deepseek",tasks.getJSONObject(0).getJSONObject("selection").getString("providerId"))
+  assertEquals("deepseek-flash",tasks.getJSONObject(0).getJSONObject("selection").getString("model"))
+  assertFalse(prefs.all.toString().contains("synthetic-native-provider-key"))
+  assertEquals("Drawer preserves my unsent work",prefs.getString("draft:same-thread",null))
  }
 }

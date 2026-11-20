@@ -2,6 +2,7 @@ import {createAccountResetControl} from './account-reset.mjs';
 import {LocalSendPresentation} from './local-send-presentation.mjs';
 import {UxMeasurements} from './ux-measurements.mjs';
 import {NativeSettingsPanel,addServiceTierControl} from './native-settings.mjs';
+import {ProviderPanel,NewTaskProvider} from './model-providers.mjs';
 import {commandOutputButton,openTerminals,executionApiFor} from './native-execution.mjs';
 import {ConversationToolsPane} from './conversation-tools.mjs';
 import {messageTime} from './message-time.mjs';
@@ -294,6 +295,7 @@ function restoreView(view){if(!view||view.follow)return;const list=$('transcript
 async function open(id){
  queueNavigation++;queueVerifiedNavigation=-1;
  nativeSettingsPanel.closeForNavigation();
+ providerPanel.close();
  ux.end(uxOpen,'superseded');ux.end(uxSend,'superseded');uxFresh=0;
  uxOpen=id!=='coordinator'&&!isRoom(id)?ux.begin('open'):0;
  historyReader.invalidate(id);
@@ -450,6 +452,7 @@ function handleEvent(m){
  if(m.type==='nativeAuthBoundary'){catalogChecksIncomplete=true;renderList();scheduleRefresh({head:false,catalog:true,attention:true});}
  if(m.type==='nativeAuthBoundary'||m.type==='status'&&m.connected===false||m.type==='environmentStatus'&&(m.available??m.connected)===false){queueAuthority++;queueVerifiedNavigation=-1;renderOutbox();}
  nativeSettingsPanel.event(m);
+ if(m.type==='nativeAuthBoundary'||m.type==='status'&&m.connected===false)providerPanel.close();
  conversationToolsPane.event(m);
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
  if(m.type==='environmentStatus'){
@@ -535,10 +538,10 @@ $('send').onpointerdown=e=>{if(document.activeElement===$('draft'))e.preventDefa
 $('coordinator').onclick=run(()=>open('coordinator'));$('refresh').onclick=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});let catalogSearchTimer;$('search').oninput=()=>{renderList();clearTimeout(catalogSearchTimer);catalogSearchTimer=setTimeout(()=>void run(()=>refreshList({invalidate:true}))(),250);};$('filter').onchange=run(async()=>{needsPreviousView=null;seatOrder=[];await refreshList({invalidate:true});});$('back').onclick=()=>{saveDraft();saveView();document.body.classList.remove('chat-open');seatOrder=[];renderList();};$('earlier').onclick=run(async()=>{demandOlder();await loadEarlier();});$('latest').onclick=()=>{follow=true;cache.followLatest(scope);renderTranscript();$('transcript').scrollTop=$('transcript').scrollHeight;};$('transcript').onscroll=()=>{follow=$('transcript').scrollHeight-$('transcript').scrollTop-$('transcript').clientHeight<90;void ackVisible();scheduleEdge();};
 $('settings').onclick=run(async()=>{$('settings-dialog').showModal();renderUsage();const prefs=await api('/api/coordinator/reporting');$('report-enabled').checked=prefs.enabled;$('report-interval').value=prefs.intervalMinutes;$('report-stale').value=prefs.staleAfterMinutes;});$('save-reporting').onclick=run(async()=>{await api('/api/coordinator/reporting',{enabled:$('report-enabled').checked,intervalMinutes:Number($('report-interval').value),staleAfterMinutes:Number($('report-stale').value)});$('settings-dialog').hidePopover?.();$('settings-dialog').close();});$('notifications').onclick=run(async()=>{if(!('Notification' in window))throw Error('Browser notifications are unavailable.');const permission=await Notification.requestPermission();$('notifications').textContent=permission==='granted'?'Notifications enabled while connected':`Notifications ${permission}`;});
 $('logout').onclick=run(async()=>{saveDraft();await voice.close();await api('/web/logout',{});authenticated=false;queueAuthority++;queueVerifiedNavigation=-1;ux.foreground(false);ws?.close();clear();location.reload();});$('mic').onclick=run(()=>voice.capture(scope,voice.recording?{}:roomVoiceOptions()));$('voice-send').onclick=run(async()=>{await voice.send(scope);await refreshConversation();});$('voice-clear').onclick=run(()=>voice.discard());
-$('new-task').onclick=run(async()=>{if(newPending){await reconcileStart();return;}$('new-prompt').value=read('newDraft','');$('new-dialog').showModal();const data=await api('/api/projects');$('projects').replaceChildren(...data.projects.map(p=>{const n=el('option');n.value=p.cwd;return n;}));});$('new-prompt').oninput=()=>write('newDraft',$('new-prompt').value);$('cancel-new').onclick=()=>$('new-dialog').close();
+$('new-task').onclick=run(async()=>{if(newPending){await reconcileStart();return;}$('new-prompt').value=read('newDraft','');$('new-dialog').showModal();void newTaskProvider.load();const data=await api('/api/projects');$('projects').replaceChildren(...data.projects.map(p=>{const n=el('option');n.value=p.cwd;return n;}));});$('new-prompt').oninput=()=>write('newDraft',$('new-prompt').value);$('cancel-new').onclick=()=>$('new-dialog').close();
 async function reconcileStart(){if(startFlight)return startFlight;startFlight=performStart();try{return await startFlight;}finally{startFlight=null;}}
 async function performStart(){if(!newPending)return;const p=newPending;let result;try{result=await api(`/api/session-starts/${p.id}`);}catch(e){if(e.status!==404)throw e;try{result=await api('/api/threads',p);}catch(e){if(e.status&&e.status<500){newPending=null;write('newPending',null);}throw e;}}newPending={...p,state:result.state};write('newPending',newPending);renderOutbox();if(result.state==='started'){newPending=null;write('newPending',null);write('newDraft','');$('new-dialog').close();await refreshList({invalidate:true});await open(result.thread_id);}else if(['failed','unknown'].includes(result.state)){if(result.state==='failed'){newPending=null;write('newPending',null);}throw Error(result.error||'Task creation uncertain. Check recent work before starting again.');}else $('new-error').textContent='Task accepted. Waiting for the backend to create it…';}
-$('new-form').onsubmit=async e=>{e.preventDefault();try{if(!newPending){newPending={id:crypto.randomUUID(),cwd:$('cwd').value,prompt:$('new-prompt').value,permissions:$('permissions').value};write('newPending',newPending);}await reconcileStart();}catch(e){$('new-error').textContent=e.message;}};
+$('new-form').onsubmit=async e=>{e.preventDefault();try{if(!newPending){newPending={id:crypto.randomUUID(),cwd:$('cwd').value,prompt:$('new-prompt').value,permissions:$('permissions').value,selection:newTaskProvider.value()};write('newPending',newPending);}await reconcileStart();}catch(e){$('new-error').textContent=e.message;}};
 function setEfforts(){const model=models.find(m=>m.model===$('model').value);$('effort').replaceChildren(...(model?.efforts||[]).map(e=>{const o=el('option','',e.reasoningEffort);o.value=e.reasoningEffort;return o;}));$('effort').value=current?.turnSettings?.effort||model?.defaultEffort;serviceTierControl.refresh();$('turn-mode').value=current?.turnSettings?.mode==='plan'?'plan':'build';}$('model').onchange=setEfforts;
 for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched})],['stop','interrupt',()=>({})],['resume','queue/resume',()=>({})]])$(id).onclick=run(async()=>{await api(`/api/threads/${scope}/${id==='archive'&&$('filter').value==='archived'?'unarchive':action}`,body());$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();await refreshList({invalidate:true});});
 $('archive').onclick=run(async()=>{const thread=threads.find(t=>t.id===scope)||{...current?.thread,id:scope};closeControls();await setSessionArchived(thread,thread.archived!==true);});
@@ -607,9 +610,9 @@ $('session-menu').onclick=run(async()=>{
  for(const id of ['model','effort','turn-mode','service-tier','save-turn'])$(id).disabled=true;
  modelsStatus.textContent='Loading model settings…';anchoredControls();
  try{
-  const data=await api('/api/models',undefined,{scope:original});if(!valid())return;
+  const data=await api('/api/models?threadId='+encodeURIComponent(original),undefined,{scope:original});if(!valid())return;
   models=data.models||[];
-  if(!models.length)throw Error('No models were returned.');
+  if(!models.length)throw Error(data.manual?'This session uses '+data.providerId+'. Its provider model is retained. Start a new task to choose another provider/model.':'No models were returned.');
   $('model').replaceChildren(...models.map(m=>{const option=el('option','',m.name||m.model);option.value=m.model;return option;}));
   $('model').value=current?.turnSettings?.model||models[0]?.model||'';setEfforts();
   for(const id of ['model','effort','turn-mode','save-turn'])$(id).disabled=false;
@@ -769,6 +772,12 @@ function renderRoomAttention(){
 }
 
 const nativeSettingsPanel=new NativeSettingsPanel({api,getScope:()=>scope,openThread:id=>open(id)});
+const providerPanel=new ProviderPanel({api,getScope:()=>scope});
+const newProviderHolder=el('div');$('permissions').parentElement.after(newProviderHolder);
+const newTaskProvider=new NewTaskProvider({holder:newProviderHolder,api,manage:()=>providerPanel.open('coordinator')});
+providerPanel.dialog.addEventListener('close',()=>{if($('new-dialog').open)void newTaskProvider.load();});
+$('settings-dialog').append(button('Model providers',()=>providerPanel.open()));
+$('controls-dialog').append(button('Model providers',()=>{closeControls();return providerPanel.open();}));
 const nativeSettingsButton=button('Codex settings & agents',()=>{closeControls();return nativeSettingsPanel.open();});
 $('controls-dialog').append(nativeSettingsButton);
 $('settings-dialog').append(button('Codex settings & tools',()=>nativeSettingsPanel.open()));

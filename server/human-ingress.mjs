@@ -10,6 +10,7 @@ export function humanInputRoute(method,path){
  if(!['GET','HEAD','OPTIONS'].includes(method)&&/^\/api\/hollywood\/v3(?:\/|$)/.test(path))return true;
  if(method==='POST'&&path==='/api/account/reset')return true;
  if(method==='POST'&&path==='/api/native/configuration')return true;
+ if(method==='POST'&&path==='/api/model-providers')return true;
  if(method==='POST'&&/^\/api\/threads\/[^/]+\/terminals\/terminate$/.test(path))return true;
  if(method==='POST'&&/^\/api\/threads\/[^/]+\/conversation-operations(?:\/[^/]+\/acknowledge)?$/.test(path))return true;
  if(method==='POST'&&/^\/api\/voice\/renderings\/[a-zA-Z0-9_-]{8,100}(?:\/cancel)?$/.test(path))return true;

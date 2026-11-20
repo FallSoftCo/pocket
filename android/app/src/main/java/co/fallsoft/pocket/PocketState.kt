@@ -228,11 +228,11 @@ object Pocket {
     fun composeTask(){newTask=true;error="";startStatus=if(prefs.contains(key("newTaskRequest")))"A task request is saved. Check its status to continue." else "";scope.launchEnvironment{try{projects=api("/api/projects").optJSONArray("projects")?.objects()?:emptyList()}catch(e:Exception){if(!environmentRequestCurrent())return@launchEnvironment;error=e.message?:"Could not load projects"}}}
     var fullPermissions by mutableStateOf(true); private set
     fun updateFullPermissions(value:Boolean){fullPermissions=value;prefs.edit().putBoolean(key("fullPermissions"),value).apply()}
-    fun startTask(cwd:String,prompt:String){if(starting)return;scope.launchEnvironment{
+    fun startTask(cwd:String,prompt:String,selection:JSONObject?=null){if(starting)return;scope.launchEnvironment{
         starting=true;error="";startStatus=if(local)"Starting on this phone…" else "Starting on your workstation…"
         val requestKey=key("newTaskRequest");val promptKey=key("newTaskPrompt");val projectKey=key("lastProject")
         val previous=prefs.getString(requestKey,null)?.let{JSONObject(it)}
-        val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt).put("permissions",if(fullPermissions)"full" else "review")
+        val request=if(previous?.s("cwd")==cwd&&previous.s("prompt")==prompt)previous else JSONObject().put("id",UUID.randomUUID().toString()).put("cwd",cwd).put("prompt",prompt).put("permissions",if(fullPermissions)"full" else "review").apply{if(selection!=null)put("selection",selection)}
         prefs.edit().putString(requestKey,request.toString()).commit()
         var submitted=false
         try{

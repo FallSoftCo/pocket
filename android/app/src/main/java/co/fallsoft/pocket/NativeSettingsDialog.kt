@@ -23,6 +23,7 @@ import org.json.JSONObject
     val scope=rememberCoroutineScope()
     val catalogScroll=rememberScrollState()
     var section by remember{mutableStateOf("settings")}
+    var providersOpen by remember{mutableStateOf(false)}
     var revision by remember{mutableIntStateOf(0)}
     var view by remember{mutableStateOf<JSONObject?>(null)}
     var rows by remember{mutableStateOf(emptyList<JSONObject>())}
@@ -51,6 +52,7 @@ import org.json.JSONObject
         check(current()){ "The selected environment changed." }
         return response
     }
+    if(providersOpen){ProviderSettingsDialog{providersOpen=false};return}
     if(mcpReloadOpen){NativeMcpReloadDialog(destination,threadId){mcpReloadOpen=false;revision++};return}
     mcpAuthName?.let{name->NativeMcpAuthDialog(destination,threadId,name){mcpAuthName=null;revision++};return}
     pluginKey?.let{key->NativePluginDialog(destination,threadId,key){pluginKey=null;pluginCursor=null;pluginRefresh=true;revision++};return}
@@ -62,6 +64,7 @@ import org.json.JSONObject
     }
     AlertDialog(onDismissRequest=onDismiss,title={BilingualLabel("Codex settings & agents")},text={Column(Modifier.fillMaxWidth().heightIn(max=560.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
         view?.let{WorkflowText("${it.s("host")} · Codex ${it.optJSONObject("runtime")?.s("version")?.ifBlank{"version unavailable"}}",fontSize=12.sp,color=Muted)}
+        TextButton({providersOpen=true},enabled=changing==null){BilingualLabel("Model providers")}
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())){sections.forEach{(key,title)->TextButton({section=key;notice=""},enabled=!loading&&changing==null){BilingualLabel(if(section==key)"• $title" else title)}}}
         if(loading)CircularProgressIndicator(Modifier.size(22.dp))
         if(problem.isNotBlank())WorkflowText(problem,color=Coral,fontSize=12.sp)

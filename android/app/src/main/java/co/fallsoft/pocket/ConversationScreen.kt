@@ -66,6 +66,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val cwdKey=Pocket.key("newTaskCwd");val projectKey=Pocket.key("lastProject");val promptKey=Pocket.key("newTaskPrompt")
     var cwd by remember(cwdKey,projectKey){mutableStateOf(Pocket.prefs.getString(cwdKey,Pocket.prefs.getString(projectKey,Pocket.tasks.firstOrNull()?.cwd?:Pocket.defaultCwd))?:Pocket.defaultCwd)}
     var prompt by remember(promptKey){mutableStateOf(Pocket.prefs.getString(promptKey,"")?:"")}
+    var selection by remember(Pocket.environmentId){mutableStateOf<JSONObject?>(null)}
+    var providersOpen by remember{mutableStateOf(false)}
+    var providerRevision by remember{mutableIntStateOf(0)}
+    if(providersOpen)ProviderSettingsDialog{providersOpen=false;providerRevision++}
     Column(Modifier.fillMaxSize().imePadding()){
         Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){IconButton({Pocket.newTask=false}){SymbolIcon(Icons.AutoMirrored.Rounded.ArrowBack,"Back")};BilingualLabel("New task",fontSize=23.sp,fontWeight=FontWeight.Medium)}
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
@@ -79,12 +83,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             }
             TaskPermissionsControl()
+            ProviderChoice(selection,{selection=it},!Pocket.starting,{providersOpen=true},providerRevision)
             OutlinedTextField(prompt,{prompt=it;Pocket.prefs.edit().putString(promptKey,it).apply()},label={BilingualLabel("What would you like Codex to do?",centered=false)},placeholder={WorkflowText("Describe the task, context and what done looks like.",fontSize=14.sp)},enabled=!Pocket.starting,modifier=Modifier.fillMaxWidth().heightIn(min=150.dp),minLines=4,maxLines=10,shape=RoundedCornerShape(18.dp))
             WorkflowText("You’ll see progress here and get a notification when the task needs you or finishes.",fontSize=12.sp,color=Muted,lineHeight=19.sp)
             if(Pocket.startStatus.isNotBlank())WorkflowText(Pocket.startStatus,fontSize=13.sp,color=Mint)
             ErrorBanner();Spacer(Modifier.height(10.dp))
         }
-        Button({Pocket.startTask(cwd.trim(),prompt.trim())},enabled=cwd.isNotBlank()&&prompt.isNotBlank()&&!Pocket.starting,modifier=Modifier.fillMaxWidth().padding(20.dp).height(54.dp),shape=RoundedCornerShape(6.dp)){
+        Button({Pocket.startTask(cwd.trim(),prompt.trim(),selection)},enabled=cwd.isNotBlank()&&prompt.isNotBlank()&&!Pocket.starting,modifier=Modifier.fillMaxWidth().padding(20.dp).height(54.dp),shape=RoundedCornerShape(6.dp)){
             if(Pocket.starting)CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp,color=Ink)else SymbolIcon(Icons.Rounded.ArrowUpward,null)
             Spacer(Modifier.width(9.dp));BilingualLabel(if(Pocket.starting)"Starting…" else if(Pocket.startStatus.isNotBlank())"Check task status" else "Start task")
         }
@@ -817,7 +822,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var modelMenu by remember{mutableStateOf(false)};var effortMenu by remember{mutableStateOf(false)}
     var problem by remember{mutableStateOf("")};var loading by remember{mutableStateOf(true)}
     LaunchedEffect(Unit){try{
-        models=Pocket.api("/api/models").optJSONArray("models")?.objects()?:emptyList()
+        val response=Pocket.api("/api/models?threadId=${android.net.Uri.encode(Pocket.selected.orEmpty())}")
+        models=response.optJSONArray("models")?.objects()?:emptyList()
+        if(response.optBoolean("manual"))problem="This session uses ${response.s("providerId")}. Its model is retained. Choose another provider/model in New task."
         val current=models.firstOrNull{it.s("model")==model}?:models.firstOrNull()
         current?.let{model=it.s("model");if(it.optJSONArray("efforts")?.objects()?.none{e->e.s("reasoningEffort")==effort}!=false)effort=it.s("defaultEffort")}
     }catch(e:Exception){problem=e.message?:"Could not load models"}finally{loading=false}}

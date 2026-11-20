@@ -19,14 +19,15 @@ export class SessionStarts {
     db.exec("UPDATE session_starts SET state='unknown',error='The bridge restarted during creation. Check recent tasks before starting again.' WHERE state='creating'");
   }
   get(id){return this.db.prepare('SELECT * FROM session_starts WHERE id=?').get(id);}
-  enqueue({id,cwd,prompt,permissions='full'}={},principal){
+  enqueue({id,cwd,prompt,permissions='full',selection=null}={},principal){
     if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{8,100}$/.test(id))throw invalid('Invalid task request identifier.');
     if(typeof prompt!=='string'||!prompt.trim()||prompt.length>32000)throw invalid('Enter a task of 1–32000 characters.');
     permissionOptions(permissions);
     cwd=projectPath(cwd);prompt=prompt.trim();
     const old=this.get(id);
-    if(old){if(old.cwd!==cwd||old.prompt!==prompt||(old.permissions||'full')!==permissions)throw Object.assign(Error('This request already belongs to another task.'),{status:409});return old;}
-    const at=Date.now();admissionTransaction(this.db,()=>{this.admissions?.record('task',id,principal);this.db.prepare('INSERT INTO session_starts(id,cwd,prompt,permissions,state,created_at,updated_at) VALUES(?,?,?,?,\'queued\',?,?)').run(id,cwd,prompt,permissions,at,at);});
+    const selected=selection?JSON.stringify({providerId:selection.providerId,model:selection.model||null,effort:selection.effort||null}):null;
+    if(old){if(old.cwd!==cwd||old.prompt!==prompt||(old.permissions||'full')!==permissions||(selected!==null&&old.selection!==selected))throw Object.assign(Error('This request already belongs to another task or provider.'),{status:409});return old;}
+    const at=Date.now();admissionTransaction(this.db,()=>{this.admissions?.record('task',id,principal);this.db.prepare('INSERT INTO session_starts(id,cwd,prompt,permissions,selection,state,created_at,updated_at) VALUES(?,?,?,?,?,\'queued\',?,?)').run(id,cwd,prompt,permissions,selected,at,at);});
     void this.flush();return this.get(id);
   }
   async flush(){
@@ -35,7 +36,8 @@ export class SessionStarts {
       if(this.running.has(row.id))continue;this.running.add(row.id);
       try{
         this.db.prepare("UPDATE session_starts SET state='creating',updated_at=? WHERE id=?").run(Date.now(),row.id);
-        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...(row.permissions?permissionOptions(row.permissions):this.codex.executionOptions?.()),...newThreadComputerUseOptions()});
+        const selection=row.selection?JSON.parse(row.selection):null;
+        const {thread}=await this.codex.call('thread/start',{cwd:row.cwd,...(selection?{modelProvider:selection.providerId,...(selection.model?{model:selection.model}:{}),...(selection.effort?{config:{model_reasoning_effort:selection.effort}}:{})}:{}),...(row.permissions?permissionOptions(row.permissions):this.codex.executionOptions?.()),...newThreadComputerUseOptions()});
         this.db.exec('BEGIN IMMEDIATE');
         try{
           this.db.prepare("UPDATE session_starts SET state='started',thread_id=?,updated_at=? WHERE id=?").run(thread.id,Date.now(),row.id);

@@ -27,6 +27,7 @@ export function openStore(dir) {
     CREATE TABLE IF NOT EXISTS session_starts(id TEXT PRIMARY KEY,cwd TEXT NOT NULL,prompt TEXT NOT NULL,state TEXT NOT NULL,thread_id TEXT,error TEXT,created_at INTEGER,updated_at INTEGER);
   `);
   if(!db.prepare('PRAGMA table_info(session_starts)').all().some(c=>c.name==='permissions'))db.exec("ALTER TABLE session_starts ADD COLUMN permissions TEXT NOT NULL DEFAULT ''");
+  if(!db.prepare('PRAGMA table_info(session_starts)').all().some(c=>c.name==='selection'))db.exec('ALTER TABLE session_starts ADD COLUMN selection TEXT');
   if(!db.prepare('PRAGMA table_info(outgoing)').all().some(c=>c.name==='mode'))db.exec("ALTER TABLE outgoing ADD COLUMN mode TEXT NOT NULL DEFAULT 'auto'");
   const columns=db.prepare('PRAGMA table_info(notifications)').all().map(c=>c.name);
   if(!columns.includes('source_turn_id'))db.exec('ALTER TABLE notifications ADD COLUMN source_turn_id TEXT');
