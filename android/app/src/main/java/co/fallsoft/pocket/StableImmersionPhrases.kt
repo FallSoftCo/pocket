@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -47,14 +48,15 @@ import androidx.compose.ui.unit.*
         save={state:androidx.compose.runtime.snapshots.SnapshotStateMap<String,Int>->state.toMap()},
         restore={saved->mutableStateMapOf<String,Int>().apply{saved.forEach{(id,value)->put(id,value as Int)}}}
     )){mutableStateMapOf<String,Int>()}
-    BoxWithConstraints(modifier.then(immersionIntrinsicLayout(measurer,forms,style,maxLines,overflow))){
+    BoxWithConstraints(modifier.clipToBounds().then(immersionIntrinsicLayout(measurer,forms,style,maxLines,overflow))){
         val available=constraints.maxWidth.takeIf{it!=Constraints.Infinity}?:with(density){600.dp.roundToPx()}
+        val availableHeight=constraints.maxHeight
         val pad=with(density){4.dp.roundToPx()}
         val innerVertical=with(density){1.dp.roundToPx()}
         val gutter=if(phraseTaps)2.dp else 0.dp
         val gutterPixels=with(density){gutter.roundToPx()}
-        val dimensions=remember(runs,available,style,density,gutterPixels,innerVertical){runs.associate{run->
-            val layouts=run.forms.map{measurer.measure(it,style=style,constraints=Constraints(maxWidth=(available-pad*2).coerceAtLeast(1)))}
+        val dimensions=remember(runs,available,availableHeight,style,density,gutterPixels,innerVertical){runs.associate{run->
+            val layouts=run.forms.map{measurer.measure(it,style=style,maxLines=maxLines,overflow=overflow,constraints=Constraints(maxWidth=(available-pad*2).coerceAtLeast(1),maxHeight=if(availableHeight==Constraints.Infinity)Constraints.Infinity else (availableHeight-(gutterPixels+innerVertical)*2).coerceAtLeast(1)))}
             run.id to (layouts.maxOf{it.size.width}.plus(pad*2).coerceAtMost(available).coerceAtLeast(1) to layouts.maxOf{it.size.height}.plus((gutterPixels+innerVertical)*2).coerceAtLeast(1))
         }}
         val inline=mutableMapOf<String,InlineTextContent>()
@@ -92,7 +94,7 @@ import androidx.compose.ui.unit.*
                     DisableSelection{
                         Box(Modifier.fillMaxSize().padding(vertical=gutter).background(wash,shape).then(focusRing).then(action).padding(horizontal=4.dp,vertical=1.dp).semantics{
                             if(interact){role=Role.Button;contentDescription=shown.text;if(overrides.containsKey(id))stateDescription="Language held"}else if(!linked)hideFromAccessibility()
-                        }){Text(shown,style=style,modifier=Modifier.fillMaxSize(),overflow=TextOverflow.Clip)}
+                        }){Text(shown,style=style,modifier=Modifier.fillMaxSize(),maxLines=maxLines,overflow=overflow)}
                     }
                 }
             }
