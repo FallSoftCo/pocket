@@ -16,7 +16,7 @@
     {
       "id": "session-card-error-overflow-20261120",
       "request": "Error messages in the session list overflow individual items.",
-      "status": "isolated candidate; qualification pending",
+      "status": "Android197/alpha179 published both channels; web live; physical install unverified",
       "implementation": [
         "Bound phrase placeholder measurement and glyph rendering to caller maxLines",
         "Clip the fixed preview viewport; retain complete errors in the opened session",
@@ -25,7 +25,8 @@
       "verification": [
         "Native long error, multiline and unbroken token previews at normal/large text with immersion on/off",
         "Rendered desktop/narrow web adjacent card boundaries"
-      ]
+      ],
+      "evidence": "docs/qualification/session-preview-overflow197.json"
     },
     {
       "id": "native-model-providers-20261120",

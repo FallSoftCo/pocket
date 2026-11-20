@@ -1,5 +1,7 @@
 # NextComp documentation
 
+[197 session preview repair](qualification/session-preview-overflow197.json) is published on both Android update channels and live on web: long errors and bilingual previews stay inside their cards, including enlarged text. Reload web or install the Android update; handset installation remains unverified.
+
 NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. NextComp’s room, LAX and Hollywood entry points were retired on 2026-11-07. Their documentation and original evidence remain historical; they do not describe selectable NextComp backends. This retirement does not establish that separate native runtimes or services are shut down; their lifecycle is outside this release. See [the Codex-only transition](CODEX-ONLY.md).
 
 The [current supported snapshot](CAPABILITIES.md#current-supported-snapshot--2026-11-07) records the published version, deployed sources and last verified handset installation. [182 delivery and qualification evidence](qualification/native-parity-182.json) records the delivered Android, backend and web182 release on both hosts; physical-phone installation remains separately unverified. Publication, synthetic/emulator qualification and physical-phone observations are distinct.
