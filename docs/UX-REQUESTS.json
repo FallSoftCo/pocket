@@ -16,7 +16,7 @@
     {
       "id": "native-model-providers-20261120",
       "request": "Choose external model providers such as DeepSeek in Android and web.",
-      "status": "Web controls live; Android195 in native qualification",
+      "status": "Android195/alpha177 published both channels; web and both backends live; phone installation unverified",
       "implementation": [
         "Native Codex provider registry and version-guarded private provider configuration; no proxy and no ChatGPT credential replacement",
         "Explicit provider/model on new tasks, frozen into durable original creation receipts",
@@ -27,7 +27,8 @@
         "Current setup qualified against installed Codex 0.171.0; older runtimes report unavailable",
         "Responses API-compatible providers only; existing owner DeepSeek key configured, one bounded real native deepseek-flash turn completed; no default provider changed",
         "Existing session provider migration is not implemented; start a separate session with explicit provider/model"
-      ]
+      ],
+      "evidence": "docs/qualification/model-providers-195.json"
     },
     {
       "id": "persistent-cross-provider-handoff-20261120",

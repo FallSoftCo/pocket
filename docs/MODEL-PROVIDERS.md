@@ -1,6 +1,6 @@
 # Model providers
 
-The Android and web 195 candidate adds **Model providers** to settings and
+Android and web 195 add **Model providers** to settings and
 **Provider** to New task. These controls use the selected environment's native
 Codex configuration. They do not replace Codex execution with a proxy.
 
@@ -66,10 +66,12 @@ workflow, rather than a second memory service:
 2. Save an immutable checkpoint and a reference transcript with stable turn/item
    IDs. Preserve the original logs. The checkpoint includes the current objective,
    latest scope corrections, completed work, decisions, paths/commits, verification,
-   pending questions, deliberate stops and uncertain external effects. A summary
+   pending questions, active subagent identities, deliberate stops and uncertain
+   external effects. Existing child work is referenced, not recreated. A summary
    is an index into this evidence, not a replacement for it.
 3. Create a fresh native thread with the explicitly selected provider and model,
-   in the same environment and workspace. Its initial context includes the
+   in the same environment and workspace, preserving the authorized permissions
+   and task constraints. Its initial context includes the
    checkpoint, a bounded relevant transcript excerpt, and paths to the remaining
    public messages/tool results. Preserve author roles and source labels: an old
    tool result or agent comment must not become a new human instruction. Do not
