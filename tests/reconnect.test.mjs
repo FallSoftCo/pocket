@@ -17,7 +17,8 @@ test('bridge restart backfills missed completion, survives replay and keeps work
  const turn=()=>({id:turnId,status:completed?'completed':'inProgress',items:completed?[{id:'answer',type:'agentMessage',text:'Recovery passed.'}]:[]});
  wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{const m=JSON.parse(raw);if(!m.id)return;
  if(m.params?.threadId==='broken-thread'){ws.send(JSON.stringify({id:m.id,error:{message:'Task unavailable'}}));return;}
- if(m.method==='thread/resume')resumes++;
+ if(m.method==='thread/loaded/list'){ws.send(JSON.stringify({id:m.id,result:{data:['thread-one']}}));return;}
+ if(m.method==='thread/read')resumes++;
  ws.send(JSON.stringify({id:m.id,result:m.method.startsWith('thread/')?{thread:{id:'thread-one',status:{type:completed?'idle':'active'},turns:[turn()]}}:{}}));
  });});
  const stop=async()=>{if(child&&child.exitCode===null){const done=once(child,'exit');child.kill();await done;}};
@@ -37,11 +38,11 @@ test('bridge restart backfills missed completion, survives replay and keeps work
  const loaded=await api('/api/notifications/'+created.notification.id);assert.equal(loaded.notification.spoken_text,'Task update. '+fullSpeech);
  const unauthenticated=await fetch(`http://127.0.0.1:${port}/api/notifications/${created.notification.id}`);assert.equal(unauthenticated.status,401);
 
- peer.send(JSON.stringify({method:'turn/completed',params:{threadId:'thread-one',turn:turn()}}));
+ for(const ws of wss.clients)ws.send(JSON.stringify({method:'turn/completed',params:{threadId:'thread-one',turn:turn()}}));
  const before=resumes;await stop();await start();await wait(()=>resumes>before);
  rows=(await api('/api/notifications')).notifications;assert.equal(rows.length,2,'restart and live replay must not duplicate the completion');
  // A socket-only outage must recover without restarting the Pocket process.
- turnId='turn-during-disconnect';peer.terminate();
+ turnId='turn-during-disconnect';for(const ws of wss.clients)ws.terminate();
  await wait(async()=>(await api('/api/notifications')).notifications.length===3);
  assert.equal((await api('/api/notifications')).notifications.at(-1).source_turn_id,turnId);
 });

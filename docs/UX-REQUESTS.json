@@ -29,6 +29,17 @@
       "evidence": "docs/qualification/session-preview-overflow197.json"
     },
     {
+      "id": "live-session-timeout-recovery-20261120",
+      "request": "Keep active Vipi work and Android session updates responsive through gateway reconnection.",
+      "status": "Gateway repair candidate; targeted regression tests passed, live verification pending.",
+      "implementation": [
+        "Reconnect observes only enabled, already-loaded watches; only active runtimes are subscribed, without loading historical runtimes.",
+        "Foreground timeline, coordinator observation and historical work-record reads use separate transports.",
+        "Missed completions retain their original saved boundary; successful live subscriptions are registered for event forwarding."
+      ],
+      "evidence": "docs/qualification/live-session-timeout-recovery-20261120.json"
+    },
+    {
       "id": "native-model-providers-20261120",
       "request": "Choose external model providers such as DeepSeek in Android and web.",
       "status": "Android195/alpha177 published both channels; web and both backends live; phone installation unverified",

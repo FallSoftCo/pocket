@@ -12,6 +12,7 @@ import {CoordinatorCollector} from './coordinator-collector.mjs';
 import {NativeLiveInput} from './native-live-input.mjs';
 import {createCoordinatorHub} from './coordinator-hub.mjs';
 import {NativeSubscriptions} from './native-subscriptions.mjs';
+import {restoreWatchedSubscriptions} from './watched-subscriptions.mjs';
 import {NativeTimelineReader,projectNativeTimeline} from './native-timeline.mjs';
 import {nativeJsonCompression} from './json-compression.mjs';
 import {readThreadProjection} from './thread-projection.mjs';
@@ -64,6 +65,7 @@ import { dirname, resolve, basename, extname } from 'node:path';
 import { readFileSync, writeFileSync, mkdirSync, statSync, realpathSync, existsSync, chmodSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { Codex } from './codex.mjs';
+import {createTimelineConnection} from './timeline-connection.mjs';
 import { openStore, hash } from './store.mjs';
 import { loadPush } from './push.mjs';
 import { AppUpdates,mountAppUpdates } from './app-updates.mjs';
@@ -117,8 +119,12 @@ const push=loadPush(db,dir);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex(undefined,{managedStart:process.env.POCKET_CODEX_MANAGED_START});
 const knownThreadMetadata=id=>cachedThreadMetadata(db,id);
-const nativeTimelineReader=new NativeTimelineReader(codex,{known:knownThreadMetadata});
-const coordinatorHeadReader=new CoordinatorHeadReader({codex,native:nativeTimelineReader});
+// Keep interactive reads off the connection used for background resume/config work.
+const timelineCodex=createTimelineConnection();
+const observationCodex=createTimelineConnection();
+const nativeTimelineReader=new NativeTimelineReader(timelineCodex,{known:knownThreadMetadata});
+const observationTimelineReader=new NativeTimelineReader(observationCodex,{known:knownThreadMetadata});
+const coordinatorHeadReader=new CoordinatorHeadReader({codex:observationCodex,native:observationTimelineReader});
 const nativeSubscriptions=new NativeSubscriptions(codex);
 const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
 app.use('/api',nativeJsonCompression());
@@ -261,14 +267,15 @@ const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("context
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
 const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
 const history=new ThreadHistory(codex,{identity:sendIdentity,inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
-const workRecord=new WorkRecord(db,{version:appVersion,scanAllowed:(id,thread)=>!sessionDiscovery.hidden(id,thread)});
+const workRecord=new WorkRecord(db,{version:appVersion,scanAllowed:(id,thread)=>nativeSubscriptions.loaded?.has(id)&&!sessionDiscovery.hidden(id,thread)});
+const workRecordHistory=new ThreadHistory(createTimelineConnection(),{identity:sendIdentity});
 const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
 for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
 let scanningWork=false;
 setInterval(async()=>{
   if(scanningWork||!codex.ready)return;
   scanningWork=true;
-  try{await workRecord.scan(history,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
+  try{await workRecord.scan(workRecordHistory,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
   catch(e){console.error('Work record history unavailable:',JSON.stringify(e.workRecordDiagnostic||{code:'WORK_RECORD_SCAN_FAILED',operation:'work-record/scan'}));}
   finally{scanningWork=false;}
 },15000).unref();
@@ -390,6 +397,7 @@ function resolveAttention(where,...args){
 resolveAttention('request_id IS NOT NULL');
 const questionActions=new QuestionActions({pending,codex,db,resolve:resolveAttention});
 const historyRecovery=new Map();
+const watchHistoryRecovered=new Set();
 function observeCompletionSnapshot(thread,{latest=false}={}){
   const turn=thread.turns?.at(-1);
   if(latest&&turn?.id&&db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(thread.id)){
@@ -401,16 +409,16 @@ function observeCompletionSnapshot(thread,{latest=false}={}){
   }
   completions.observe(thread);
 }
-function recoverHistory(metadata){
+function recoverHistory(metadata,reader=history){
   if(historyRecovery.has(metadata.id))return historyRecovery.get(metadata.id);
   const work=(async()=>{
     const positions=[],seen=new Set();let cursor=null;
     while(true){
-      const page=await history.read(metadata,{before:cursor,summary:true});if(cursor===null)observeCompletionSnapshot(page,{latest:true});positions.push(cursor);
+      const page=await reader.read(metadata,{before:cursor,summary:true});if(cursor===null)observeCompletionSnapshot(page,{latest:true});positions.push(cursor);
       if(!completions.needsEarlier(page)||!page._pocketPage?.before)break;
       cursor=page._pocketPage.before;if(seen.has(cursor))throw Error('Codex returned a repeated history cursor.');seen.add(cursor);
     }
-    for(const position of positions.reverse())completions.observe(await history.read(metadata,{before:position,summary:true}));
+    for(const position of positions.reverse())completions.observe(await reader.read(metadata,{before:position,summary:true}));
   })();
   historyRecovery.set(metadata.id,work);void work.finally(()=>historyRecovery.delete(metadata.id)).catch(()=>{});
   return work;
@@ -564,14 +572,15 @@ codex.on('event',m=>{
 });
 codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});});
 codex.on('status',status=>emit('status',status));
-codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
+codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();watchHistoryRecovered.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
   if(reconnecting)return;reconnecting=true;
   try{
     await codex.connect();
     await sessionStarts.flush();
-    for(const w of db.prepare('SELECT thread_id FROM watches').all())if(!attached.has(w.thread_id)){try{await attach(w.thread_id);}catch{if(!codex.ready)break;}}
+    await restoreWatchedSubscriptions({watches:db.prepare('SELECT thread_id,enabled FROM watches WHERE enabled=1').all(),codex,subscriptions:nativeSubscriptions,attached,
+      onObserved:thread=>{sessionDiscovery.remember(thread);if(!watchHistoryRecovered.has(thread.id)){watchHistoryRecovered.add(thread.id);void recoverHistory(thread,workRecordHistory).catch(error=>{watchHistoryRecovered.delete(thread.id);console.error('Watch history recovery unavailable',error.code||error.name);});}}});
     await flush();
   }catch(e){ /* Reconnect without changing the running Codex process. */ }finally{reconnecting=false;}
 },5000).unref();
@@ -801,11 +810,12 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
  const id=requireId(req.params.id),cursor=req.query.before??null;
  if(cursor!==null&&(typeof cursor!=='string'||!cursor||cursor.length>16384))
   return res.status(400).json({error:'Invalid native timeline cursor.'});
- await codex.connect();
- const thread=await readThreadMetadata(codex,id,{known:knownThreadMetadata});
- if(cursor===null&&req.query.observeOnly!=='1')void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).catch(error=>console.error('Native live subscription unavailable',error.message));
+ const observationOnly=req.query.observeOnly==='1',reader=observationOnly?observationCodex:timelineCodex;
+ await reader.connect();
+ const thread=await readThreadMetadata(reader,id,{known:knownThreadMetadata});
+ if(cursor===null&&!observationOnly)void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).then(ok=>{if(ok)attached.add(id);}).catch(error=>console.error('Native live subscription unavailable',error.message));
  const revision=timeline.version,historyHead=historyHeads.snapshot(id);
- const head=await coordinatorHeadReader.read(id,{cursor,limit:64,observationOnly:req.query.observeOnly==='1'});
+ const head=observationOnly?await coordinatorHeadReader.read(id,{cursor,limit:64,observationOnly:true}):{page:await nativeTimelineReader.read(id,{cursor,limit:64})};
  const requests=[...pending.values()].filter(m=>m.params.threadId===id);
  const response={
   thread:{...thread,...catalogFields(thread),turns:[]},
