@@ -194,4 +194,5 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 
 /* Catalog diagnostics must never paint over the next card or its controls. */
 .work-card .preview { min-width:0; max-width:100%; overflow:hidden; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
-.work-card .preview .immersion-phrase { max-height:2.9em; overflow:hidden; }
+.work-card .preview .immersion-phrase { max-width:100%; max-height:2.9em; white-space:normal; overflow:hidden; padding-block:0; margin-block:0; vertical-align:top; }
+.work-card .preview .phrase-form { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
