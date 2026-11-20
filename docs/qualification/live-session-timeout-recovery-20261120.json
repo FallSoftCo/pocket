@@ -1,0 +1,17 @@
+{
+  "scope": "gateway-only live observation and background-read isolation",
+  "node": "22.23.1",
+  "regression": {
+    "tests": 27,
+    "passed": 27,
+    "failed": 0
+  },
+  "physicalPhoneVerification": "not performed",
+  "liveVerification": "pending activation",
+  "preserved": [
+    "native Codex runtime and agent turns",
+    "original watch and delivery receipts",
+    "disabled watch state",
+    "alpha178 provider continuation changes"
+  ]
+}
