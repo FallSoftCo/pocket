@@ -16,7 +16,7 @@
     {
       "id": "native-model-providers-20261120",
       "request": "Choose external model providers such as DeepSeek in Android and web.",
-      "status": "195 candidate in qualification; not published",
+      "status": "Web controls live; Android195 in native qualification",
       "implementation": [
         "Native Codex provider registry and version-guarded private provider configuration; no proxy and no ChatGPT credential replacement",
         "Explicit provider/model on new tasks, frozen into durable original creation receipts",
@@ -25,9 +25,21 @@
       ],
       "limits": [
         "Current setup qualified against installed Codex 0.171.0; older runtimes report unavailable",
-        "Responses API-compatible providers only; no paid provider request performed",
+        "Responses API-compatible providers only; existing owner DeepSeek key configured, one bounded real native deepseek-flash turn completed; no default provider changed",
         "Existing session provider migration is not implemented; start a separate session with explicit provider/model"
       ]
+    },
+    {
+      "id": "persistent-cross-provider-handoff-20261120",
+      "request": "Continue conversations across providers using durable contextual handoff, original transcript and current work evidence.",
+      "status": "Native provider-changing fork investigated; isolated protocol proof passed; user-facing handoff not implemented",
+      "architecture": [
+        "Use native thread/fork at a completed turn boundary with explicit modelProvider/model; preserve original thread and source/destination link",
+        "Retain a durable checkpoint containing task intent/constraints, decisions, completed artifacts, next steps and blockers, original external-action receipts and unknown effects",
+        "Qualify tool and provider-specific reasoning compatibility; do not equate portable transcript with portable hidden reasoning",
+        "Explicit user-controlled continuation; no automatic replay or waking the original worker"
+      ],
+      "proof": "Isolated real Codex0.171 fork retained original user and assistant context and routed the new turn to another local provider; no paid request for this fork proof."
     },
     {
       "id": "local-ux-measurement-visual-native-parity-20261109",

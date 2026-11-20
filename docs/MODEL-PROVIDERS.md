@@ -32,7 +32,7 @@ version-checked `config/batchWrite`, followed by ordinary `thread/start` with
 `modelProvider`/`model`. Native Codex 0.171.0 was inspected and exercised against
 an isolated local Responses endpoint. This made one synthetic request, verified
 endpoint/model/credential routing, private configuration mode and unchanged
-OpenAI default. No DeepSeek inference or billing has been exercised.
+OpenAI default. A separate owner-authorized workstation check reused the existing DeepSeek key and completed one real native `deepseek-flash` turn in 3.758 seconds. This establishes that host/key/model path, not arbitrary provider compatibility.
 
 In this runtime, `model/list` can retain the old provider registry after setup
 and custom gateways can receive the built-in OpenAI model catalog. Consequently
@@ -41,3 +41,13 @@ New tasks use an explicit external model ID. Existing external sessions do not
 offer an invented OpenAI model picker. Provider setup is unavailable on runtime
 versions outside the qualified profile; opening the controls never upgrades or
 restarts a daemon.
+
+## Cross-provider continuation follow-up
+
+Codex 0.171 exposes `thread/fork` with `modelProvider`, `model` and a completed
+`lastTurnId`. An isolated native proof preserved source user/assistant messages
+and sent the next turn to another local provider without altering the original.
+The proposed UX combines that native fork with a durable work checkpoint and
+source/destination link. Provider-specific reasoning/tool records and unknown
+external effects require explicit qualification and reconciliation. This handoff
+workflow is requested but is not part of the delivered provider selector.

@@ -22,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.withContext
 
 @Composable internal fun motionAllowed(): Boolean {
     val context = LocalContext.current
@@ -31,7 +34,7 @@ import androidx.lifecycle.LifecycleOwner
         c as? LifecycleOwner
     }
     var allowed by remember { mutableStateOf(false) }
-    DisposableEffect(owner, context) {
+    LaunchedEffect(owner, context) { withContext(Dispatchers.Main.immediate) {
         fun update() { allowed = owner?.lifecycle?.currentState?.isAtLeast(Lifecycle.State.RESUMED) == true && Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
         val observer = LifecycleEventObserver { _, _ -> update() }
         val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -40,8 +43,11 @@ import androidx.lifecycle.LifecycleOwner
         context.contentResolver.registerContentObserver(
             Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, settingsObserver)
         owner?.lifecycle?.addObserver(observer); update()
-        onDispose { owner?.lifecycle?.removeObserver(observer); context.contentResolver.unregisterContentObserver(settingsObserver) }
-    }
+        // LifecycleRegistry requires main-thread registration and removal, even
+        // when a recomposer applies disposal from another dispatcher.
+        try { awaitCancellation() }
+        finally { owner?.lifecycle?.removeObserver(observer); context.contentResolver.unregisterContentObserver(settingsObserver) }
+    } }
     return allowed
 }
 
