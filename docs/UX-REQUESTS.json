@@ -32,14 +32,14 @@
     {
       "id": "persistent-cross-provider-handoff-20261120",
       "request": "Continue conversations across providers using durable contextual handoff, original transcript and current work evidence.",
-      "status": "Native provider-changing fork investigated; isolated protocol proof passed; user-facing handoff not implemented",
+      "status": "Protocol investigation completed; portable handoff UX not yet implemented",
       "architecture": [
-        "Use native thread/fork at a completed turn boundary with explicit modelProvider/model; preserve original thread and source/destination link",
-        "Retain a durable checkpoint containing task intent/constraints, decisions, completed artifacts, next steps and blockers, original external-action receipts and unknown effects",
-        "Qualify tool and provider-specific reasoning compatibility; do not equate portable transcript with portable hidden reasoning",
-        "Explicit user-controlled continuation; no automatic replay or waking the original worker"
+        "Create a fresh native target-provider thread from a completed source-turn boundary; preserve the original session and durable source/destination link",
+        "Store a portable work checkpoint: task/constraints, decisions, completed artifacts, next steps, blockers and original external-action receipts/unknown effects",
+        "Export public conversation and tool-result evidence for on-demand reference; exclude provider-specific opaque reasoning and raw protocol replay",
+        "Use existing durable operation admission and receipt recovery; no automatic replay or concurrent continuation of the original worker"
       ],
-      "proof": "Isolated real Codex0.171 fork retained original user and assistant context and routed the new turn to another local provider; no paid request for this fork proof."
+      "proof": "Native0.171 fork passes ordinary user/assistant context but also forwards opaque source-provider reasoning to the new provider. This blocks blindly using raw fork for cross-provider handoff. Isolated proof made no paid requests."
     },
     {
       "id": "local-ux-measurement-visual-native-parity-20261109",

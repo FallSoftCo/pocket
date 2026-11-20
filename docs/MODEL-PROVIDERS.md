@@ -45,9 +45,48 @@ restarts a daemon.
 ## Cross-provider continuation follow-up
 
 Codex 0.171 exposes `thread/fork` with `modelProvider`, `model` and a completed
-`lastTurnId`. An isolated native proof preserved source user/assistant messages
-and sent the next turn to another local provider without altering the original.
-The proposed UX combines that native fork with a durable work checkpoint and
-source/destination link. Provider-specific reasoning/tool records and unknown
-external effects require explicit qualification and reconciliation. This handoff
-workflow is requested but is not part of the delivered provider selector.
+`lastTurnId`. An isolated native proof preserved source user/assistant messages,
+but a further probe also forwarded opaque source-provider reasoning to the new
+provider. Raw native fork therefore cannot be assumed portable across providers.
+
+The proposed handoff creates a fresh native destination session from a durable
+work checkpoint, accompanied by a reference export of public conversation and
+tool results. The checkpoint records task intent, constraints, decisions,
+completed artifacts, next steps, blockers and unresolved external effects.
+Provider-specific reasoning is excluded. Source/destination linkage and original
+operation receipts survive restart, and uncertain actions are never replayed.
+This workflow is requested but is not part of the delivered provider selector.
+
+The handoff should be one durable operation in the existing conversation-actions
+workflow, rather than a second memory service:
+
+1. At a completed turn boundary, pin the source environment, thread and last turn.
+   An active source must reach that boundary, or be explicitly interrupted; a
+   provider change must not silently leave two workers doing the same task.
+2. Save an immutable checkpoint and a reference transcript with stable turn/item
+   IDs. Preserve the original logs. The checkpoint includes the current objective,
+   latest scope corrections, completed work, decisions, paths/commits, verification,
+   pending questions, deliberate stops and uncertain external effects. A summary
+   is an index into this evidence, not a replacement for it.
+3. Create a fresh native thread with the explicitly selected provider and model,
+   in the same environment and workspace. Its initial context includes the
+   checkpoint, a bounded relevant transcript excerpt, and paths to the remaining
+   public messages/tool results. Preserve author roles and source labels: an old
+   tool result or agent comment must not become a new human instruction. Do not
+   forward encrypted reasoning, dangling
+   tool-call records, credentials or provider session/cache identifiers.
+4. Persist the linked destination before continuing. Lost acknowledgements are
+   reconciled using the original operation receipt; never create another thread
+   or replay an external action simply because a reply was lost. Unknown effects
+   stay unresolved until their actual state can be checked.
+5. Show the destination as a continuation with a link to its source and checkpoint
+   date. Both transcripts remain inspectable. Further provider changes make new
+   versioned checkpoints, so returning to a previous provider does not resurrect
+   its stale working state.
+
+Checkpoint creation should happen at an explicit handoff, with later updates at
+useful work boundaries; no background model loop is needed. The first version
+must also work when the old provider has no allowance: public-history export and
+existing checkpoints remain readable without starting a source-provider turn.
+The destination can read further evidence on demand. Persisting a checkpoint
+cannot promise that every model will understand or obey it identically.
