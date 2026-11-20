@@ -56,7 +56,7 @@
   "publication": {
     "workstation": "195 published and authenticated compatible metadata readback passed",
     "macbook": "195 published and authenticated compatible metadata readback passed",
-    "announcement": "One updater announcement; physical handset installation not asserted"
+    "announcement": "One updater announcement, accepted by FCM on the first attempt; physical handset installation not asserted"
   },
   "handoff": {
     "status": "design and native protocol investigation; continuation UI not implemented",
@@ -66,7 +66,9 @@
   "retainedFailures": [
     "Initial gateway activation exposed native daemon membership in the gateway cgroup. Runtime ownership was separated; a subsequent gateway reload preserved the original native process and pairings.",
     "Reading journey exposed off-main lifecycle observer disposal. Main-dispatcher registration and cleanup fixed the reproduced failure.",
-    "Combined context/apps/plugins/auth/reload journey exceeded its fixed three-minute runner budget while progressing. Its overall bound is now ten minutes, retaining per-assertion bounds; the unchanged APK passed."
+    "Combined context/apps/plugins/auth/reload journey exceeded its fixed three-minute runner budget while progressing. Its overall bound is now ten minutes, retaining per-assertion bounds; the unchanged APK passed.",
+    "Supplemental optimized review encountered an Android/QEMU graphics-pipe stall. App and System UI evidence was retained; the same APK passed provider review after the owned emulator recovered.",
+    "Supplemental review initially looked in the global settings drawer. The corrected real route Find to New task to Manage providers passed without product source changes."
   ],
   "limits": [
     "Provider setup qualified on native0.171.0; Mac native0.163 reports unavailable without an unrequested daemon upgrade.",
