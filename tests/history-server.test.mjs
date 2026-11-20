@@ -91,7 +91,7 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
  const beforeCold=calls.length;const cold=await api('/api/threads/cold-thread?view=timeline');assert.equal(cold.status,200);assert.equal(cold.data.timeline.rows[0].turnId,'turn-15');assert.ok(calls.slice(beforeCold).every(c=>c.method!=='thread/read'||!c.params.includeTurns),'cold recent attach must not fetch full history when pagination hint is absent');
  const afterColdDb=new DatabaseSync(join(dir,'pocket.sqlite'));afterColdDb.prepare('DELETE FROM watches WHERE thread_id=?').run('cold-thread');afterColdDb.close();
  disconnect=true;const failed=await api('/api/threads/large-thread?view=timeline');assert.equal(failed.status,503);assert.equal(failed.data.code,'CODEX_DISCONNECTED');assert.match(failed.data.error,/phone can reach the workstation/);
- assert.equal((await api('/api/status')).data.connected,false);
+ assert.equal((await api('/api/status')).data.connected,true,'A read transport outage must not disconnect the independent control transport');
  const listing=await api('/api/threads');assert.equal(listing.status,200);assert.ok(listing.data.threads.some(t=>t.id===metadata.id&&t.archived===false));
  const archived=await api('/api/threads?archived=true');assert.equal(archived.status,200);assert.equal(archived.data.threads[0].id,'archived-thread');assert.equal(archived.data.threads[0].archived,true);
  assert.equal((await api('/api/projects')).status,200);
@@ -117,7 +117,7 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
    assert.equal(response.data.timeline,undefined);assert.equal(response.data.catchup,undefined);assert.ok(!JSON.stringify(response.data).includes('/missing/'));
   }
  }
- assert.ok(calls.slice(failedReadCount).every(c=>c.method==='thread/read'),'metadata refusal must not dispatch page, resume, or work RPCs');
+ assert.ok(calls.slice(failedReadCount).filter(c=>['temporary-thread','durable-thread','unknown-thread'].includes(c.params?.threadId)).every(c=>c.method==='thread/read'),'metadata refusal must not dispatch page, resume, or work RPCs');
  assert.equal(evidenceDb.prepare('SELECT count(*) AS n FROM pocket_discovered_threads WHERE thread_id IN (?,?)').get('durable-thread','temporary-thread').n,2);
  // A later successful native read is immediately usable; no terminal cache or
  // inferred permanent loss may suppress it.

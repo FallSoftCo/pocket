@@ -267,6 +267,7 @@ const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("context
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
 const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
 const history=new ThreadHistory(codex,{identity:sendIdentity,inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
+const projectionHistory=new ThreadHistory(createTimelineConnection(),{identity:sendIdentity,inheritedHistory:id=>history.inheritedHistory(id)});
 const workRecord=new WorkRecord(db,{version:appVersion,scanAllowed:(id,thread)=>nativeSubscriptions.loaded?.has(id)&&!sessionDiscovery.hidden(id,thread)});
 const workRecordHistory=new ThreadHistory(createTimelineConnection(),{identity:sendIdentity});
 const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
@@ -830,7 +831,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
 }));
 app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   const timelineView=req.query.view==='timeline'||req.path.endsWith('/head');
-  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery,known:knownThreadMetadata},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
+  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex:projectionHistory.codex,history:projectionHistory,timeline,historyHeads,discovery:sessionDiscovery,known:knownThreadMetadata},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
   const t=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
   const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
