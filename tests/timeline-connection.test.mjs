@@ -40,3 +40,26 @@ test('interactive history remains readable while a lifecycle connection is block
   release();await pending;
  }finally{release();control.ws?.terminate();client.ws?.terminate();wss.close();await new Promise(r=>server.close(r));}
 });
+
+test('a stalled history read cannot hold a subsequent read on the same session',async()=>{
+ const server=http.createServer(),wss=new WebSocketServer({server});
+ const path=`/tmp/nextcomp-fresh-reads-${process.pid}.sock`;
+ let release,admit,connections=0;
+ const blocked=new Promise(r=>{release=r}),started=new Promise(r=>{admit=r});
+ wss.on('connection',ws=>{
+  connections++;let queue=Promise.resolve();
+  ws.on('message',raw=>{queue=queue.then(async()=>{
+   const m=JSON.parse(raw);if(m.id===undefined)return;
+   if(m.method==='thread/turns/list'){admit();await blocked;}
+   ws.send(JSON.stringify({id:m.id,result:m.method==='thread/read'?{thread:{id:'vipi'}}:{}}));
+  });});
+ });
+ server.listen(path);await once(server,'listening');
+ try{
+  const reads=createTimelineConnection({createClient:()=>new Codex(path)});
+  const older=reads.call('thread/turns/list',{threadId:'vipi',limit:1});await started;
+  const latest=await Promise.race([reads.call('thread/read',{threadId:'vipi',includeTurns:false}),new Promise((_,reject)=>setTimeout(()=>reject(Error('Latest read waited for a stale read')),1000).unref())]);
+  assert.equal(latest.thread.id,'vipi');assert.equal(connections,2);
+  release();await older;
+ }finally{release();for(const ws of wss.clients)ws.terminate();wss.close();await new Promise(r=>server.close(r));}
+});
