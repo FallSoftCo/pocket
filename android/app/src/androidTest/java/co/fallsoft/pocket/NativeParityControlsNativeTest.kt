@@ -151,6 +151,35 @@ class NativeParityControlsNativeTest {
         assertTrue("Inspection submitted a human reply",calls("/api/threads/$thread/reply").isEmpty())
     }
 
+    @Test fun providerContinuationPreservesDraftAndOriginalReceipt(){
+        workflow("provider-continuation"){
+            contextTools()
+            tap("Continue with another provider")
+            tap("Provider: OpenAI")
+            tap("DeepSeek")
+            compose.onNode(hasSetTextAction() and hasText("Provider model ID")).assertTextContains("deepseek-flash")
+            compose.onNode(hasSetTextAction() and hasText("Handoff instructions (optional)")).performScrollTo().performTextInput("Preserve original external receipt.")
+            tap("Save handoff & continue")
+            tap("Confirm",inDialog=true)
+            await{calls("/api/threads/$thread/conversation-operations").size==1}
+            val original=calls("/api/threads/$thread/conversation-operations").single().getJSONObject("input")
+            assertEquals("continue",original.s("kind"))
+            assertEquals("deepseek",original.getJSONObject("selection").s("providerId"))
+            assertEquals("deepseek-flash",original.getJSONObject("selection").s("model"))
+            assertEquals("alpha-turn",original.s("expectedLastTurnId"))
+            assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
+            tap("Check saved operation")
+            assertEquals("Lost acknowledgement must not re-create a session",1,calls("/api/threads/$thread/conversation-operations").size)
+            qa("resolve-fork",JSONObject())
+            tap("Check saved operation")
+            await{Pocket.selected=="parity-fork"&&PocketTranscript.currentHistoryVerified}
+            visible("Alpha branch response")
+            assertOriginalDraftsAndNoReplies()
+            assertEquals(1,calls("/api/threads/$thread/conversation-operations").size)
+            capture("provider-continuation-recovered")
+        }
+    }
+
     @Test fun requestsKeepOriginalIdentityAndReturnToCommandOutput(){
         workflow("requests"){
             // Same request ID is replaced while its secret field is being edited.

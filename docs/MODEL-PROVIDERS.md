@@ -22,8 +22,9 @@ inference to test credentials. There is no automatic fallback to another provide
 Provider selection applies to **new sessions**. Existing sessions, including
 queued replies, keep their original provider. Configuration IDs already in use
 cannot be overwritten in this setup form; choose a new ID for a different
-endpoint or credential configuration. Cross-provider continuation/fork is not
-implemented in this candidate. Provider selection, model and optional effort
+endpoint or credential configuration. Cross-provider continuation is implemented in candidate 196 through
+**Context & files → Continue with another provider**; delivery qualification is
+separate from the published 195 provider selector. Provider selection, model and optional effort
 are persisted with a new-task request before dispatch and survive backend
 restart. Reopening an original request does not consult a changed host default.
 
@@ -55,7 +56,8 @@ tool results. The checkpoint records task intent, constraints, decisions,
 completed artifacts, next steps, blockers and unresolved external effects.
 Provider-specific reasoning is excluded. Source/destination linkage and original
 operation receipts survive restart, and uncertain actions are never replayed.
-This workflow is requested but is not part of the delivered provider selector.
+Candidate 196 implements this workflow. It remains separate from the already
+delivered 195 provider selector until its release qualification is complete.
 
 The handoff should be one durable operation in the existing conversation-actions
 workflow, rather than a second memory service:
@@ -92,3 +94,47 @@ must also work when the old provider has no allowance: public-history export and
 existing checkpoints remain readable without starting a source-provider turn.
 The destination can read further evidence on demand. Persisting a checkpoint
 cannot promise that every model will understand or obey it identically.
+
+## Continue with — candidate 196
+
+Android and web use the existing conversation-operation receipt path. Choose
+a provider and explicit model, optionally add handoff instructions, then confirm
+**Save handoff & continue**. The source must be settled with no waiting or unknown
+input. The original draft and transcript remain available; the continuation links
+back through conversation controls. This does not interrupt a running source.
+
+Preparation writes a private, immutable checkpoint and chronological public-history
+JSONL on the same environment. It includes stable native turn/item identities,
+latest user request and assistant update, native instruction evidence with original
+roles, prior handoff references and an explicit reconciliation policy. It is an
+evidence index, not a model-generated claim that work is complete. The destination
+reads additional context from those files. Reasoning items and provider caches are
+excluded; binary attachments are not copied. Common credential patterns are
+redacted, but arbitrary secrets in free-form historical text cannot be reliably
+identified. This operation shares the retained work context with the chosen
+provider under its billing and data handling.
+
+The new native session preserves workspace roots, source base instructions,
+approval policy, supported sandbox/profile settings, disabled plugins and
+collaboration mode. Destination permissions and provider/model are verified before
+input admission. Developer instruction history remains labelled evidence; current
+runtime instructions govern. No source-provider inference is required. Native
+remote execution environments and app-owned dynamic tools are explicitly rejected
+until their handoff contracts are qualified. The source transcript is unchanged.
+
+Creation is never retried after an uncertain native acknowledgement. Once the
+destination is acknowledged, its identity is persisted before input admission.
+The linked receipt and the single ordinary outbox message commit together with
+the original paired-human provenance. Existing outgoing reconciliation handles
+sending; fetching or replaying the operation receipt cannot create another thread
+or message. A successful receipt means saved and queued, not completed.
+
+A second continuation from the same source boundary is refused in favor of the
+existing receipt. Source changes during preparation abort before input admission.
+External TUI clients remain independent writers: this is not a distributed lock
+on arbitrary user actions, and an old source can still be deliberately resumed.
+
+Export bounds are 3,000 turns / 64 MiB of public history and 512 MiB of scanned
+instruction lineage. Exceeding them fails before creating a destination rather
+than silently omitting earlier context. Checkpoints use private file permissions
+and are not public gallery assets. No new model polling or memory service exists.

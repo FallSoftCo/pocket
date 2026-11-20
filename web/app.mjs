@@ -82,9 +82,9 @@ async function api(path,body,options={}){
 }
 const error=e=>{if($('startup')){$('startup').hidden=true;if($('app').hidden&&$('pairing').hidden)$('pairing').hidden=false;}$('error').textContent=e.message||String(e);$('error').hidden=false;};
 const run=fn=>async(...args)=>{try{$('error').hidden=true;await fn(...args);}catch(e){error(e);}};
-const conversationToolsPane=new ConversationToolsPane({api,source:()=>scope,device:()=>deviceId,
+const conversationToolsPane=new ConversationToolsPane({api,manageProviders:(id,refresh)=>{providerPanel.dialog.addEventListener('close',refresh,{once:true});return providerPanel.open(id);},navigate:open,source:()=>scope,device:()=>deviceId,
  appendDraft:(text,id)=>{if(scope!==id)throw Error('Conversation changed.');$('draft').value=$('draft').value+text;saveDraft(true);},
- applied:async(receipt,id)=>{if(receipt.kind==='fork'&&receipt.thread?.id){await refreshList({invalidate:true});await open(receipt.thread.id);}else{if(receipt.kind==='revert'&&scope===id){cache.replaceHistory(id,receipt.result?.historyHead);const text=receipt.result?.draft||'';$('draft').value=$('draft').value?$('draft').value+'\n\n'+text:text;saveDraft(true);}if(scope===id)await refreshConversation();}}
+ applied:async(receipt,id)=>{if(['fork','continue'].includes(receipt.kind)&&receipt.thread?.id){await refreshList({invalidate:true});await open(receipt.thread.id);}else{if(receipt.kind==='revert'&&scope===id){cache.replaceHistory(id,receipt.result?.historyHead);const text=receipt.result?.draft||'';$('draft').value=$('draft').value?$('draft').value+'\n\n'+text:text;saveDraft(true);}if(scope===id)await refreshConversation();}}
 });
 const requestList=new RequestList({holder:$('requests'),create:el,button,api,refresh:refreshConversation});
 const voice=new BrowserVoice(api,(text,p)=>{

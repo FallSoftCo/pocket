@@ -3,6 +3,7 @@ import {registerNativeConfigurationRoutes} from './native-configuration.mjs';
 import {requestPresentation} from './native-request-contract.mjs';
 import {mountNativeExecution} from './native-execution.mjs';
 import {ConversationTools,registerConversationTools} from './conversation-tools.mjs';
+import {ProviderHandoff} from './provider-handoff.mjs';
 import {supportsNativeMethod} from './native-capabilities.mjs';
 import {inactiveArchiveReason} from './session-archive.mjs';
 import {mountOperatorNotifications} from './notification-requests.mjs';
@@ -470,7 +471,9 @@ async function sendOutgoing(row,initialThread=null){
     }
     if(!db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=? AND state='queued'").run(now(),row.id).changes)return;
     emit('reply',{id,threadId,state:'sending'});
-    const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides=turnOverrides(savedTurnSettings(t.id));
+    const continuation=db.prepare("SELECT result FROM conversation_operations WHERE kind='continue' AND state='accepted' AND json_extract(result,'$.outgoingId')=? LIMIT 1").get(row.id);
+    const continuationOptions=continuation?JSON.parse(continuation.result).turnOptions||{}:{};
+    const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides={...continuationOptions,...turnOverrides(savedTurnSettings(t.id))};
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
@@ -833,7 +836,17 @@ app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionC
 registerAccountResetRoutes(app,{dir,root,secrets,rateLimits,route,admissions:humanIngress});
 const modelProviders=registerModelProviderRoutes(app,{codex,route});
 registerNativeConfigurationRoutes(app,{codex,db,admissions:humanIngress,accountEvidence:boundaryAt=>codex.ready&&!rateLimits.failed&&!rateLimits.loading&&!rateLimits.inflight&&rateLimits.updatedAt>=boundaryAt&&Date.now()-rateLimits.updatedAt<=rateLimits.ttl&&typeof rateLimits.accountId==='string'&&rateLimits.accountId.trim()?{accountId:rateLimits.accountId,generation:rateLimits.generation}:null,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
-const conversationTools=new ConversationTools({db,codex,supports:method=>supportsNativeMethod(codex,method),publish:emit,
+const conversationTools=new ConversationTools({db,codex,
+ handoff:new ProviderHandoff({codex,db,providers:modelProviders,directory:resolve(dir,'provider-handoffs')}),admissions:humanIngress,
+ admitContinuation:(thread,request,handoff)=>{
+  const id='continue-'+request.id;
+  db.prepare("INSERT INTO outgoing(id,thread_id,text,state,created_at,updated_at) VALUES(?,?,?,'queued',?,?)").run(id,thread.id,handoff.prompt,now(),now());
+  humanIngress.inherit('conversation',request.id,'reply',id);
+  db.prepare('INSERT OR IGNORE INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(thread.id,'Continuation · '+handoff.checkpoint.providerId);
+  return id;
+ },
+ dispatchContinuation:(id,thread)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);void sendOutgoing(db.prepare('SELECT * FROM outgoing WHERE id=?').get(id),thread);},
+ supports:method=>supportsNativeMethod(codex,method),publish:emit,
  checkSource:id=>{terminalForkImports?.inputAllowed(id);terminalForks?.inputRole(id);},
  hasPending:id=>syncing.has(id)||['dispatching','unknown','running'].includes(turnRecovery.get(id)?.state)||!!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled') LIMIT 1").get(id),
  onFork:thread=>{sessionDiscovery.remember(thread);recordWork(()=>workRecord.enroll(thread));emit('sessionStarted',{threadId:thread.id,thread});},

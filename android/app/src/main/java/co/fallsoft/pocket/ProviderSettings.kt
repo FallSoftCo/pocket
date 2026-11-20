@@ -62,7 +62,7 @@ import org.json.JSONObject
     }
 }
 
-@Composable internal fun ProviderChoice(value:JSONObject?,onChange:(JSONObject?)->Unit,enabled:Boolean,onManage:()->Unit,revision:Int=0){
+@Composable internal fun ProviderChoice(value:JSONObject?,onChange:(JSONObject?)->Unit,enabled:Boolean,onManage:()->Unit,revision:Int=0,explicitModel:Boolean=false){
     val destination=remember(Pocket.environmentId){Pocket.captureEnvironment()}
     var view by remember(destination){mutableStateOf<JSONObject?>(null)}
     var problem by remember(destination){mutableStateOf("")}
@@ -79,7 +79,7 @@ import org.json.JSONObject
         }
         DropdownMenu(menu,{menu=false}){providers.forEach{p->DropdownMenuItem(text={Text(p.s("name"))},onClick={menu=false;onChange(JSONObject().put("providerId",p.s("id")).apply{if(p.s("baseUrl").startsWith("https://api.deepseek.com")){put("model","deepseek-flash");put("effort","high")}})})}}
     }
-    if(provider.isNotBlank()&&provider!="openai"){
+    if(provider.isNotBlank()&&(explicitModel||provider!="openai")){
         OutlinedTextField(value?.s("model").orEmpty(),{onChange(JSONObject(value.toString()).put("model",it))},label={BilingualLabel("Provider model ID")},enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth())
         WorkflowText("Uses this provider’s API billing. Model availability is determined by the provider.",fontSize=12.sp,color=Muted)
     }

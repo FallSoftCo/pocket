@@ -130,7 +130,8 @@ for(const origin of origins){
    origin.terminalMode=input.mode;body={ok:true};
   }
   else if(path==='/_qa/question'){origin.question=input.version;changed(origin);body={ok:true};}
-  else if(path==='/_qa/resolve-fork'){for(const op of origin.operations.values())if(op.kind==='fork')op.state='accepted';body={ok:true};}
+  else if(path==='/api/model-providers')body={state:'available',defaultProviderId:'openai',providers:[{id:'openai',name:'OpenAI'},{id:'deepseek',name:'DeepSeek',baseUrl:'https://api.deepseek.com'}]};
+  else if(path==='/_qa/resolve-fork'){for(const op of origin.operations.values())if(['fork','continue'].includes(op.kind))op.state='accepted';body={ok:true};}
   else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
   else if(path==='/api/status')body={host:origin.name,connected:true,deviceId:`parity-device-${origin.index}`,capabilities:{readOnlyTimeline:true,canonicalTimeline:1},...(url.searchParams.has('threadId')?{historyHead:head(origin,url.searchParams.get('threadId'))}:{})};
   else if(path==='/api/threads')body={threads:[metadata(origin),metadata(origin,otherId),...(origin.fork?[metadata(origin,forkId)]:[])]};
@@ -141,12 +142,13 @@ for(const origin of origins){
    const actions=new QuestionActions({pending:requests,codex:{answer:(id,result)=>nativeAnswers.push({origin:origin.name,id,threadId,turnId:requests.get(String(id))?.params.turnId,itemId:requests.get(String(id))?.params.itemId,requestToken:requests.get(String(id))?._pocketUI.token,result})}});
    try{body=actions.answer('same-native-request',input);origin.question=0;changed(origin);}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}
   }
-  else if(path.endsWith('/conversation-tools'))body={threadId,cwd:metadata(origin).cwd,active:false,warning:'Context changes do not undo working files.',usage:{last:{totalTokens:1234},total:{totalTokens:5678},modelContextWindow:10000},turns:[{id:origin.name.toLowerCase()+'-turn',status:'completed',userText:`${origin.name} original request`}],features:Object.fromEntries(['fork','revert','compact','review','changeDirectory'].map(k=>[k,{available:true}])),operations:[...origin.operations.values()]};
+  else if(path.endsWith('/conversation-tools'))body={threadId,cwd:metadata(origin).cwd,active:false,warning:'Context changes do not undo working files.',usage:{last:{totalTokens:1234},total:{totalTokens:5678},modelContextWindow:10000},turns:[{id:origin.name.toLowerCase()+'-turn',status:'completed',userText:`${origin.name} original request`}],features:Object.fromEntries(['continue','fork','revert','compact','review','changeDirectory'].map(k=>[k,{available:true}])),operations:[...origin.operations.values()]};
   else if(path.endsWith('/conversation-operations')&&req.method==='POST'){
    if(input.turnId&&input.turnId!==origin.name.toLowerCase()+'-turn'){res.writeHead(409).end('{"error":"Foreign turn boundary"}');return;}
-   body={id:input.id,threadId,kind:input.kind,state:input.kind==='fork'?'unknown':'accepted',result:{}};
-   if(input.kind==='fork'){origin.fork=true;body.thread=metadata(origin,forkId);body.error='Synthetic lost acknowledgement; inspect original receipt.';}
+   body={id:input.id,threadId,kind:input.kind,state:['fork','continue'].includes(input.kind)?'unknown':'accepted',result:{}};
+   if(['fork','continue'].includes(input.kind)){origin.fork=true;body.thread=metadata(origin,forkId);body.error='Synthetic lost acknowledgement; inspect original receipt.';}
    if(input.kind==='revert'){changed(origin);body.result={draft:`${origin.name} original request`,historyHead:head(origin)};}
+   if(input.kind==='continue'){body.result={checkpoint:{createdAt:Date.now(),turnCount:3,sourceThreadId:threadId},message:'Continuation saved and queued.'};}
    origin.operations.set(body.id,body);
   }
   else if(/\/conversation-operations\/[^/]+$/.test(path)){body=origin.operations.get(path.split('/').at(-1));if(!body){res.writeHead(404).end('{"error":"Original receipt missing"}');return;}}

@@ -29,6 +29,9 @@ test('catalog Needs you follows original request and delivery identities without
  await until(async()=>{if(child.exitCode!==null)throw Error('Server exited');try{return (await fetch(url+'/health')).ok;}catch{return false;}});
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8')),api=await pairedTestClient(url,adminToken);
  db=new DatabaseSync(join(dir,'pocket.sqlite'));
+ // This fixture is a second SQLite writer alongside the actual backend. Wait
+ // for its short transaction instead of treating normal contention as failure.
+ db.exec('PRAGMA busy_timeout=5000');
  const catalog=async()=>{const response=await api('/api/threads');assert.equal(response.status,200);return new Map(response.data.threads.map(t=>[t.id,t]));};
  let rows=await catalog();assert.equal(rows.get('first').attention.verified,true);assert.deepEqual(rows.get('stopped').attention.items,[]);
  for(const id of ['unknown','future']){assert.equal(rows.get(id).attention.verified,false);assert.deepEqual(rows.get(id).attention.items,[]);}

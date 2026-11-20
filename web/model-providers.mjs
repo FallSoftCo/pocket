@@ -33,10 +33,10 @@ export class ProviderPanel{
 }
 
 export class NewTaskProvider{
- constructor({holder,api,manage}){
-  Object.assign(this,{api});this.serial=0;
-  const label=el('label','Provider');this.select=el('select');this.select.id='new-provider';label.append(this.select);
-  this.model=field('Provider model ID');this.model.input.id='new-provider-model';this.model.wrapper.hidden=true;
+ constructor({holder,api,manage,explicitModel=false,prefix='new-provider'}){
+  Object.assign(this,{api,explicitModel});this.serial=0;
+  const label=el('label','Provider');this.select=el('select');this.select.id=prefix;label.append(this.select);
+  this.model=field('Provider model ID');this.model.input.id=prefix+'-model';this.model.wrapper.hidden=true;
   this.status=el('p');this.status.className='muted';const button=el('button','Manage providers');button.type='button';button.onclick=manage;
   holder.append(label,this.model.wrapper,this.status,button);this.select.onchange=()=>this.changed();
  }
@@ -46,6 +46,6 @@ export class NewTaskProvider{
    this.select.replaceChildren(...(view.providers||[]).map(p=>{const o=el('option',p.name);o.value=p.id;return o;}));this.select.value=view.defaultProviderId;this.select.disabled=view.state!=='available';this.changed();
   }catch(error){if(serial===this.serial)this.status.textContent=error.message;}
  }
- changed(){const provider=this.view?.providers?.find(p=>p.id===this.select.value);this.model.wrapper.hidden=!provider||provider.id==='openai';this.model.input.value=provider?.baseUrl?.startsWith('https://api.deepseek.com')?'deepseek-flash':'';}
- value(){const provider=this.view?.providers?.find(p=>p.id===this.select.value);if(!provider)return null;return {providerId:provider.id,...(provider.id!=='openai'?{model:this.model.input.value.trim(),...(provider.baseUrl?.startsWith('https://api.deepseek.com')?{effort:'high'}:{})}:{})};}
+ changed(){const provider=this.view?.providers?.find(p=>p.id===this.select.value);this.model.wrapper.hidden=!provider||!this.explicitModel&&provider.id==='openai';this.model.input.value=provider?.baseUrl?.startsWith('https://api.deepseek.com')?'deepseek-flash':'';}
+ value(){const provider=this.view?.providers?.find(p=>p.id===this.select.value);if(!provider)return null;return {providerId:provider.id,...(this.explicitModel||provider.id!=='openai'?{model:this.model.input.value.trim(),...(provider.baseUrl?.startsWith('https://api.deepseek.com')?{effort:'high'}:{})}:{})};}
 }
