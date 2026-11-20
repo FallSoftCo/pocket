@@ -191,3 +191,7 @@ table { border-collapse:collapse; min-width:100%; font-size:13px; }th,td { text-
 .attention-parent { padding:12px 8px 6px; border-top:1px solid var(--line); display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
 .attention-parent-name { font-size:13px; overflow-wrap:anywhere; }
 .attention-parent-open { font-size:12px; min-height:44px; }
+
+/* Catalog diagnostics must never paint over the next card or its controls. */
+.work-card .preview { min-width:0; max-width:100%; overflow:hidden; overflow-wrap:anywhere; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.work-card .preview .immersion-phrase { max-height:2.9em; overflow:hidden; }

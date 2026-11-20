@@ -21,6 +21,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.*
@@ -443,7 +444,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             SessionRestoreAction(t,onRestore)
 
         }
-        Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+        Row(Modifier.fillMaxWidth().height(previewHeight).clipToBounds(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
             Box(Modifier.width(18.dp).height(previewHeight)){
             if(terminalActive&&Pocket.codexOnline)SymbolIcon("Terminal",null,Modifier.size(18.dp))
             else if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))

@@ -14,6 +14,20 @@
   },
   "requests": [
     {
+      "id": "session-card-error-overflow-20261120",
+      "request": "Error messages in the session list overflow individual items.",
+      "status": "isolated candidate; qualification pending",
+      "implementation": [
+        "Bound phrase placeholder measurement and glyph rendering to caller maxLines",
+        "Clip the fixed preview viewport; retain complete errors in the opened session",
+        "Bound web preview and bilingual slots without adding nested scrollbars"
+      ],
+      "verification": [
+        "Native long error, multiline and unbroken token previews at normal/large text with immersion on/off",
+        "Rendered desktop/narrow web adjacent card boundaries"
+      ]
+    },
+    {
       "id": "native-model-providers-20261120",
       "request": "Choose external model providers such as DeepSeek in Android and web.",
       "status": "Android195/alpha177 published both channels; web and both backends live; phone installation unverified",
