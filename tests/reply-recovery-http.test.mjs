@@ -34,7 +34,7 @@ async function fixture(t){
  }));
  const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));const url=`http://127.0.0.1:${port}`;
  const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:String(port),POCKET_DATA:dir,CODEX_SOCKET:socket},stdio:'ignore'});let db;
- t.after(async()=>{if(child.exitCode===null)await new Promise(r=>{child.once('exit',r);child.kill();});db?.close();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>host.close(r));await rm(dir,{recursive:true,force:true});});
+ t.after(async()=>{if(t.error&&db)console.error('REPLY_FIXTURE_DIAGNOSTIC',JSON.stringify({rows:db.prepare('SELECT id,state,result FROM outgoing').all(),calls:calls.map(m=>({method:m.method,params:m.params}))}));if(child.exitCode===null)await new Promise(r=>{child.once('exit',r);child.kill();});db?.close();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>host.close(r));await rm(dir,{recursive:true,force:true});});
  await waitFor(async()=>{if(child.exitCode!==null)throw Error('Fixture server exited before startup');try{return (await fetch(url+'/health')).ok;}catch{return false;}});
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
  db=new DatabaseSync(join(dir,'pocket.sqlite'));const deviceToken='synthetic-paired-human-token';db.prepare('INSERT INTO devices(id,name,token_hash,created_at) VALUES(?,?,?,?)').run('paired-human','Synthetic human',createHash('sha256').update(deviceToken).digest('hex'),Date.now());

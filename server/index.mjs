@@ -525,6 +525,13 @@ async function sendOutgoing(row,initialThread=null){
     syncing.delete(threadId);
     const ids=promotedOutgoing.get(threadId),next=ids?.values().next().value;
     if(next){ids.delete(next);if(!ids.size)promotedOutgoing.delete(threadId);void sendOutgoing({id:next,thread_id:threadId,promoted:true});}
+    else {
+      // A direct human send can arrive while a queue-status read owns this
+      // thread. Drain that original saved intent as soon as the owner exits;
+      // do not leave it waiting for the periodic inventory loop.
+      const waiting=db.prepare("SELECT * FROM outgoing WHERE thread_id=? AND id<>? AND state='queued' AND mode='steer' ORDER BY rowid LIMIT 64").all(threadId,id).find(r=>replyDelivery.ready(r.id));
+      if(waiting)void sendOutgoing(waiting);
+    }
   }
 }
 let outgoingFlush=null;

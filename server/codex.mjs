@@ -87,7 +87,7 @@ export class Codex extends EventEmitter {
   }
   // Explicit native mutation lifetime is distinct from the caller's ordinary 25 s wait.
   // Native globally serializes these writes: retain at most one original reply.
-  operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation);}
+  operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation&&!['turn/start','turn/steer'].includes(p.method));}
   callOperation(method,params,onOutcome){
     if(!['plugin/install','plugin/uninstall','mcpServer/oauth/login','config/mcpServer/reload'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
     return this.callPending(method,params,onOutcome);
