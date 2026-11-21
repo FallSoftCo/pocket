@@ -117,7 +117,9 @@ test('HTTP conversation loading stays read-only with opaque history pages; outag
    assert.equal(response.data.timeline,undefined);assert.equal(response.data.catchup,undefined);assert.ok(!JSON.stringify(response.data).includes('/missing/'));
   }
  }
- assert.ok(calls.slice(failedReadCount).every(c=>c.method==='thread/read'),'metadata refusal must not dispatch page, resume, or work RPCs');
+ const refusedCalls=calls.slice(failedReadCount).filter(c=>['temporary-thread','durable-thread','unknown-thread'].includes(c.params?.threadId));
+ assert.ok(refusedCalls.length>0);
+ assert.ok(refusedCalls.every(c=>c.method==='thread/read'),'metadata refusal must not dispatch page, resume, or work RPCs for the refused source');
  assert.equal(evidenceDb.prepare('SELECT count(*) AS n FROM pocket_discovered_threads WHERE thread_id IN (?,?)').get('durable-thread','temporary-thread').n,2);
  // A later successful native read is immediately usable; no terminal cache or
  // inferred permanent loss may suppress it.

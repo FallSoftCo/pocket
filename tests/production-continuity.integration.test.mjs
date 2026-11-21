@@ -38,7 +38,8 @@ test('paired request answer crosses real backend and native transport; recycled 
  assert.equal((await f.request('/api/requests/73/answer',body)).status,200);assert.equal(f.answers.length,1);
  assert.equal((await f.api(path)).pending.length,1,'HTTP acceptance is not native resolution');
  f.disconnect();await until(()=>f.events.some(e=>e.type==='status'&&e.connected===false),Boolean,'native disconnect event');
- await f.api(path);f.emit(question());page=await until(()=>f.api(path),p=>p.pending.length===1,'reused native request');
+ // A read-only timeline reconnect does not subscribe the separate control lane.
+ await f.api('/api/threads');await f.api(path);f.emit(question());page=await until(()=>f.api(path),p=>p.pending.length===1,'reused native request');
  assert.notEqual(page.pending[0]._pocketUI.token,old._pocketUI.token);
  assert.equal((await f.request('/api/requests/73/answer',body)).status,409);assert.equal(f.answers.length,1,'stale answer must not reach the new native request');
  assert.equal((await f.request('/api/requests/73/answer',{answers:{choice:'Current decision'},requestToken:page.pending[0]._pocketUI.token})).status,200);

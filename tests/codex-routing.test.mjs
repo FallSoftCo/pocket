@@ -16,11 +16,13 @@ test('same-thread steering, idle continuation, and exact pending request respons
  const h=http.createServer(),wss=new WebSocketServer({server:h});await new Promise(r=>h.listen(socket,r));
  let peer;const calls=[],answers=[];let active=true;
  const thread=()=>({id:'thread-live',name:'Routing test',status:{type:active?'active':'idle'},turns:[{id:'turn-original',status:active?'inProgress':'completed',items:[{type:'userMessage',content:[{type:'text',text:'Please fix notification speech'}]}]}]});
- wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{const m=JSON.parse(raw);if(m.result){answers.push(m);return;}if(!m.id)return;calls.push(m);let result={};
+ // Native requests belong to the original control connection, not the independent read lane.
+ wss.on('connection',ws=>{peer ||= ws;ws.on('message',raw=>{const m=JSON.parse(raw);if(m.result){answers.push(m);return;}if(!m.id)return;calls.push(m);let result={};
  // This retained older protocol has no provider registry. Unknown methods must
  // reject like native Codex, rather than return a malformed successful catalog.
  if(m.method==='modelProvider/list'){ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:'Method not found'}}));return;}
  if(m.method==='thread/resume'||m.method==='thread/read')result={thread:thread()};
+ if(m.method==='thread/turns/list')result={data:thread().turns.map(t=>({id:t.id,status:t.status,items:[]})),nextCursor:null};
  if(m.method==='turn/steer')result={turnId:'turn-original'};
  if(m.method==='turn/start')result={turn:{id:'turn-next'}};
  if(m.method==='thread/start')result={thread:{id:'thread-phone',cwd:m.params.cwd,status:{type:'idle'},turns:[]}};
@@ -90,9 +92,10 @@ test('same-thread steering, idle continuation, and exact pending request respons
  assert.equal(calls.findLast(c=>c.method==='turn/start').params.threadId,'thread-phone');
  active=true;assert.equal((await api('/api/threads/thread-live/interrupt',{})).status,200);
  assert.deepEqual(calls.find(c=>c.method==='turn/interrupt').params,{threadId:'thread-live',turnId:'turn-original'});
+ const initializedBeforeVoice=calls.filter(c=>c.method==='initialize').length,connectionsBeforeVoice=wss.clients.size;
  const coordinator=await api('/api/voice/start',{});assert.equal(coordinator.status,200);
- assert.equal(calls.filter(c=>c.method==='initialize').length,1,'coordinator focus reuses the session runtime instead of opening another client');
- assert.equal(wss.clients.size,1);
+ assert.equal(calls.filter(c=>c.method==='initialize').length,initializedBeforeVoice,'coordinator focus reuses the session runtime instead of opening another client');
+ assert.equal(wss.clients.size,connectionsBeforeVoice);
  const directAfterVoice=randomUUID();await api('/api/threads/thread-live/reply',{id:directAfterVoice,text:'Keep this instruction in the direct session'});
  await waitFor(async()=>(await api('/api/replies/'+directAfterVoice)).data.state==='accepted');
  assert.equal(calls.findLast(c=>c.method==='turn/steer').params.threadId,'thread-live');
