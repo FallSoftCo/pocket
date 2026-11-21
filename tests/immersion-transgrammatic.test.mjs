@@ -14,6 +14,9 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
   calls=[];
   async connect(){}
   async call(method,args){this.calls.push({method,args});
+   if(method==='config/read')return {config:{mcp_servers:{}}};
+   if(method==='thread/unsubscribe')return {status:'unsubscribed'};
+   if(method==='thread/loaded/list')return {data:[]};
    if(method==='account/read')return {account:{type:'chatgpt'}};
    if(method==='model/list')return {data:[]};
    if(method==='thread/start')return {thread:{id:'grammar-qa'}};

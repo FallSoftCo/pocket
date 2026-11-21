@@ -93,6 +93,12 @@ export class Codex extends EventEmitter {
     return this.callPending(method,params,onOutcome);
   }
   call(method,params={}){return this.callPending(method,params);}
+  // A bounded owned background worker waits for the ORIGINAL lifecycle outcome.
+  // Its display deadline is not permission to forget a successful late start.
+  callWorker(method,params){
+    if(!['thread/start','thread/unsubscribe','turn/start','turn/interrupt'].includes(method)||[...this.pending.values()].filter(p=>p.operation).length>=4)return Promise.reject(Error('Worker lifecycle capacity unavailable.'));
+    return this.callPending(method,params,()=>{},true);
+  }
   // Keep observing the original mutation after the UI deadline. A late native
   // acknowledgement is authoritative; a second turn submission is not recovery.
   callTurn(method,params,onOutcome){
@@ -100,7 +106,7 @@ export class Codex extends EventEmitter {
     if([...this.pending.values()].filter(p=>p.operation).length>=64)return Promise.reject(codexConnectionError('CODEX_UNAVAILABLE'));
     return this.callPending(method,params,onOutcome);
   }
-  callPending(method,params,onOutcome=null){
+  callPending(method,params,onOutcome=null,waitForOutcome=false){
     return new Promise((resolve,reject)=>{
       const observe=outcome=>{if(onOutcome)try{onOutcome(outcome);}catch{console.error('CODEX_OPERATION_RECEIPT_UPDATE_FAILED');}};
       const rejected=error=>{observe({error,terminal:!!error.rpc});reject(error);};
@@ -112,7 +118,7 @@ export class Codex extends EventEmitter {
         if(!onOutcome)this.pending.delete(id);
         const error=Object.assign(codexConnectionError('CODEX_TIMEOUT'),{rpcMethod:method});
         this.emit('rpcTimeout',{method,pending:this.pending.size,observedMutation:!!onOutcome});
-        reject(error);
+        if(!waitForOutcome)reject(error);
       },this.requestTimeoutMs);
       this.pending.set(id,{resolve:result=>{observe({result,terminal:true});resolve(result);},reject:rejected,timer,method,operation:!!onOutcome});
       try{this.send({id,method,params});}catch(error){clearTimeout(timer);this.pending.delete(id);rejected(error);}

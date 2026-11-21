@@ -160,11 +160,12 @@ if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioComma
 const nativeAudioWorkspace=resolve(dir,'native-audio-workspace');
 mkdirSync(nativeAudioWorkspace,{recursive:true,mode:0o700});
 const nativeVoiceCodex=new Codex(undefined,{command:audioCommand,processCwd:nativeAudioWorkspace});
-const immersion=new ImmersionWorker({codex:codex,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
-// Existing devices retain their old endpoint/cache; reuse native authenticated transport.
+const immersion=new ImmersionWorker({codex:new Codex(),ownsTransport:true,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
+// Existing devices retain their endpoint/cache. Each worker owns a bounded
+// connection to the shared authenticated daemon; no separate model process.
 db.exec('CREATE TABLE IF NOT EXISTS immersion_transgrammatic_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const transgrammaticImmersion=new ImmersionWorker({
- codex:codex,cwd:immersionCwd,contract:transgrammaticContract,
+ codex:new Codex(),ownsTransport:true,cwd:immersionCwd,contract:transgrammaticContract,
  registerThread:id=>internalSessions.register(id,'immersion'),
  load:id=>{const row=db.prepare('SELECT state FROM immersion_transgrammatic_profiles WHERE device_id=?').get(id);if(row)return JSON.parse(row.state);const old=immersion.snapshot(id);return {enabled:old.enabled,density:old.density,translations:[]};},
  save:(id,state)=>db.prepare('INSERT INTO immersion_transgrammatic_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),
