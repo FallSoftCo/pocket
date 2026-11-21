@@ -97,21 +97,23 @@ import org.json.JSONObject
     var loaded by remember{mutableStateOf(false)}
     var problem by remember{mutableStateOf("")}
     var saving by remember{mutableStateOf(false)}
-    LaunchedEffect(Pocket.environmentId){if(Pocket.captureEnvironment()?.matches(destination)!=true)open=false}
+    LaunchedEffect(Pocket.environmentId){if(destination?.let{Pocket.captureEnvironment()?.matches(it)}!=true)open=false}
     OutlinedButton({destination=Pocket.captureEnvironment();loaded=false;problem="";open=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Immersion provider & model")}
     if(manage)ProviderSettingsDialog{manage=false}
     if(open){
         LaunchedEffect(destination){try{
-            val state=Pocket.apiEnvironment(requireNotNull(destination),"/api/immersion/v2")
-            if(Pocket.captureEnvironment()?.matches(destination)==true){selection=state.optJSONObject("selection");loaded=true}
+            val captured=requireNotNull(destination)
+            val state=Pocket.apiEnvironment(captured,"/api/immersion/v2")
+            if(Pocket.captureEnvironment()?.matches(captured)==true){selection=state.optJSONObject("selection");loaded=true}
         }catch(e:CancellationException){throw e}catch(e:Exception){problem=e.message?:"Immersion settings unavailable"}}
         SettingsDrawer(true,{if(!saving)open=false},"Immersion model"){
             WorkflowText("Cached phrases stay available. New translations use this provider’s billing; no automatic fallback.",color=Muted,fontSize=13.sp)
             if(loaded)ProviderChoice(selection,{selection=it},!saving,{manage=true},explicitModel=true,providerPath="/api/immersion/v2?settings=1")
             if(problem.isNotBlank())WorkflowText(problem,color=Coral)
             Button({saving=true;scope.launch{try{
-                check(Pocket.captureEnvironment()?.matches(destination)==true){"Environment changed"}
-                Pocket.apiEnvironment(requireNotNull(destination),"/api/immersion/v2",JSONObject().put("enabled",PocketImmersion.enabled).put("density",PocketImmersion.density).put("selection",selection?:JSONObject.NULL))
+                val captured=requireNotNull(destination)
+                check(Pocket.captureEnvironment()?.matches(captured)==true){"Environment changed"}
+                Pocket.apiEnvironment(captured,"/api/immersion/v2",JSONObject().put("enabled",PocketImmersion.enabled).put("density",PocketImmersion.density).put("selection",selection?:JSONObject.NULL))
                 open=false
             }catch(e:CancellationException){throw e}catch(e:Exception){problem=e.message?:"Provider setting was not saved"}finally{saving=false}}},enabled=loaded&&!saving,modifier=Modifier.fillMaxWidth()){BilingualLabel("Save immersion model")}
         }
