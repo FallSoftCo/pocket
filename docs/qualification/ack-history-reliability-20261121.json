@@ -46,7 +46,14 @@
     },
     "nativeDaemonsRestarted": false,
     "originalUnknownMessagesReplayed": false,
-    "pairingChanged": false
+    "pairingChanged": false,
+    "phoneHttpsHealth": {
+      "httpStatus": 200,
+      "totalMs": 236,
+      "dnsMs": 10,
+      "tlsCompleteMs": 120,
+      "scope": "Termux curl through the actual tailnet HTTPS gateway; not an authenticated app send"
+    }
   },
   "limits": [
     "These are bounded local live read measurements, not handset round-trip timings or proof that upstream native stalls cannot recur.",
@@ -55,5 +62,16 @@
     "Wi-Fi roaming is not established as the cause of the local RPC failures.",
     "Late native reply observation survives an ordinary request deadline, not process or transport loss; those outcomes remain unknown and are not blindly retried.",
     "Android198 is not published until current-source native and exact optimized APK checks complete."
-  ]
+  ],
+  "environmentHealth": {
+    "availableMemoryGiB": 34,
+    "memoryPressureAvg10": 0,
+    "oomKillsObserved": 0,
+    "ownBuildCompilerWorkers": 2,
+    "ownEmulatorCount": 1,
+    "otherEmulators": "Two Vipi emulators retained; no unrelated work stopped",
+    "ownSchedulingWeight": 20,
+    "inactiveOwnCompilerIntermediatesRemovedGiB": 2.08,
+    "signedArtifactsAndSourcePreserved": true
+  }
 }
