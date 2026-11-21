@@ -187,6 +187,10 @@ class NativeCanonicalTranscriptNativeTest{
             val skip=skipBounds()
             device.click(skip.centerX(),skip.centerY())
             await("Question answer was not routed"){qa("state").optInt("answers")==1}
+            // The submitted decision stays inspectable in its drawer. Restore
+            // the transcript viewport before testing that reconnect retains it.
+            device.pressBack()
+            assertTrue("Answer was not visible before the outage",device.wait(Until.hasObject(By.text("Native answer two")),4000))
             val completedBefore=((UxMeasurements.snapshot()["counts"] as Map<*,*>)["open_complete"] as? Number)?.toLong()?:0L
             qa("disconnect")
             val visibleBefore=PocketTranscript.rows.map{it.s("id")}
