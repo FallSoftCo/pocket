@@ -219,3 +219,20 @@ test('HTTP late native steer acknowledgement resolves the original timeout witho
  f.releaseDelivery();await waitFor(async()=>await f.status('late-ack')==='accepted');
  assert.equal(f.turns().length,1);assert.equal(f.db.prepare('SELECT phase FROM reply_dispatch WHERE id=?').get('late-ack').phase,'acknowledged');
 });
+
+test('HTTP direct sending needs only runtime metadata and one active-turn header, never transcript items',async t=>{
+ const f=await fixture(t);
+ for(const active of [false,true]){
+  f.setStatus(active?'active':'idle');f.snapshotTurn({id:'current-header',status:active?'inProgress':'completed',items:[]});
+  const before=f.calls.length,id=active?'header-steer':'metadata-start';
+  assert.equal((await f.api('/api/threads/task-recovery/reply',{id,text:'Send without loading message history',mode:'steer'})).status,202);
+  await waitFor(async()=>await f.status(id)==='accepted');
+  const calls=f.calls.slice(before);
+  assert.equal(calls.filter(c=>c.method==='thread/items/list'||c.method==='thread/timeline/list').length,0);
+  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>c.params.includeTurns===false));
+  const headers=calls.filter(c=>c.method==='thread/turns/list');
+  assert.equal(headers.length,active?1:0);
+  if(active)assert.deepEqual(headers[0].params,{threadId:'task-recovery',limit:1,sortDirection:'desc',itemsView:'notLoaded'});
+  const submitted=f.turns().filter(c=>c.params.clientUserMessageId===id);assert.equal(submitted.length,1);assert.equal(submitted[0].method,active?'turn/steer':'turn/start');
+ }
+});

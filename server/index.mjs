@@ -37,7 +37,7 @@ import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
 import {ReplyDelivery} from './reply-delivery.mjs';
 import {OutgoingProjection} from './outgoing-projection.mjs';
-import {queuedDestination} from './queued-destination.mjs';
+import {queuedDestination,replyDestination} from './queued-destination.mjs';
 import {confirmedFailedTurn} from './manual-turn-admission.mjs';
 import {loadHollywood} from './hollywood.mjs';
 import {teamNotificationFields} from './losangelex-attention.mjs';
@@ -464,14 +464,15 @@ async function sendOutgoing(row,initialThread=null){
     let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
     if(row.mode==='queue'&&db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(threadId,id))return;
     const attachedMode=row.mode;
-    let t=initialThread||(attachedMode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await attach(threadId,{recent:attachedMode==='steer'}));requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+    let t=initialThread||(attachedMode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput));requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+    sessionDiscovery.remember(t);recordWork(()=>workRecord.enroll(t));
     // Re-read after attachment: the user may have edited or removed the waiting message.
     row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
     if(!row||row.state!=='queued')return;
     // A queued metadata read has no active-turn identity. Promotion during that
     // await requires a bounded current-turn read, then another edit/remove check.
     if(attachedMode==='queue'&&row.mode==='steer'){
-      t=await attach(threadId,{recent:true});requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+      t=await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput);requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
       row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
       if(!row||row.state!=='queued')return;
     }
