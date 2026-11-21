@@ -35,6 +35,7 @@ import {catalogFields,catalogName,sessionIdentity,sessionWorkTime,requireDirectS
 import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
+import {ReplyDelivery} from './reply-delivery.mjs';
 import {OutgoingProjection} from './outgoing-projection.mjs';
 import {queuedDestination} from './queued-destination.mjs';
 import {confirmedFailedTurn} from './manual-turn-admission.mjs';
@@ -96,6 +97,7 @@ const localMode=process.env.POCKET_LOCAL==='1';
 const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
 const {db,secrets}=openStore(dir);
 const outgoingProjection=new OutgoingProjection(db);
+const replyDelivery=new ReplyDelivery(db);
 const fleet=process.env.POCKET_FLEET_CONFIG?new LocalFleetAccess({db,credentialKey:enrollmentKey(dir),config:()=>loadFleet(process.env.POCKET_FLEET_CONFIG)}):null;
 if(fleet)fleet.config(); // Reject incomplete enrollment before opening a listener.
 const backendArtifacts=process.env.POCKET_BACKEND_ARTIFACTS_DIR?new BackendArtifacts({dir:process.env.POCKET_BACKEND_ARTIFACTS_DIR,keyFile:process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE,dataDir:dir}):null;
@@ -266,7 +268,7 @@ setInterval(()=>timeline.prune(),60000).unref();
 const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
 // Notes hydrate when their conversation opens, not while hundreds of list cards load.
 const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
-const history=new ThreadHistory(codex,{identity:sendIdentity,inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
+const history=new ThreadHistory(timelineCodex,{identity:sendIdentity,inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
 const workRecord=new WorkRecord(db,{version:appVersion,scanAllowed:(id,thread)=>nativeSubscriptions.loaded?.has(id)&&!sessionDiscovery.hidden(id,thread)});
 const workRecordHistory=new ThreadHistory(createTimelineConnection(),{identity:sendIdentity});
 const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
@@ -425,7 +427,7 @@ function recoverHistory(metadata,reader=history){
 }
 async function attach(threadId,{before=null,recent=false}={}){
   requireId(threadId); await codex.connect();
-  let metadata=(await codex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);recordWork(()=>workRecord.enroll(metadata));
+  let metadata=(await timelineCodex.call('thread/read',{threadId,includeTurns:false})).thread,initial=null;sessionDiscovery.remember(metadata);recordWork(()=>workRecord.enroll(metadata));
   if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
     attached.add(threadId);const snapshotRevision=timeline.version,snapshotHistoryHead=historyHeads.snapshot(threadId);const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision,_pocketSnapshotHistoryHead:snapshotHistoryHead};
   }
@@ -457,7 +459,8 @@ async function sendOutgoing(row,initialThread=null){
   syncing.add(threadId);
   try{
     row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
-    if(!row||row.state!=='queued')return;
+    if(!row||row.state!=='queued'||!replyDelivery.ready(id))return;
+    replyDelivery.prepare(id);
     let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
     if(row.mode==='queue'&&db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(threadId,id))return;
     const attachedMode=row.mode;
@@ -482,27 +485,36 @@ async function sendOutgoing(row,initialThread=null){
     const continuation=db.prepare("SELECT result FROM conversation_operations WHERE kind='continue' AND state='accepted' AND json_extract(result,'$.outgoingId')=? LIMIT 1").get(row.id);
     const continuationOptions=continuation?JSON.parse(continuation.result).turnOptions||{}:{};
     const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides={...continuationOptions,...turnOverrides(savedTurnSettings(t.id))};
+    const accepted=result=>{if(!replyDelivery.accept(row,result))return;
+      resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
+      emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
+    };
+    const submit=(method,params)=>{replyDelivery.dispatched(id);return codex.callTurn(method,params,outcome=>{
+      if(outcome.result)accepted(outcome.result);
+      else if(outcome.terminal&&outcome.error){const state=replyDelivery.rejectLate(row,outcome.error);if(state)emit('reply',{id,threadId,state,error:outcome.error.message});}
+    });};
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
     if(row.mode!=='queue'&&isActive(t)&&active) {
       const steerTransport=codex.transport;
-      try {result=await codex.call('turn/steer',{threadId:t.id,expectedTurnId:active.id,clientUserMessageId:row.id,input});}
+      try {result=await submit('turn/steer',{threadId:t.id,expectedTurnId:active.id,clientUserMessageId:row.id,input});}
       catch(e){
         // Retry only when Codex explicitly reports that the turn has finished.
         if(e.rpc && /no active turn|no turn in progress/i.test(e.message)){
-          const fresh=(await codex.call('thread/read',{threadId:t.id,includeTurns:false})).thread;
+          replyDelivery.prepare(id);
+          const fresh=(await timelineCodex.call('thread/read',{threadId:t.id,includeTurns:false})).thread;
           if(codex.transport!==steerTransport||fresh?.id!==t.id||fresh.status?.type!=='idle')throw e;
           requireDirectSessionInput(fresh);
-          result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+          result=await submit('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
         }else throw e;
       }
     }else if(isActive(t))throw new Error('The active turn is not ready for replies. Try again shortly.');
-    else if(t.status?.type==='idle'||(row.mode!=='queue'&&await confirmedFailedTurn(codex,t,requireDirectSessionInput)))result=await codex.call('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+    else if(t.status?.type==='idle'||(row.mode!=='queue'&&await confirmedFailedTurn(codex,t,requireDirectSessionInput)))result=await submit('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
     else throw new Error('The conversation is not confirmed idle. Refresh before sending this message.');
-    db.prepare("UPDATE outgoing SET state='accepted',result=?,updated_at=? WHERE id=?").run(JSON.stringify(result),now(),row.id);
-    resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
-    emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
+    accepted(result);
   }catch(e){
+    console.error('Reply delivery failure',JSON.stringify({method:e.rpcMethod||null,code:e.code||'RPC_REJECTED',phase:db.prepare('SELECT phase FROM reply_dispatch WHERE id=?').get(id)?.phase||'beforePreflight'}));
+    if(replyDelivery.preflightFailed(id,e)){emit('reply',{id,threadId,state:'queued'});return;}
     // A definite busy rejection is safe to retry as a queued next turn; lost acknowledgements aren't.
     const state=row?.mode==='queue'&&e.rpc&&/already active|turn.*in progress|active turn/i.test(e.message)?'queued':ambiguousDelivery(e)?'unknown':'failed';
     // Attachment may fail after a waiting reply was removed. Never resurrect
@@ -515,7 +527,16 @@ async function sendOutgoing(row,initialThread=null){
     if(next){ids.delete(next);if(!ids.size)promotedOutgoing.delete(threadId);void sendOutgoing({id:next,thread_id:threadId,promoted:true});}
   }
 }
-async function flush(){if(!codex.ready)return;for(const row of db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY rowid").all())await sendOutgoing(row);}
+let outgoingFlush=null;
+async function flush(){
+ if(!codex.ready)return;
+ if(outgoingFlush)return outgoingFlush;
+ const rows=db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY rowid").all();let next=0;
+ const work=Promise.all(Array.from({length:Math.min(2,rows.length)},async()=>{
+  while(next<rows.length&&codex.ready)await sendOutgoing(rows[next++]);
+ }));outgoingFlush=work;
+ try{await work;}finally{if(outgoingFlush===work)outgoingFlush=null;}
+}
 db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during delivery; check the conversation before resending.' WHERE state='sending'").run();
 
 codex.on('event',m=>{
@@ -572,12 +593,15 @@ codex.on('event',m=>{
 });
 codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});});
 codex.on('status',status=>emit('status',status));
+codex.on('rpcTimeout',value=>console.error('Codex RPC deadline',JSON.stringify(value)));
 codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();watchHistoryRecovered.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
 let reconnecting=false;
 setInterval(async()=>{
   if(reconnecting)return;reconnecting=true;
   try{
     await codex.connect();
+    // Explicit saved input must not wait behind optional watch discovery.
+    await flush();
     await sessionStarts.flush();
     await restoreWatchedSubscriptions({watches:db.prepare('SELECT thread_id,enabled FROM watches WHERE enabled=1').all(),codex,subscriptions:nativeSubscriptions,attached,
       onObserved:thread=>{sessionDiscovery.remember(thread);if(!watchHistoryRecovered.has(thread.id)){watchHistoryRecovered.add(thread.id);void recoverHistory(thread,workRecordHistory).catch(error=>{watchHistoryRecovered.delete(thread.id);console.error('Watch history recovery unavailable',error.code||error.name);});}}});

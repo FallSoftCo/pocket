@@ -189,6 +189,16 @@ class NativeCanonicalTranscriptNativeTest{
             await("Question answer was not routed"){qa("state").optInt("answers")==1}
             val completedBefore=((UxMeasurements.snapshot()["counts"] as Map<*,*>)["open_complete"] as? Number)?.toLong()?:0L
             qa("disconnect")
+            val visibleBefore=PocketTranscript.rows.map{it.s("id")}
+            main{
+                CodexSessionRepository.invalidate("same-thread")
+                CodexConversations.onForeground(false)
+                CodexConversations.onForeground(true)
+                assertEquals("Reattaching during an outage erased the displayed history",visibleBefore,PocketTranscript.rows.map{it.s("id")})
+                assertTrue("Retained history was hidden pending refresh",PocketTranscript.presentationReady)
+                assertFalse("Retained content was incorrectly acknowledged as fresh",PocketTranscript.currentHistoryVerified)
+            }
+            assertTrue("Previously visible answer disappeared during reconnect",device.wait(Until.hasObject(By.text("Native answer two")),4000))
             main{Pocket.closeTask()}
             qa("recover")
             open()

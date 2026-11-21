@@ -198,3 +198,24 @@ test('HTTP promotion cannot reinterpret unknown delivery or start a turn without
  }
  f.setStatus('active');f.snapshotTurn({id:'uncertain-active',status:'inProgress',items:[]});f.seed('lost-steer','held','queue');f.steerError({disconnect:true});assert.equal((await action('lost-steer')).status,200);await waitFor(async()=>await f.status('lost-steer')==='unknown');const before=f.turns().length;assert.equal((await action('lost-steer')).status,409);await f.api('/api/replies/lost-steer');assert.equal(f.turns().length,before);
 });
+
+test('HTTP read deadline retains undelivered input and retries only its preflight after persisted backoff',async t=>{
+ const f=await fixture(t);f.blockAttach();
+ assert.equal((await f.api('/api/threads/task-recovery/reply',{id:'preflight-deadline',text:'Saved while history is unavailable',mode:'steer'})).status,202);
+ await waitFor(()=>f.attachBlocked());
+ await new Promise(r=>setTimeout(r,25300));
+ assert.equal(await f.status('preflight-deadline'),'queued');assert.equal(f.turns().length,0);
+ const boundary=f.db.prepare('SELECT * FROM reply_dispatch WHERE id=?').get('preflight-deadline');assert.equal(boundary.phase,'preflight');assert.ok(boundary.next_at>boundary.updated_at);
+ // The original read can finish late; it must not dispatch that abandoned attempt.
+ f.releaseAttach();
+ await waitFor(async()=>await f.status('preflight-deadline')==='accepted');
+ assert.equal(f.turns().length,1);assert.equal(f.turns()[0].params.clientUserMessageId,'preflight-deadline');
+});
+
+test('HTTP late native steer acknowledgement resolves the original timeout without a second submission',async t=>{
+ const f=await fixture(t);f.setStatus('active');f.snapshotTurn({id:'active-late',status:'inProgress',items:[]});f.holdDelivery();
+ await f.api('/api/threads/task-recovery/reply',{id:'late-ack',text:'Original correction',mode:'steer'});await waitFor(()=>f.deliveryBlocked());
+ await new Promise(r=>setTimeout(r,25300));assert.equal(await f.status('late-ack'),'unknown');assert.equal(f.turns().length,1);
+ f.releaseDelivery();await waitFor(async()=>await f.status('late-ack')==='accepted');
+ assert.equal(f.turns().length,1);assert.equal(f.db.prepare('SELECT phase FROM reply_dispatch WHERE id=?').get('late-ack').phase,'acknowledged');
+});

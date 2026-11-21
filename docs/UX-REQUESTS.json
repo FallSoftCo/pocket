@@ -14,6 +14,13 @@
   },
   "requests": [
     {
+      "id": "ack-history-reliability-20261121",
+      "request": "Every send hits an acknowledgement timeout and message history disappears in between; diagnose host connectivity and repair delivery/read lifetimes.",
+      "status": "198 candidate; original unknown deliveries preserved, no replay",
+      "implementation": ["Retain original native turn acknowledgement observer beyond UI deadline", "Persist preflight versus dispatch boundary; back off undelivered input without falsely marking an uncertain write", "Keep history reads off the shared control transport", "Explicit saved replies run before optional watch discovery", "Retain visible same-source history across foreground reattachment without marking it fresh"],
+      "verification": "Real HTTP/socket late acknowledgement and preflight deadline journeys; native disconnect/reattach retains rows and drafts"
+    },
+    {
       "id": "session-card-error-overflow-20261120",
       "request": "Error messages in the session list overflow individual items.",
       "status": "Android197/alpha179 published both channels; web live; physical install unverified",

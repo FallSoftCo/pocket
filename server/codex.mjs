@@ -8,8 +8,8 @@ import {createInterface} from 'node:readline';
 import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
-  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null}={}) {
-    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
+  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null,requestTimeoutMs=25000}={}) {
+    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;this.requestTimeoutMs=requestTimeoutMs;
   }
   executionOptions(){
     const sandbox=process.env.POCKET_CODEX_SANDBOX,approvalPolicy=process.env.POCKET_CODEX_APPROVAL_POLICY;
@@ -93,6 +93,13 @@ export class Codex extends EventEmitter {
     return this.callPending(method,params,onOutcome);
   }
   call(method,params={}){return this.callPending(method,params);}
+  // Keep observing the original mutation after the UI deadline. A late native
+  // acknowledgement is authoritative; a second turn submission is not recovery.
+  callTurn(method,params,onOutcome){
+    if(!['turn/start','turn/steer'].includes(method)||typeof onOutcome!=='function')throw Error('Invalid observed turn mutation.');
+    if([...this.pending.values()].filter(p=>p.operation).length>=64)return Promise.reject(codexConnectionError('CODEX_UNAVAILABLE'));
+    return this.callPending(method,params,onOutcome);
+  }
   callPending(method,params,onOutcome=null){
     return new Promise((resolve,reject)=>{
       const observe=outcome=>{if(onOutcome)try{onOutcome(outcome);}catch{console.error('CODEX_OPERATION_RECEIPT_UPDATE_FAILED');}};
@@ -103,8 +110,10 @@ export class Codex extends EventEmitter {
         // UI expiry never cancels or resubmits an admitted mutation. Its one
         // observer remains until the original response or transport closure.
         if(!onOutcome)this.pending.delete(id);
-        reject(codexConnectionError('CODEX_TIMEOUT'));
-      },25000);
+        const error=Object.assign(codexConnectionError('CODEX_TIMEOUT'),{rpcMethod:method});
+        this.emit('rpcTimeout',{method,pending:this.pending.size,observedMutation:!!onOutcome});
+        reject(error);
+      },this.requestTimeoutMs);
       this.pending.set(id,{resolve:result=>{observe({result,terminal:true});resolve(result);},reject:rejected,timer,method,operation:!!onOutcome});
       try{this.send({id,method,params});}catch(error){clearTimeout(timer);this.pending.delete(id);rejected(error);}
     });
