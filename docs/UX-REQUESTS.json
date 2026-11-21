@@ -14,6 +14,12 @@
   },
   "requests": [
     {
+      "id": "immersion-runtime-residency-20261121",
+      "request": "Diagnose intermittent slow acknowledgements and whether workstation thermal throttling causes them.",
+      "status": "Active thermal throttling confirmed. Native diagnostics150 loaded threads;144 are registered immersion threads;1050 live MCP connections. Rotation/failure paths omit native cleanup. Repair and latency attribution remain open.",
+      "evidence": "docs/qualification/send-runtime-diagnosis-20261121.json"
+    },
+    {
       "id": "git-stability-audit-20261121",
       "request": "Trace Git and real deployment history to establish what was stable before adding more fixes.",
       "status": "Baseline194 established from122 accepted sends; first unhealthy deployment195; exact trigger unproven. Android198 history-preservation update published separately; audit remains open.",

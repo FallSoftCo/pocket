@@ -1,0 +1,112 @@
+{
+  "date": "2026-11-21",
+  "status": "confirmed-thermal-throttling-and-immersion-residency-leak; exact-delay-attribution-open",
+  "thermal": {
+    "observedCoreMaxCelsius": 95,
+    "observedPackageCelsius": 94,
+    "initialObservationSeconds": 84.7537,
+    "packageThrottleTimeIncreaseMs": 8587,
+    "coincidentProbeWindowMs": 35103,
+    "coincidentPackageThrottleTimeMs": 2335,
+    "nativeProbeMs": [
+      26,
+      4,
+      4,
+      4,
+      4,
+      3,
+      3,
+      3
+    ],
+    "sharedControlMetadataProbeMs": [
+      24,
+      8,
+      8,
+      6,
+      9,
+      7,
+      7,
+      7
+    ],
+    "limit": "Counters confirm throttling; fast native probes during throttling do not rule out worse thermal episodes and do not attribute previous minute-long sends."
+  },
+  "native": {
+    "pid": 3330,
+    "version": "0.171.0",
+    "diagnosticsAt": 1795275897996,
+    "gauges": [
+      {
+        "name": "app.requests.in_flight",
+        "value": 10
+      },
+      {
+        "name": "app.requests.queued",
+        "value": 4
+      },
+      {
+        "name": "core.mailbox.pending",
+        "value": 6
+      },
+      {
+        "name": "core.threads.live",
+        "value": 150
+      },
+      {
+        "name": "core.turns.active",
+        "value": 5
+      },
+      {
+        "name": "mcp.connections.live",
+        "value": 1050
+      }
+    ],
+    "loadedThreads": 150,
+    "ownershipCounts": {
+      "not-registered-internal": 6,
+      "immersion": 144
+    },
+    "limits": [
+      "144 registered immersion threads are currently loaded; no inference that all are simultaneously running models.",
+      "1050 live MCP connections are runtime-wide, not individually attributed by this gauge.",
+      "One sampled loaded thread metadata read timed out; successful cheap loaded/list probes are not a full healthy-runtime test."
+    ]
+  },
+  "confirmedSourceDefects": [
+    {
+      "path": "server/immersion-worker.mjs",
+      "details": "ensure() replaces the current ephemeral thread every20 turns; flush() discards current thread on any translation failure. Neither path unsubscribes/unloads the old thread. close() removes event listeners but also does not release native threads. Start uses ordinary call(), so a late successful thread/start can lose its original observer."
+    },
+    {
+      "path": "server/immersion-worker.mjs",
+      "details": "No thread-specific MCP suppression is configured despite the translation-only/no-tools role. Prompt/shell restrictions do not prevent configured MCP startup."
+    },
+    {
+      "path": "server/index.mjs at deployed93a10457",
+      "details": "Human sends still wait for conversation attach/history before native submission. Built381c candidate removes that dependency but is not deployed."
+    }
+  ],
+  "recentActualSendReceiptMs": [
+    73493,
+    90940
+  ],
+  "otherFindings": [
+    "Native runtime emitted model-catalog/MCP network timeouts and a thread-store connection-pool timeout.",
+    "Diagnostic exec itself timed out and reported code-mode runtime replacement; no mutation was replayed.",
+    "No current memory pressure, cgroup CPU throttling or OOM evidence.",
+    "Eight-second process sample: Vipi QA emulator36.3% of one CPU; its Gradle Java effectively idle. Preserved other-owner work."
+  ],
+  "nextRepair": [
+    "Bound immersion runtime ownership and retain original startup/turn outcomes across UI deadlines.",
+    "Release only positively owned obsolete translation threads using native lifecycle semantics; preserve human/coordinator work.",
+    "Disable unnecessary MCP initialization only for translation workers, preserving user-session tools.",
+    "Correlate actual receipt stages with runtime diagnostics after controlled repair; no latency-fix claim based solely on cheap read probes."
+  ],
+  "runtimeMutationsPerformed": false,
+  "phoneTouched": false,
+  "unknownMessagesReplayed": false,
+  "productionCandidateDeployed": false,
+  "sourceEvidence": [
+    "https://raw.githubusercontent.com/openai/codex/rust-v0.171.0/codex-rs/app-server/src/message_processor.rs",
+    "https://raw.githubusercontent.com/openai/codex/rust-v0.171.0/codex-rs/app-server-protocol/src/protocol/common.rs"
+  ]
+}
