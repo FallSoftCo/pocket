@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-20",
+  "updated": "2026-11-21",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -14,11 +14,23 @@
   },
   "requests": [
     {
+      "id": "git-stability-audit-20261121",
+      "request": "Trace Git and real deployment history to establish what was stable before adding more fixes.",
+      "status": "Baseline194 established from122 accepted sends; first unhealthy deployment195; exact triggering cause not yet proven. Android198 remains unpublished.",
+      "evidence": "docs/qualification/send-history-regression-audit-20261121.json"
+    },
+    {
       "id": "ack-history-reliability-20261121",
       "request": "Every send hits an acknowledgement timeout and message history disappears in between; diagnose host connectivity and repair delivery/read lifetimes.",
-      "status": "198 candidate; original unknown deliveries preserved, no replay",
-      "implementation": ["Retain original native turn acknowledgement observer beyond UI deadline", "Persist preflight versus dispatch boundary; back off undelivered input without falsely marking an uncertain write", "Keep history reads off the shared control transport", "Explicit saved replies run before optional watch discovery", "Retain visible same-source history across foreground reattachment without marking it fresh"],
-      "verification": "Real HTTP/socket late acknowledgement and preflight deadline journeys; native disconnect/reattach retains rows and drafts"
+      "status": "Initial198 backend repair live, but real131847ms send proves latency unresolved; Android198 unpublished",
+      "implementation": [
+        "Retain original native turn acknowledgement observer beyond UI deadline",
+        "Persist preflight versus dispatch boundary; back off undelivered input without falsely marking an uncertain write",
+        "Keep history reads off the shared control transport",
+        "Explicit saved replies run before optional watch discovery",
+        "Retain visible same-source history across foreground reattachment without marking it fresh"
+      ],
+      "verification": "HTTP/socket cases pass; revised visible native disconnect/reattach journey pending. See historical audit; no end-to-end latency repair claim."
     },
     {
       "id": "session-card-error-overflow-20261120",

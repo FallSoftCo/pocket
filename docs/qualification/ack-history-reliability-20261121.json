@@ -2,7 +2,7 @@
   "date": "2026-11-21",
   "androidVersionCode": 198,
   "androidVersionName": "0.5.0-alpha.180",
-  "state": "backend-live-android-qualification-in-progress",
+  "state": "backend-live-latency-unresolved-android-unpublished",
   "source": {
     "android": "3848fb03",
     "backend": "93a104574a930103dc6d4f79ff06bcc26800acf8",
@@ -33,7 +33,8 @@
     },
     "retainedFailures": [
       "Original direct-send handoff HTTP test failed before the drain correction and passed unchanged afterward.",
-      "Owned emulator first launch lacked KVM access after reboot; no phone or other emulator changed. A transient owned service supplied the existing KVM supplementary group."
+      "Owned emulator first launch lacked KVM access after reboot; no phone or other emulator changed. A transient owned service supplied the existing KVM supplementary group.",
+      "First reconnect visibility assertion ran with the decision drawer still open; state retention had passed. Test now explicitly closes the drawer and verifies the transcript before the outage. The revised native journey has not passed yet."
     ],
     "liveWorkstationReadMs": [
       69,
@@ -53,11 +54,14 @@
       "dnsMs": 10,
       "tlsCompleteMs": 120,
       "scope": "Termux curl through the actual tailnet HTTPS gateway; not an authenticated app send"
-    }
+    },
+    "realUserSendAfterBackendRepairMs": 131847,
+    "overallLatencyRepairProven": false,
+    "androidNativeCurrentCandidatePassed": false
   },
   "limits": [
     "These are bounded local live read measurements, not handset round-trip timings or proof that upstream native stalls cannot recur.",
-    "No actual human message was submitted as a test. Original unknown messages remain unchanged.",
+    "No actual human message was submitted as a test. No original unknown message was automatically replayed; later user-initiated retries are separately recorded.",
     "Phone SSH confirmed installed197; physical ADB unavailable, so handset transport logs and touch verification remain unavailable.",
     "Wi-Fi roaming is not established as the cause of the local RPC failures.",
     "Late native reply observation survives an ordinary request deadline, not process or transport loss; those outcomes remain unknown and are not blindly retried.",
@@ -72,6 +76,8 @@
     "otherEmulators": "Two Vipi emulators retained; no unrelated work stopped",
     "ownSchedulingWeight": 20,
     "inactiveOwnCompilerIntermediatesRemovedGiB": 2.08,
-    "signedArtifactsAndSourcePreserved": true
-  }
+    "signedArtifactsAndSourcePreserved": true,
+    "observationScope": "Earlier active build snapshot; own build completed and owned emulator subsequently stopped for the historical audit. Unrelated Vipi workloads preserved."
+  },
+  "historicalAudit": "send-history-regression-audit-20261121.json"
 }
