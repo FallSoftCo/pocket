@@ -4180,5 +4180,11 @@
     "qualification": "52 affected tests before final retirement guard; 40 focused tests after guard including delayed unload and lost-start reply; actual isolated Codex 0.171 four create/release cycles, no model turns or MCP requests. Deployment evidence tracked separately.",
     "evidence": "docs/qualification/immersion-lifecycle-20261121.json",
     "status": "Backend deployed on workstation and Mac; immersion disabled; Mac legacy unload compatibility remains limited and fails closed."
+  },
+  "immersion_provider_complete_20261121": {
+    "request": "Repair immersion fully, including native cleanup on Mac, and support configured model providers including existing DeepSeek. Preserve disabled setting until user enables.",
+    "implementation": "Provider/model choice per device and environment, native credential ownership, explicit provider verification without fallback, one stateless scratch thread per batch, archive+delete with durable cleanup ownership, cached validated plans preserved.",
+    "qualification": "45 focused tests; actual DeepSeek 3277ms and OpenAI5037ms complete grammatical plans with zero owned threads after cleanup. Mac0.163 archive/delete unloaded in isolated two-cycle check. Android/web UI qualification pending.",
+    "status": "candidate"
   }
 }

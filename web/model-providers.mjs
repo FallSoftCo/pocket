@@ -33,8 +33,8 @@ export class ProviderPanel{
 }
 
 export class NewTaskProvider{
- constructor({holder,api,manage,explicitModel=false,prefix='new-provider'}){
-  Object.assign(this,{api,explicitModel});this.serial=0;
+ constructor({holder,api,manage,explicitModel=false,prefix='new-provider',providerPath='/api/model-providers'}){
+  Object.assign(this,{api,explicitModel,providerPath});this.serial=0;
   const label=el('label','Provider');this.select=el('select');this.select.id=prefix;label.append(this.select);
   this.model=field('Provider model ID');this.model.input.id=prefix+'-model';this.model.wrapper.hidden=true;
   this.status=el('p');this.status.className='muted';const button=el('button','Manage providers');button.type='button';button.onclick=manage;
@@ -42,7 +42,7 @@ export class NewTaskProvider{
  }
  async load(){
   const serial=++this.serial;this.select.disabled=true;this.view=null;this.select.replaceChildren(el('option','Codex default'));this.model.wrapper.hidden=true;
-  try{const view=await this.api('/api/model-providers');if(serial!==this.serial)return;this.view=view;this.status.textContent=view.notice;
+  try{const view=await this.api(this.providerPath);if(serial!==this.serial)return;this.view=view;this.status.textContent=view.notice;
    this.select.replaceChildren(...(view.providers||[]).map(p=>{const o=el('option',p.name);o.value=p.id;return o;}));this.select.value=view.defaultProviderId;this.select.disabled=view.state!=='available';this.changed();
   }catch(error){if(serial===this.serial)this.status.textContent=error.message;}
  }

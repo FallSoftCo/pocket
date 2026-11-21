@@ -89,6 +89,27 @@ class SettingsDrawerNativeTest {
   assertEquals("System76",tasks.getJSONObject(0).getString("host"))
   assertEquals("deepseek",tasks.getJSONObject(0).getJSONObject("selection").getString("providerId"))
   assertEquals("deepseek-flash",tasks.getJSONObject(0).getJSONObject("selection").getString("model"))
+  // Immersion chooses a provider independently without enabling or sending work.
+  main{Pocket.closeTask()}
+  open()
+  compose.onNode(hasText("Settings").and(hasClickAction()),useUnmergedTree=true).performScrollTo().performClick()
+  compose.onNodeWithText("Immersion provider & model",useUnmergedTree=true).performScrollTo().performClick()
+  await{compose.onAllNodesWithText("Provider: OpenAI",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNodeWithText("Provider: OpenAI",useUnmergedTree=true).performClick()
+  compose.onNodeWithText("DeepSeek",useUnmergedTree=true).performClick()
+  compose.onNodeWithText("Save immersion model",useUnmergedTree=true).performScrollTo().performClick()
+  await{compose.onAllNodesWithText("Save immersion model",useUnmergedTree=true).fetchSemanticsNodes().isEmpty()}
+  assertFalse(PocketImmersion.enabled)
+  compose.onNodeWithText("Immersion provider & model",useUnmergedTree=true).performScrollTo().performClick()
+  await{compose.onAllNodesWithText("Provider: DeepSeek",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
+  compose.onNode(hasSetTextAction().and(hasText("Provider model ID"))).assertTextContains("deepseek-flash")
+  val immersionState=(java.net.URL("http://127.0.0.1:18880/_qa/state").openConnection() as java.net.HttpURLConnection).run{
+   setRequestProperty("Authorization","Bearer synthetic-system76");inputStream.bufferedReader().use{org.json.JSONObject(it.readText())}
+  }
+  val immersionWrites=immersionState.getJSONArray("immersionWrites").objects().filter{it.has("selection")}
+  assertEquals(1,immersionWrites.size);assertFalse(immersionWrites[0].getBoolean("enabled"))
+  assertEquals("deepseek",immersionWrites[0].getJSONObject("selection").getString("providerId"))
+  assertEquals(1,immersionState.getJSONArray("taskRequests").length())
   assertFalse(prefs.all.toString().contains("synthetic-native-provider-key"))
   assertEquals("Drawer preserves my unsent work",prefs.getString("draft:same-thread",null))
  }

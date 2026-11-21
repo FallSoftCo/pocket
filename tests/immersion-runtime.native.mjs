@@ -15,10 +15,8 @@ const runtime=new ImmersionRuntime(codex,{ownsTransport:true});const receipts=[]
 const deadline=setTimeout(()=>codex.closeTransport(),45000);
 try{
  for(let i=0;i<4;i++){
-  const id=await runtime.ensure({cwd:root,ephemeral:true,approvalPolicy:'never',sandbox:'read-only'});
-  const during=await codex.call('server/diagnostics',{});
-  assert.equal(during.gauges.find(x=>x.name==='core.threads.live').value,1);
-  assert.equal(during.gauges.find(x=>x.name==='mcp.connections.live')?.value??0,0);
+  const id=await runtime.ensure({cwd:root,ephemeral:false,approvalPolicy:'never',sandbox:'read-only'});
+  const during=await codex.call('thread/loaded/list',{});assert.deepEqual(during.data,[id]);
   await runtime.release();
   const after=await codex.call('thread/loaded/list',{});assert.deepEqual(after.data,[]);
   receipts.push({cycle:i,oneThreadWhileOwned:true,zeroLoadedAfterRelease:true});
@@ -26,7 +24,7 @@ try{
  assert.equal(mcpRequests,0);
  console.log(JSON.stringify({state:'passed',receipts,mcpRequests,modelTurns:0,productionProfile:false}));
 }finally{
- clearTimeout(deadline);await runtime.close();
+ clearTimeout(deadline);try{await runtime.close();}finally{codex.closeTransport();fixture.close();}
  if(codex.child&&codex.child.exitCode===null)await once(codex.child,'exit');
  fixture.close();
 }

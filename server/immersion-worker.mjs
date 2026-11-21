@@ -1,3 +1,4 @@
+import {immersionProvider,immersionSelection} from './immersion-provider.mjs';
 import {ImmersionRuntime} from './immersion-runtime.mjs';
 import {createHash} from 'node:crypto';
 import {validateImmersionPlan,deriveImmersionText,IMMERSION_PLAN_VERSION,immersionDensity,IMMERSION_ROLES,IMMERSION_FEATURES,IMMERSION_RELATIONS} from './immersion-plan.mjs';
@@ -22,7 +23,7 @@ const preservesProtectedText=(source,text)=>[...fencedBlocks(source),...(source.
 const digest=text=>createHash('sha256').update(text).digest('hex');
 const displayPriority=(source)=>/urgent|question/.test(source.kind||'')?3:/^(row:|coordinator:|saved-reply:)/.test(source.id)||source.kind==='message'?2:/^label:/.test(source.id)||/interface/.test(source.kind||'')?0:1;
 export class ImmersionWorker {
- constructor({codex,cwd,registerThread=()=>{},publish=()=>{},load=()=>null,save=()=>{},delay=2500,timeout=60000,maxCache=600,contract=null,now=Date.now,ownsTransport=false}){Object.assign(this,{codex,cwd,registerThread,publish,load,save,delay,timeout,maxCache});this.now=now;this.durableJobs=contract?.durableJobs===true;this.retryDelays=contract?.retryDelays||[];this.jobVersion=contract?.jobVersion||'quoted-anchors-v1';this.compatiblePlanVersions=new Set(contract?.compatiblePlanVersions||[]);this.upgradeCached=contract?.upgradeCached||((row)=>row);this.prepareBatch=contract?.prepareBatch;this.planVersion=contract?.version||IMMERSION_PLAN_VERSION;this.instructions=contract?.instructions||IMMERSION_INSTRUCTIONS;this.alignmentInstructions=contract?.alignmentInstructions??IMMERSION_ALIGNMENT_INSTRUCTIONS;this.validate=contract?.validate||validateImmersionPlan;this.derive=contract?.derive||deriveImmersionText;this.closed=false;this.devices=new Map();this.timer=null;this.busy=false;this.activeJobs=[];this.model=null;this.modelResolved=false;this.lastRun=0;this.runtime=new ImmersionRuntime(codex,{registerThread,wanted:()=>!this.closed&&[...this.devices.values()].some(s=>s.enabled),ownsTransport});}
+ constructor({codex,cwd,registerThread=()=>{},publish=()=>{},load=()=>null,save=()=>{},delay=2500,timeout=60000,maxCache=600,contract=null,now=Date.now,ownsTransport=false,loadOwnership,saveOwnership}){Object.assign(this,{codex,cwd,registerThread,publish,load,save,delay,timeout,maxCache});this.now=now;this.durableJobs=contract?.durableJobs===true;this.retryDelays=contract?.retryDelays||[];this.jobVersion=contract?.jobVersion||'quoted-anchors-v1';this.compatiblePlanVersions=new Set(contract?.compatiblePlanVersions||[]);this.upgradeCached=contract?.upgradeCached||((row)=>row);this.prepareBatch=contract?.prepareBatch;this.planVersion=contract?.version||IMMERSION_PLAN_VERSION;this.instructions=contract?.instructions||IMMERSION_INSTRUCTIONS;this.alignmentInstructions=contract?.alignmentInstructions??IMMERSION_ALIGNMENT_INSTRUCTIONS;this.validate=contract?.validate||validateImmersionPlan;this.derive=contract?.derive||deriveImmersionText;this.closed=false;this.devices=new Map();this.timer=null;this.busy=false;this.activeJobs=[];this.model=null;this.modelResolved=false;this.lastRun=0;this.runtime=new ImmersionRuntime(codex,{registerThread,wanted:()=>!this.closed&&[...this.devices.values()].some(s=>s.enabled),ownsTransport,loadOwnership,saveOwnership});}
 
  state(id){
   if(!this.devices.has(id)){
@@ -34,18 +35,18 @@ export class ImmersionWorker {
     const migrated=job.jobVersion!==this.jobVersion?{...job,jobVersion:this.jobVersion,attempts:0,nextAttemptAt:now,retryBlocked:false,lastError:null}:job;
     queue.set(job.id,{...migrated,priority:displayPriority(job),retryBlocked:migrated.retryBlocked===true||migrated.attempts>=this.retryDelays.length+1,attempts:Number.isSafeInteger(migrated.attempts)?Math.max(0,migrated.attempts):0,nextAttemptAt:Number.isFinite(migrated.nextAttemptAt)?migrated.nextAttemptAt:now});
    }
-   this.devices.set(id,{enabled:saved.enabled===true,density:immersionDensity(saved.density),queue,cache:new Map((saved.translations||[]).map(x=>this.upgradeCached(x)).filter(x=>x?.planVersion===this.planVersion).slice(-this.maxCache).map(x=>[x.id,x]))});
+   this.devices.set(id,{selection:saved.selection||null,enabled:saved.enabled===true,density:immersionDensity(saved.density),queue,cache:new Map((saved.translations||[]).map(x=>this.upgradeCached(x)).filter(x=>x?.planVersion===this.planVersion).slice(-this.maxCache).map(x=>[x.id,x]))});
   }
   return this.devices.get(id);
  }
- persist(id){const s=this.state(id);this.save(id,{enabled:s.enabled,density:s.density,translations:[...s.cache.values()],...(this.durableJobs?{jobs:[...s.queue.values()].map(job=>({...job,planVersion:this.planVersion}))}:{})});}
- setEnabled(id,enabled,density=null){const s=this.state(id);if(density!==null&&s.density!==immersionDensity(density)){s.density=immersionDensity(density);s.cache.clear();s.queue.clear();}s.enabled=enabled===true;if(!s.enabled)s.queue.clear();this.persist(id);if(![...this.devices.values()].some(s=>s.enabled)){clearTimeout(this.timer);this.timer=null;this.runtime.cancel();}this.schedule();return this.snapshot(id);}
+ persist(id){const s=this.state(id);this.save(id,{selection:s.selection,enabled:s.enabled,density:s.density,translations:[...s.cache.values()],...(this.durableJobs?{jobs:[...s.queue.values()].map(job=>({...job,planVersion:this.planVersion}))}:{})});}
+ setEnabled(id,enabled,density=null,selection=undefined){const s=this.state(id);if(selection!==undefined){const next=immersionSelection(selection);if(JSON.stringify(next)!==JSON.stringify(s.selection)){s.selection=next;for(const job of s.queue.values()){job.attempts=0;job.retryBlocked=false;job.nextAttemptAt=0;}if(this.activeJobs.some(x=>x.device===id))this.runtime.cancel();}}if(density!==null&&s.density!==immersionDensity(density)){s.density=immersionDensity(density);s.cache.clear();s.queue.clear();}s.enabled=enabled===true;if(!s.enabled)s.queue.clear();this.persist(id);if(![...this.devices.values()].some(s=>s.enabled)){clearTimeout(this.timer);this.timer=null;this.runtime.cancel();}this.schedule();return this.snapshot(id);}
  snapshot(id){
   const s=this.state(id),now=this.now();
   for(const [key,job]of s.queue)if(job.expiresAt<=now)s.queue.delete(key);
   this.schedule();
   const jobs=[...s.queue.values()].map(job=>({id:job.id,version:job.version,state:this.activeJobs.some(entry=>entry.device===id&&entry.source.version===job.version&&entry.source.density===job.density)?'running':job.retryBlocked?'unavailable':job.nextAttemptAt>now?'retryWaiting':'pending',attempts:job.attempts||0,retryAt:job.nextAttemptAt||0,reason:job.lastError||null}));
-  return {enabled:s.enabled,language:'it',density:s.density,planVersion:this.planVersion,translations:s.enabled?[...s.cache.values()]:[],...(this.durableJobs?{jobs,unavailable:jobs.some(job=>job.state==='unavailable')}: {})};
+  return {selection:s.selection,enabled:s.enabled,language:'it',density:s.density,planVersion:this.planVersion,translations:s.enabled?[...s.cache.values()]:[],...(this.durableJobs?{jobs,unavailable:jobs.some(job=>job.state==='unavailable')}: {})};
  }
  ownsThread(id){return this.runtime.owns(id);}
  submit(device,sources){const s=this.state(device);if(!s.enabled)return this.snapshot(device);if(!Array.isArray(sources)||sources.length>60)throw Object.assign(Error('Submit at most 60 visible texts.'),{status:400});for(const source of sources){if(typeof source.id!=='string'||source.id.length>200||typeof source.text!=='string'||!source.text.trim()||source.text.length>12000)continue;if(source.kind==='reasoningRaw'||source.kind==='toolPayload')continue;const version=digest(source.text);if(s.cache.get(source.id)?.version===version&&s.cache.get(source.id)?.planVersion===this.planVersion&&s.cache.get(source.id)?.density===s.density)continue;const reused=[...s.cache.values()].find(row=>row.version===version&&row.original===source.text&&row.planVersion===this.planVersion&&row.density===s.density);if(reused){s.queue.delete(source.id);s.cache.delete(source.id);s.cache.set(source.id,{...reused,id:source.id});while(s.cache.size>this.maxCache)s.cache.delete(s.cache.keys().next().value);this.persist(device);continue;}const existing=s.queue.get(source.id);if(this.durableJobs&&existing?.version===version&&existing.density===s.density&&existing.expiresAt>this.now())continue;const sibling=this.durableJobs?[...s.queue.values()].find(job=>job.version===version&&job.density===s.density&&job.expiresAt>this.now()):null;s.queue.delete(source.id);s.queue.set(source.id,{...(sibling||{attempts:0,nextAttemptAt:0,expiresAt:this.now()+15*60*1000}),jobVersion:this.jobVersion,id:source.id,version,text:source.text,kind:source.kind,density:s.density,priority:Math.max(sibling?.priority||0,this.durableJobs?displayPriority(source):/urgent|question/.test(source.kind||'')?1:0)});while(s.queue.size>120)s.queue.delete(s.queue.keys().next().value);}this.persist(device);this.schedule();return this.snapshot(device);}
@@ -57,14 +58,12 @@ export class ImmersionWorker {
   const wait=Math.max(urgent?100:this.delay,(urgent?2000:10000)-(now-this.lastRun),due-now);
   this.timer=setTimeout(()=>{this.timer=null;void this.flush();},wait);this.timer.unref?.();
  }
- async translate(batch){
-  this.lastRun=Date.now();await this.codex.connect();
-  const account=await this.codex.call('account/read',{refreshToken:false});
-  if(account.account?.type!=='chatgpt')throw Error('Italian immersion requires Codex signed in with ChatGPT. API-key usage is disabled.');
-  if(!this.modelResolved){const list=await this.codex.call('model/list',{});const available=list?.data||[];this.model=available.find(m=>m.model==='gpt-6-luna')?.model||available.find(m=>m.model?.endsWith('-luna'))?.model||available.find(m=>m.isDefault)?.model||null;this.modelResolved=true;}
+ async translate(batch,selection=null){
+  this.lastRun=this.now();
+  const provider=await immersionProvider(this.codex,selection);
   const prepared=this.prepareBatch?.(batch);
-  const result=await this.runtime.run({cwd:this.cwd,...(this.model?{model:this.model}:{}),ephemeral:true,sandbox:'read-only',approvalPolicy:'never',developerInstructions:this.instructions+"\n"+this.alignmentInstructions,config:{'features.multi_agent':false,'features.shell_tool':false,'features.unified_exec':false,'web_search':'disabled','project_doc_max_bytes':0,'model_reasoning_effort':'medium'}},
-   {input:[{type:'text',text:JSON.stringify(prepared?.input||{sources:batch})}],approvalPolicy:'never',sandboxPolicy:{type:'readOnly'},effort:'medium',outputSchema:prepared?.schema||{type:'object',additionalProperties:false,required:['translations'],properties:{translations:{type:'array',items:{type:'object',additionalProperties:false,required:['id','version','spans'],properties:{id:{type:'string'},version:{type:'string'},spans:{type:'array',items:{type:'object',additionalProperties:false,required:['source','occurrence','target','unit','note','targetSegments'],properties:{source:{type:'string'},occurrence:{type:'integer'},target:{type:'string'},unit:{type:'string'},note:{type:'string'},targetSegments:{type:'array',items:segmentSchema}}}}}}}}}},this.timeout);
+  const result=await this.runtime.run({cwd:this.cwd,modelProvider:provider.providerId,model:provider.model,allowProviderModelFallback:false,ephemeral:false,sandbox:'read-only',approvalPolicy:'never',developerInstructions:this.instructions+"\n"+this.alignmentInstructions,config:{'features.multi_agent':false,'features.shell_tool':false,'features.unified_exec':false,'web_search':'disabled','project_doc_max_bytes':0,'model_reasoning_effort':provider.effort}},
+   {input:[{type:'text',text:JSON.stringify(prepared?.input||{sources:batch})}],approvalPolicy:'never',sandboxPolicy:{type:'readOnly'},effort:provider.effort,outputSchema:prepared?.schema||{type:'object',additionalProperties:false,required:['translations'],properties:{translations:{type:'array',items:{type:'object',additionalProperties:false,required:['id','version','spans'],properties:{id:{type:'string'},version:{type:'string'},spans:{type:'array',items:{type:'object',additionalProperties:false,required:['source','occurrence','target','unit','note','targetSegments'],properties:{source:{type:'string'},occurrence:{type:'integer'},target:{type:'string'},unit:{type:'string'},note:{type:'string'},targetSegments:{type:'array',items:segmentSchema}}}}}}}}}},this.timeout);
   return prepared?prepared.decode(result):result;
  }
  async flush(){
@@ -73,7 +72,7 @@ export class ImmersionWorker {
   const now=this.now(),selected=[];let chars=0;
   const candidates=[...this.devices].flatMap(([device,s])=>s.enabled?(this.durableJobs?[...s.queue.values()].reverse():[...s.queue.values()]).filter(source=>!source.retryBlocked&&source.expiresAt>now&&(source.nextAttemptAt||0)<=now).map(source=>({device,source})):[]).sort((a,b)=>(b.source.priority||0)-(a.source.priority||0));
   const limit=(this.durableJobs?candidates[0]?.source.priority>=3:candidates[0]?.source.priority)?1:2;
-  for(const entry of candidates){if(selected.length>=limit)break;if(this.durableJobs&&selected.some(x=>x.device===entry.device&&x.source.version===entry.source.version&&x.source.density===entry.source.density))continue;if(chars+entry.source.text.length>(this.durableJobs?2400:16000)&&selected.length)continue;selected.push(entry);chars+=entry.source.text.length;}
+  for(const entry of candidates){if(selected.length>=limit)break;if(selected.length&&JSON.stringify(this.state(entry.device).selection)!==JSON.stringify(this.state(selected[0].device).selection))continue;if(this.durableJobs&&selected.some(x=>x.device===entry.device&&x.source.version===entry.source.version&&x.source.density===entry.source.density))continue;if(chars+entry.source.text.length>(this.durableJobs?2400:16000)&&selected.length)continue;selected.push(entry);chars+=entry.source.text.length;}
   if(!selected.length){this.busy=false;this.schedule();return;}
   // Checkpoint attempts before inference. A restart resumes display-only work,
   // never an action, and cannot reset the bounded retry budget.
@@ -81,7 +80,7 @@ export class ImmersionWorker {
   this.activeJobs=selected;
   const batch=selected.map(({source},i)=>({...source,id:String(i)}));
   try{
-   const result=await this.translate(batch);
+   const result=await this.translate(batch,this.state(selected[0].device).selection);
    for(const rawRow of result.translations||[]){
     if(!rawRow||typeof rawRow!=='object')continue;
     const index=Number(rawRow.id),entry=selected[index];

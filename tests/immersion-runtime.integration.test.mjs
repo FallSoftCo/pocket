@@ -9,7 +9,7 @@ async function fixture(t,{lateStart=0,lateTurn=0,holdUnload=false,loseStartup=fa
  wsServer.on('connection',ws=>{lastSocket=ws;ws.on('message',async raw=>{const m=JSON.parse(raw);if(m.id===undefined)return;calls.push(m);let result={};
  if(m.method==='config/read')result={config:{mcp_servers:{irrelevant:{url:'https://not-used.invalid',secret:'not copied'}}}};
  if(m.method==='thread/start'){await delay(lateStart);const id='translator-'+(++n);loaded.add(id);if(loseStartup){ws.close();return;}result={thread:{id}};}
- if(m.method==='thread/unsubscribe'){if(!holdUnload)loaded.delete(m.params.threadId);result={status:'unsubscribed'};}
+ if(m.method==='thread/archive'){if(!holdUnload)loaded.delete(m.params.threadId);result={status:'unsubscribed'};}
  if(m.method==='thread/loaded/list')result={data:[...loaded]};
  if(m.method==='turn/start'){await delay(lateTurn);result={turn:{id:'turn-'+m.id}};}
  if(ws.readyState===1)ws.send(JSON.stringify({id:m.id,result}));
@@ -25,6 +25,7 @@ test('late original startup remains owned; disabling cannot submit or create a r
  await delay(60);assert.equal(f.calls.filter(x=>x.method==='thread/start').length,1);
  wanted=false;f.runtime.cancel();await rejected;await f.runtime.release();
  assert.equal(f.calls.filter(x=>x.method==='turn/start').length,0);assert.equal(f.loaded.size,0);assert.equal(f.codex.pending.size,0);
+ assert(f.calls.some(x=>x.method==='thread/delete'));
  const params=f.calls.find(x=>x.method==='thread/start').params;
  assert.deepEqual(params.config.mcp_servers,{irrelevant:{enabled:false}});assert.equal(params.config.thread_unload_delay_secs,0);assert.equal(params.config['apps._default.enabled'],false);
 });
@@ -42,12 +43,12 @@ test('late turn acknowledgement receives one exact interrupt and no replacement 
 test('rotation releases native residency before allocating another thread',async t=>{
  const f=await fixture(t);const first=await f.runtime.ensure({cwd:'/owned',ephemeral:true});f.runtime.turns=20;
  const second=await f.runtime.ensure({cwd:'/owned',ephemeral:true});assert.notEqual(first,second);assert.deepEqual([...f.loaded],[second]);
- const unsub=f.calls.findIndex(x=>x.method==='thread/unsubscribe'),starts=f.calls.map((x,i)=>x.method==='thread/start'?i:-1).filter(x=>x>=0);assert.ok(unsub>starts[0]&&unsub<starts[1]);await f.runtime.release();assert.equal(f.loaded.size,0);
+ const unsub=f.calls.findIndex(x=>x.method==='thread/archive'),starts=f.calls.map((x,i)=>x.method==='thread/start'?i:-1).filter(x=>x>=0);assert.ok(unsub>starts[0]&&unsub<starts[1]);await f.runtime.release();assert.equal(f.loaded.size,0);
 });
-test('acknowledged unsubscribe with delayed unload cannot be reused or replaced',async t=>{
+test('acknowledged archive with delayed unload cannot be reused or replaced',async t=>{
  const f=await fixture(t,{holdUnload:true});const id=await f.runtime.ensure({cwd:'/owned',ephemeral:true});
- await assert.rejects(f.runtime.release(),/still unloading/);
- await assert.rejects(f.runtime.run({cwd:'/owned'},{input:[]},30),/still unloading/);
+ await assert.rejects(f.runtime.release(),/cleanup residency/);
+ await assert.rejects(f.runtime.run({cwd:'/owned'},{input:[]},30),/cleanup residency/);
  assert.equal(f.calls.filter(x=>x.method==='thread/start').length,1);
  assert.equal(f.calls.filter(x=>x.method==='turn/start').length,0);
  f.loaded.delete(id);await f.runtime.release();
@@ -58,4 +59,16 @@ test('lost startup reply does not authorize another native thread',async t=>{
  await assert.rejects(f.runtime.ensure({cwd:'/owned',ephemeral:true}));
  await assert.rejects(f.runtime.ensure({cwd:'/owned',ephemeral:true}),/startup is unresolved/);
  assert.equal(f.calls.filter(x=>x.method==='thread/start').length,1);
+});
+
+test('restart cleans the exact durable scratch identity before admitting new work',async t=>{
+ const f=await fixture(t),saved=[];const old=await f.runtime.ensure({cwd:'/owned'});
+ f.runtime.codex.off('event',f.runtime.onEvent);f.runtime.codex.off('disconnected',f.runtime.onDisconnect);
+ const recovered=new ImmersionRuntime(f.codex,{loadOwnership:()=>({threadId:old,phase:'owned'}),saveOwnership:s=>saved.push(s)});
+ t.after(()=>recovered.close());
+ const id=await recovered.ensure({cwd:'/owned'});
+ assert.notEqual(id,old);assert.deepEqual([...f.loaded],[id]);
+ assert(f.calls.some(x=>x.method==='thread/delete'&&x.params.threadId===old));assert(saved.includes(null));
+ // The old object represents a dead process, not a second cleanup owner.
+ f.runtime.thread=null;await recovered.release();
 });

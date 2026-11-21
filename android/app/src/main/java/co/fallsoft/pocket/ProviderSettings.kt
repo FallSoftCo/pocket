@@ -62,13 +62,13 @@ import org.json.JSONObject
     }
 }
 
-@Composable internal fun ProviderChoice(value:JSONObject?,onChange:(JSONObject?)->Unit,enabled:Boolean,onManage:()->Unit,revision:Int=0,explicitModel:Boolean=false){
+@Composable internal fun ProviderChoice(value:JSONObject?,onChange:(JSONObject?)->Unit,enabled:Boolean,onManage:()->Unit,revision:Int=0,explicitModel:Boolean=false,providerPath:String="/api/model-providers"){
     val destination=remember(Pocket.environmentId){Pocket.captureEnvironment()}
     var view by remember(destination){mutableStateOf<JSONObject?>(null)}
     var problem by remember(destination){mutableStateOf("")}
     var menu by remember{mutableStateOf(false)}
     LaunchedEffect(destination,revision){try{
-        val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/model-providers")
+        val result=Pocket.apiEnvironment(requireNotNull(destination),providerPath)
         if(Pocket.captureEnvironment()?.matches(destination)==true){view=result;if(value==null&&result.s("state")=="available")onChange(JSONObject().put("providerId",result.s("defaultProviderId")))}
     }catch(e:CancellationException){throw e}catch(e:Exception){problem=e.message?:"Provider list unavailable"}}
     val providers=view?.optJSONArray("providers")?.objects().orEmpty()
@@ -81,8 +81,39 @@ import org.json.JSONObject
     }
     if(provider.isNotBlank()&&(explicitModel||provider!="openai")){
         OutlinedTextField(value?.s("model").orEmpty(),{onChange(JSONObject(value.toString()).put("model",it))},label={BilingualLabel("Provider model ID")},enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth())
-        WorkflowText("Uses this provider’s API billing. Model availability is determined by the provider.",fontSize=12.sp,color=Muted)
+        WorkflowText(if(provider=="openai")"Uses this environment’s Codex authentication. Model availability is determined by the provider." else "Uses this provider’s API billing. Model availability is determined by the provider.",fontSize=12.sp,color=Muted)
     }
     if(problem.isNotBlank())WorkflowText(problem,fontSize=12.sp,color=Coral)
     TextButton(onManage,enabled=enabled){BilingualLabel("Manage providers")}
+}
+
+/** Uses native provider credentials; the display cache and conversations remain intact. */
+@Composable internal fun ImmersionProviderControl(){
+    var destination by remember{mutableStateOf(Pocket.captureEnvironment())}
+    val scope=rememberCoroutineScope()
+    var open by remember{mutableStateOf(false)}
+    var manage by remember{mutableStateOf(false)}
+    var selection by remember{mutableStateOf<JSONObject?>(null)}
+    var loaded by remember{mutableStateOf(false)}
+    var problem by remember{mutableStateOf("")}
+    var saving by remember{mutableStateOf(false)}
+    LaunchedEffect(Pocket.environmentId){if(Pocket.captureEnvironment()?.matches(destination)!=true)open=false}
+    OutlinedButton({destination=Pocket.captureEnvironment();loaded=false;problem="";open=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Immersion provider & model")}
+    if(manage)ProviderSettingsDialog{manage=false}
+    if(open){
+        LaunchedEffect(destination){try{
+            val state=Pocket.apiEnvironment(requireNotNull(destination),"/api/immersion/v2")
+            if(Pocket.captureEnvironment()?.matches(destination)==true){selection=state.optJSONObject("selection");loaded=true}
+        }catch(e:CancellationException){throw e}catch(e:Exception){problem=e.message?:"Immersion settings unavailable"}}
+        SettingsDrawer(true,{if(!saving)open=false},"Immersion model"){
+            WorkflowText("Cached phrases stay available. New translations use this provider’s billing; no automatic fallback.",color=Muted,fontSize=13.sp)
+            if(loaded)ProviderChoice(selection,{selection=it},!saving,{manage=true},explicitModel=true,providerPath="/api/immersion/v2?settings=1")
+            if(problem.isNotBlank())WorkflowText(problem,color=Coral)
+            Button({saving=true;scope.launch{try{
+                check(Pocket.captureEnvironment()?.matches(destination)==true){"Environment changed"}
+                Pocket.apiEnvironment(requireNotNull(destination),"/api/immersion/v2",JSONObject().put("enabled",PocketImmersion.enabled).put("density",PocketImmersion.density).put("selection",selection?:JSONObject.NULL))
+                open=false
+            }catch(e:CancellationException){throw e}catch(e:Exception){problem=e.message?:"Provider setting was not saved"}finally{saving=false}}},enabled=loaded&&!saving,modifier=Modifier.fillMaxWidth()){BilingualLabel("Save immersion model")}
+        }
+    }
 }

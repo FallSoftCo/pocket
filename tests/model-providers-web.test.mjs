@@ -35,3 +35,15 @@ test('a lost provider-save reply cannot be repeatedly submitted by the same form
   await save.onclick();await save.onclick();assert.equal(writes,1);assert(save.disabled);assert.equal(panel.dialog.querySelector('input[type=password]').value,'');assert.match(panel.dialog.textContent,/Reload to inspect/);
  }finally{global.document=previous;dom.window.close();}
 });
+
+
+test('immersion selector uses its settings endpoint and explicit model without saving credentials or starting work',async()=>{
+ const dom=new JSDOM('<body/>'),previous=global.document;global.document=dom.window.document;
+ try{
+  const calls=[],holder=document.createElement('div');
+  const choice=new NewTaskProvider({holder,explicitModel:true,providerPath:'/api/immersion/v2?settings=1',manage:()=>{},api:async(path,body)=>{calls.push({path,body});return {state:'available',defaultProviderId:'openai',providers:[{id:'openai',name:'OpenAI'},{id:'deepseek',name:'DeepSeek',baseUrl:'https://api.deepseek.com'}]};}});
+  await choice.load();choice.select.value='deepseek';choice.changed();
+  assert.equal(choice.value().model,'deepseek-flash');assert.equal(choice.value().providerId,'deepseek');
+  assert.deepEqual(calls,[{path:'/api/immersion/v2?settings=1',body:undefined}]);
+ }finally{global.document=previous;dom.window.close();}
+});

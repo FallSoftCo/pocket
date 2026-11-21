@@ -794,3 +794,23 @@ $('download-ux').onclick=()=>{
  const link=document.createElement('a');link.href=url;link.download='nextcomp-ux-report.json';link.click();
  requestAnimationFrame(()=>URL.revokeObjectURL(url));
 };
+
+// Provider selection is separate from enablement: saving cannot turn immersion on.
+let immersionSettingsScope=null;
+const immersionProviderChoice=new NewTaskProvider({holder:$('immersion-provider-choice'),api:(path,body)=>api(path,body,{scope:immersionSettingsScope}),manage:()=>providerPanel.open(),explicitModel:true,prefix:'immersion-provider',providerPath:'/api/immersion/v2?settings=1'});
+$('immersion-provider-settings').ontoggle=run(async()=>{
+ if(!$('immersion-provider-settings').open)return;
+ const captured=scope;immersionSettingsScope=captured;
+ await immersionProviderChoice.load();
+ if(scope!==captured)return;
+ const settings=await api('/api/immersion/v2',undefined,{scope:captured});
+ if(scope!==captured)return;
+ if(settings.selection){immersionProviderChoice.select.value=settings.selection.providerId;immersionProviderChoice.changed();immersionProviderChoice.model.input.value=settings.selection.model||'';}
+ $('immersion-provider-status').textContent='Cached phrases are retained. New translations use this provider’s billing. No automatic fallback.';
+});
+$('save-immersion-provider').onclick=run(async()=>{
+ if(scope!==immersionSettingsScope)throw Error('Reopen immersion settings in the selected environment.');
+ const button=$('save-immersion-provider');button.disabled=true;
+ try{const snapshot=await api('/api/immersion/v2',{enabled:immersion.enabled,density:'strong',selection:immersionProviderChoice.value()},{scope:immersionSettingsScope});if(scope!==immersionSettingsScope)return;immersion.accept(snapshot);$('immersion-provider-status').textContent='Immersion model saved.';}
+ finally{button.disabled=false;}
+});

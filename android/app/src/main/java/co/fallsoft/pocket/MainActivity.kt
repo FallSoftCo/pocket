@@ -504,6 +504,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         TaskPermissionsControl()
         CoordinatorReportingControl()
         Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.enabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,onCheckedChange=null)}
+        ImmersionProviderControl()
         if(PocketImmersion.enabled)ImmersionDensityControl()
         if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.motionEnabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setMotionEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Automatic language cycling",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.motionEnabled,onCheckedChange=null)}
         if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.supportEnabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setSupportEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("English support",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.supportEnabled,onCheckedChange=null)}

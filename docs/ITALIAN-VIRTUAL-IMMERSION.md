@@ -1,3 +1,29 @@
+## Provider-independent immersion repair — candidate199
+
+Immersion provider/model selection is saved per paired device and environment.
+Credentials stay in Codex; NextComp stores only the provider ID, model and effort.
+With no explicit choice, the worker follows the native configured provider; the
+OpenAI default may choose the advertised small teacher model. Explicit external
+models are never replaced by OpenAI. Native returned provider/model must match
+before any translation input is submitted. This supports configured Codex
+Responses-compatible providers, not arbitrary incompatible API protocols.
+
+Each bounded batch uses a separate tool-disabled scratch thread in the shared
+native runtime. There is no accumulation of previous translation context. After
+completion/cancellation it is archived to unload it, then deleted through native
+APIs. Exact cleanup ownership is retained across gateway restart; cleanup must
+complete before a replacement is admitted. No customer thread enters this path.
+Disabled mode cancels owned translation work and admits no new inference.
+Validated phrase caches survive provider changes. Unknown startup blocks further
+allocation; an uncertain model request is never permission to spawn a replacement.
+
+Real synthetic output passed the same complete grammatical-plan validator on
+DeepSeek and OpenAI, then unloaded/deleted its scratch thread. Mac0.163 and
+workstation0.171 archive/delete paths were exercised without production daemon
+restarts. Provider quality, availability and billing remain provider-specific.
+Publication and Android native UI evidence are recorded separately; this section
+does not claim the candidate is installed on the phone.
+
 ## Required-unit generation repair (2026-10-18 candidate)
 
 A real 508-character response exposed incomplete source coverage and invalid lexical alignment in the teacher-generated anchors. The server now owns bounded source units and requires every unit in the structured output. Protected material and Markdown delimiters remain canonical. The teacher supplies fluent Italian and complete contextual English word meanings; optional grammatical feature/relationship annotations are not requested on this path. Existing strict coverage, source-version and lexical-alignment validation still applies. Visible message bodies precede labels/previews in the bounded single-worker queue. This is wire-compatible with Android132 and retains cached paired forms and durable attempt budgets.

@@ -1,21 +1,23 @@
 // One translation worker owns one native thread and its original RPC outcomes.
 // UI timeouts must never turn into replacement threads or duplicate model turns.
 export class ImmersionRuntime {
-  constructor(codex,{registerThread=()=>{},wanted=()=>true,ownsTransport=false}={}) {
-    Object.assign(this,{codex,registerThread,wanted,ownsTransport});
-    this.thread=null;this.starting=null;this.releasing=null;this.active=null;
-    this.retireRequested=false;this.startupUncertain=false;this.turns=0;this.stopped=false;this.generation=0;
+  constructor(codex,{registerThread=()=>{},wanted=()=>true,ownsTransport=false,loadOwnership=()=>null,saveOwnership=()=>{}}={}) {
+    Object.assign(this,{codex,registerThread,wanted,ownsTransport,saveOwnership});
+    const retained=loadOwnership();this.thread=retained?.threadId||null;this.cleanupPhase=retained?.phase||null;this.starting=null;this.releasing=null;this.active=null;
+    this.retireRequested=!!this.thread;this.startupUncertain=false;this.turns=0;this.stopped=false;this.generation=0;
     this.onEvent=e=>this.observe(e);
     this.onDisconnect=()=>{
       // A lost transport is not a terminal turn receipt. Keep its identity;
       // subsequent work cannot silently replace the uncertain model operation.
-      if(this.active)this.active.reject(Error('Translation connection lost; original work is unresolved.'));
+      if(this.active){clearTimeout(this.active.timer);this.active.reject(Error('Translation connection lost; cleanup precedes further work.'));this.active=null;this.retireRequested=true;}
     };
     codex.on('event',this.onEvent);codex.on('disconnected',this.onDisconnect);
+    if(this.thread)queueMicrotask(()=>{void this.release().catch(()=>{});});
   }
   owns(id){return !!id&&id===this.thread;}
   call(method,params){return this.codex.callWorker?this.codex.callWorker(method,params):this.codex.call(method,params);}
   async ensure(params){
+    await this.codex.connect();
     if(this.releasing)await this.releasing;
     if(this.startupUncertain)throw Error('Original translation startup is unresolved.');
     if(this.active)throw Error('The previous translation is still settling.');
@@ -32,15 +34,17 @@ export class ImmersionRuntime {
       config.mcp_servers=Object.fromEntries(Object.keys(view.config.mcp_servers||{}).map(name=>[name,{enabled:false}]));
       if(!this.wanted()||this.stopped)throw Error('Immersion is disabled.');
       let response;
-      try{response=await this.call('thread/start',{...params,config});}
+      try{response=await this.call('thread/start',{...params,ephemeral:false,config});}
       catch(error){if(!error.rpc)this.startupUncertain=true;throw error;}
       const {thread}=response;
       if(!thread?.id)throw Error('Translation startup returned no identity.');
-      this.thread=thread.id;this.turns=0;this.registerThread(thread.id);
+      this.thread=thread.id;this.turns=0;this.retireRequested=true;this.cleanupPhase='owned';this.saveOwnership({threadId:thread.id,phase:'owned'});this.registerThread(thread.id);
+      if(params.modelProvider&&(response.modelProvider!==params.modelProvider||response.model!==params.model))throw Error('Native immersion provider selection did not match.');
+      this.retireRequested=false;
       return thread.id;
     })();
     this.starting=work;
-    try{return await work;}finally{if(this.starting===work)this.starting=null;}
+    try{return await work;}finally{if(this.starting===work)this.starting=null;if(this.thread&&this.retireRequested)void this.release().catch(()=>{});}
   }
   async run(params,turn,timeout){
     const generation=this.generation;
@@ -69,12 +73,15 @@ export class ImmersionRuntime {
   async interrupt(a){
     if(this.active!==a||!a.turnId||a.interruptSent)return;
     a.interruptSent=true;
-    try{await this.call('turn/interrupt',{threadId:a.threadId,turnId:a.turnId});}
+    try{
+      await this.call('turn/interrupt',{threadId:a.threadId,turnId:a.turnId});
+      if(this.active===a&&a.cancelled){clearTimeout(a.timer);this.active=null;void this.release().catch(()=>{});}
+    }
     catch{ /* Never repeat an uncertain interrupt or start replacement work. */ }
   }
   observe(event){
     const p=event.params||{};if(!this.owns(p.threadId))return false;
-    if(event.method==='thread/closed'){if(this.thread===p.threadId){this.thread=null;this.retireRequested=false;}return true;}
+    if(event.method==='thread/closed')return true; // Ownership ends only after native deletion is acknowledged.
     if(event.id!==undefined){try{this.codex.reject(event.id,'Translation has no tools.');}catch{}return true;}
     const a=this.active;if(!a||a.threadId!==p.threadId)return true;
     if(event.method==='turn/started'&&!a.turnId){a.turnId=p.turn?.id;if(a.cancelled)void this.interrupt(a);}
@@ -87,7 +94,7 @@ export class ImmersionRuntime {
       if(a.cancelled||p.turn?.status==='failed'||p.turn?.status==='interrupted')a.reject(Error('Translation did not complete'));
       else try{a.resolve(JSON.parse(a.text.replace(/^```(?:json)?\s*|\s*```$/g,'')));}catch{a.reject(Error('Invalid translation response'));}
       if(this.stopped)void this.close().catch(()=>{});
-      else if(a.cancelled||!this.wanted())void this.release().catch(()=>{});
+      else void this.release().catch(()=>{}); // Every batch is stateless: never accumulate prior translated prose.
     }
     return true;
   }
@@ -98,16 +105,34 @@ export class ImmersionRuntime {
       if(this.starting)try{await this.starting;}catch{}
       if(this.active)return; // Cancellation awaits its original terminal event.
       const id=this.thread;if(!id)return;
-      const result=await this.call('thread/unsubscribe',{threadId:id});
-      if(!['unsubscribed','notLoaded','notSubscribed'].includes(result?.status))throw Error('Translation cleanup was not acknowledged.');
-      // Confirm native residency, not merely removal from our JavaScript map.
-      for(let i=0;i<10;i++){
-        const page=await this.codex.call('thread/loaded/list',{});
-        if(page.nextCursor||!Array.isArray(page.data))throw Error('Translation residency is unavailable.');
-        if(!page.data.includes(id)){if(this.thread===id){this.thread=null;this.retireRequested=false;}return;}
-        await new Promise(r=>setTimeout(r,100));
+      await this.codex.connect();
+      // Only exact internally owned scratch threads enter this method. Archive
+      // stops/unloads them on both native 0.163 and 0.171. Delete removes the
+      // scratch transcript; accepted display plans live in the bounded cache.
+      if(this.cleanupPhase!=='archived'){
+        try{await this.call('thread/archive',{threadId:id});}
+        catch(error){if(!error.rpc)throw error;/* An interrupted cleanup may already have archived this exact scratch thread. */}
+        this.cleanupPhase='archived';this.saveOwnership({threadId:id,phase:'archived'});
       }
-      throw Error('Translation thread is still unloading.');
+      try{await this.call('thread/delete',{threadId:id});}
+      catch(error){
+        if(!error.rpc)throw error;
+        // A lost delete acknowledgement can be reconciled without replaying any
+        // inference. Missing history alone is insufficient: residency is checked below.
+        let missing=false;
+        try{await this.codex.call('thread/read',{threadId:id,includeTurns:false});}
+        catch(readError){missing=!!readError.rpc&&/(?:thread not found|no rollout found)/i.test(readError.message);}
+        if(!missing)throw error;
+      }
+      let cursor=null,checked=false;
+      for(let i=0;i<50;i++){
+        const page=await this.codex.call('thread/loaded/list',{limit:100,...(cursor?{cursor}:{})});
+        if(!Array.isArray(page.data)||page.data.includes(id))throw Error('Translation cleanup residency is unavailable.');
+        if(!page.nextCursor){checked=true;break;}if(page.nextCursor===cursor)break;cursor=page.nextCursor;
+      }
+      if(!checked)throw Error('Translation cleanup residency is unavailable.');
+      if(this.thread===id){this.thread=null;this.cleanupPhase=null;this.retireRequested=false;this.saveOwnership(null);}
+
     })();
     this.releasing=work;
     void work.finally(()=>{if(this.releasing===work)this.releasing=null;}).catch(()=>{});

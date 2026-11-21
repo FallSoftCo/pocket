@@ -96,7 +96,7 @@ export class Codex extends EventEmitter {
   // A bounded owned background worker waits for the ORIGINAL lifecycle outcome.
   // Its display deadline is not permission to forget a successful late start.
   callWorker(method,params){
-    if(!['thread/start','thread/unsubscribe','turn/start','turn/interrupt'].includes(method)||[...this.pending.values()].filter(p=>p.operation).length>=4)return Promise.reject(Error('Worker lifecycle capacity unavailable.'));
+    if(!['thread/start','thread/unsubscribe','thread/archive','thread/delete','turn/start','turn/interrupt'].includes(method)||[...this.pending.values()].filter(p=>p.operation).length>=4)return Promise.reject(Error('Worker lifecycle capacity unavailable.'));
     return this.callPending(method,params,()=>{},true);
   }
   // Keep observing the original mutation after the UI deadline. A late native

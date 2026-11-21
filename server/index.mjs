@@ -44,6 +44,7 @@ import {teamNotificationFields} from './losangelex-attention.mjs';
 import {computerUseStatus} from './computer-use.mjs';
 import {NotificationTitles} from './notification-titles.mjs';
 import {NotificationReads} from './notification-reads.mjs';
+import {immersionProvider,immersionProviderChoices} from './immersion-provider.mjs';
 import {ImmersionWorker} from './immersion-worker.mjs';
 import {transgrammaticContract} from './immersion-transgrammatic.mjs';
 import {QuestionActions} from './question-actions.mjs';
@@ -160,12 +161,18 @@ if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioComma
 const nativeAudioWorkspace=resolve(dir,'native-audio-workspace');
 mkdirSync(nativeAudioWorkspace,{recursive:true,mode:0o700});
 const nativeVoiceCodex=new Codex(undefined,{command:audioCommand,processCwd:nativeAudioWorkspace});
-const immersion=new ImmersionWorker({codex:new Codex(),ownsTransport:true,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
+// Only exact scratch-thread identities are retained for interrupted cleanup.
+db.exec('CREATE TABLE IF NOT EXISTS immersion_runtime_ownership(worker TEXT PRIMARY KEY,state TEXT NOT NULL)');
+const immersionOwnership=worker=>({
+ loadOwnership:()=>{const row=db.prepare('SELECT state FROM immersion_runtime_ownership WHERE worker=?').get(worker);return row?JSON.parse(row.state):null;},
+ saveOwnership:state=>{if(state)db.prepare('INSERT INTO immersion_runtime_ownership VALUES(?,?) ON CONFLICT(worker) DO UPDATE SET state=excluded.state').run(worker,JSON.stringify(state));else db.prepare('DELETE FROM immersion_runtime_ownership WHERE worker=?').run(worker);}
+});
+const immersion=new ImmersionWorker({...immersionOwnership('legacy'),codex:new Codex(),ownsTransport:true,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
 // Existing devices retain their endpoint/cache. Each worker owns a bounded
 // connection to the shared authenticated daemon; no separate model process.
 db.exec('CREATE TABLE IF NOT EXISTS immersion_transgrammatic_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
 const transgrammaticImmersion=new ImmersionWorker({
- codex:new Codex(),ownsTransport:true,cwd:immersionCwd,contract:transgrammaticContract,
+ ...immersionOwnership('transgrammatic'),codex:new Codex(),ownsTransport:true,cwd:immersionCwd,contract:transgrammaticContract,
  registerThread:id=>internalSessions.register(id,'immersion'),
  load:id=>{const row=db.prepare('SELECT state FROM immersion_transgrammatic_profiles WHERE device_id=?').get(id);if(row)return JSON.parse(row.state);const old=immersion.snapshot(id);return {enabled:old.enabled,density:old.density,translations:[]};},
  save:(id,state)=>db.prepare('INSERT INTO immersion_transgrammatic_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),
@@ -1020,10 +1027,10 @@ app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActio
 app.post('/api/notifications/:id/presented',route(async(req,res)=>res.json(sessionCatchup.presentedNotification(req.device.id,req.params.id,requireId(req.body.threadId)))));
 app.post('/api/notifications/:id/skip',route(async(req,res)=>res.json(questionActions.skipNotification(req.params.id))));
 app.get('/api/immersion',(req,res)=>res.json(immersion.snapshot(req.device.id)));
-app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled,req.body.density))));
+app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled,req.body.density,req.body.selection))));
 app.post('/api/immersion/translate',route(async(req,res)=>res.json(immersion.submit(req.device.id,req.body.sources))));
-app.get('/api/immersion/v2',(req,res)=>res.json(transgrammaticImmersion.snapshot(req.device.id)));
-app.post('/api/immersion/v2',route(async(req,res)=>{immersion.setEnabled(req.device.id,false);res.json(transgrammaticImmersion.setEnabled(req.device.id,req.body.enabled,req.body.density));}));
+app.get('/api/immersion/v2',route(async(req,res)=>res.json({...transgrammaticImmersion.snapshot(req.device.id),...(req.query.settings==='1'?await immersionProviderChoices(codex):{})})));
+app.post('/api/immersion/v2',route(async(req,res)=>{if(req.body.selection)await immersionProvider(codex,req.body.selection);immersion.setEnabled(req.device.id,false);res.json(transgrammaticImmersion.setEnabled(req.device.id,req.body.enabled,req.body.density,req.body.selection));}));
 app.post('/api/immersion/v2/translate',route(async(req,res)=>res.json(transgrammaticImmersion.submit(req.device.id,req.body.sources))));
 
 app.post('/api/threads/:id/notifications/read',route(async(req,res)=>res.json(notificationReads.ack(req.device.id,requireId(req.params.id),req.body.throughId))));
