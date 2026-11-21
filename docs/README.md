@@ -1,5 +1,7 @@
 # NextComp documentation
 
+[198 history retention update](qualification/ack-history-reliability-20261121.json) is published on both Android update channels. Returning to the same conversation retains its visible messages during refresh. All23 required native journeys and exact optimized APK review passed; phone installation remains unverified. Intermittent acknowledgement latency is still unresolved and is not claimed fixed by this release.
+
 [197 session preview repair](qualification/session-preview-overflow197.json) is published on both Android update channels and live on web: long errors and bilingual previews stay inside their cards, including enlarged text. Reload web or install the Android update; handset installation remains unverified.
 
 NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. NextComp’s room, LAX and Hollywood entry points were retired on 2026-11-07. Their documentation and original evidence remain historical; they do not describe selectable NextComp backends. This retirement does not establish that separate native runtimes or services are shut down; their lifecycle is outside this release. See [the Codex-only transition](CODEX-ONLY.md).

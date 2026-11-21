@@ -2,7 +2,7 @@
   "date": "2026-11-21",
   "androidVersionCode": 198,
   "androidVersionName": "0.5.0-alpha.180",
-  "state": "backend-live-latency-unresolved-android-unpublished",
+  "state": "android198-published-both-channels-latency-unresolved",
   "source": {
     "android": "3848fb03",
     "backend": "93a104574a930103dc6d4f79ff06bcc26800acf8",
@@ -34,7 +34,8 @@
     "retainedFailures": [
       "Original direct-send handoff HTTP test failed before the drain correction and passed unchanged afterward.",
       "Owned emulator first launch lacked KVM access after reboot; no phone or other emulator changed. A transient owned service supplied the existing KVM supplementary group.",
-      "First reconnect visibility assertion ran with the decision drawer still open; state retention had passed. Test now explicitly closes the drawer and verifies the transcript before the outage. The revised native journey has not passed yet."
+      "First reconnect visibility assertion ran with decision drawer open. Corrected precondition checks visible transcript before outage; unchanged retention assertions now pass.",
+      "r04 host runner terminated with SIGTERM before settings completion; failure retained. Only three exact-hash completed receipts reused; remaining twenty passed under a bounded durable service in r05."
     ],
     "liveWorkstationReadMs": [
       69,
@@ -57,7 +58,7 @@
     },
     "realUserSendAfterBackendRepairMs": 131847,
     "overallLatencyRepairProven": false,
-    "androidNativeCurrentCandidatePassed": false
+    "androidNativeCurrentCandidatePassed": true
   },
   "limits": [
     "These are bounded local live read measurements, not handset round-trip timings or proof that upstream native stalls cannot recur.",
@@ -65,7 +66,7 @@
     "Phone SSH confirmed installed197; physical ADB unavailable, so handset transport logs and touch verification remain unavailable.",
     "Wi-Fi roaming is not established as the cause of the local RPC failures.",
     "Late native reply observation survives an ordinary request deadline, not process or transport loss; those outcomes remain unknown and are not blindly retried.",
-    "Android198 is not published until current-source native and exact optimized APK checks complete."
+    "Android198 publication verified through both authenticated update APIs; handset installation is not verified. New381c no-transcript-send backend candidate remains undeployed."
   ],
   "environmentHealth": {
     "availableMemoryGiB": 34,
@@ -79,5 +80,33 @@
     "signedArtifactsAndSourcePreserved": true,
     "observationScope": "Earlier active build snapshot; own build completed and owned emulator subsequently stopped for the historical audit. Unrelated Vipi workloads preserved."
   },
-  "historicalAudit": "send-history-regression-audit-20261121.json"
+  "historicalAudit": "send-history-regression-audit-20261121.json",
+  "delivery": {
+    "publishedAt": "2026-11-21T15:12:31.595948+00:00",
+    "channels": [
+      "system76",
+      "macbook-pro"
+    ],
+    "versionCode": 198,
+    "versionName": "0.5.0-alpha.180",
+    "phoneCompatibleApkSha256": "b7bc630a45a4659e79a6073d79a04cdd7a15833422bb23e43c869e936e9b2cd3",
+    "publicApkSha256": "b78abde8bac5beef81191cba158cc1f38705481df027775bb8cd0d614c618d8f",
+    "productionSourceSha": "3b213c0a10afb2eae04e8dbb07a0277ef9751064b7e499072fc8147b3e2f498d",
+    "qualificationInputSha": "67dc06a5bed0f843df4f2b52ffb2fc01212c404185fc5777c522a6241963450f",
+    "nativeJourneys": 23,
+    "optimizedNativeAndVisualReview": "passed; synthetic fixture/software emulator, not handset proof",
+    "announcement": {
+      "notificationId": 3134,
+      "channels": [
+        "system76"
+      ],
+      "state": "accepted_by_fcm",
+      "attempts": 1
+    },
+    "phoneInstallVerified": false,
+    "backendRestartedForPublication": false,
+    "ownEmulatorStopped": true,
+    "originalQaPreferencesRestored": true,
+    "privateReceiptDirectory": "ack-history-20261121"
+  }
 }
