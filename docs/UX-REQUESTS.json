@@ -4184,7 +4184,7 @@
   "immersion_provider_complete_20261121": {
     "request": "Repair immersion fully, including native cleanup on Mac, and support configured model providers including existing DeepSeek. Preserve disabled setting until user enables.",
     "implementation": "Provider/model choice per device and environment, native credential ownership, explicit provider verification without fallback, one stateless scratch thread per batch, archive+delete with durable cleanup ownership, cached validated plans preserved.",
-    "qualification": "45 focused tests; actual DeepSeek 3277ms and OpenAI5037ms complete grammatical plans with zero owned threads after cleanup. Mac0.163 archive/delete unloaded in isolated two-cycle check. Android/web UI qualification pending.",
-    "status": "candidate"
+    "qualification": "45 focused checks; actual short DeepSeek/OpenAI plans validated; longer DeepSeek plans showed latency and one validation failure, so complete provider quality is not claimed. Native archive/delete verified on Linux0.171 and Mac0.163. Android preflight settings/reading passed; full signed qualification not finished after user deferral.",
+    "status": "Deferred by explicit user request on 2026-11-21. Immersion disabled on workstation and Mac; no active owned translation threads. Android199 build and owned QA emulator stopped; no199 publication. Existing provider/cleanup source retained."
   }
 }
