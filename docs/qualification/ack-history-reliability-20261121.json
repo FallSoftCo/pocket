@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-21",
+  "androidVersionCode": 198,
+  "androidVersionName": "0.5.0-alpha.180",
+  "state": "backend-live-android-qualification-in-progress",
+  "source": {
+    "android": "3848fb03",
+    "backend": "93a104574a930103dc6d4f79ff06bcc26800acf8",
+    "releaseDigest": "311af8b25dc5b82d7545d39c33965fdf3d00fb4e23a6e076fe45949adb5ca491"
+  },
+  "findings": [
+    "Observed 25-second history/control RPC timeouts on the local workstation transport; Wi-Fi roaming separately observed, causal link not established.",
+    "An expired native turn response was removed from the pending reply map, preventing a later authoritative acknowledgement from updating the original receipt.",
+    "A pre-dispatch history timeout was classified as unknown delivery despite no native turn submission.",
+    "A saved direct send could wait behind another outgoing preflight and optional watch discovery.",
+    "Foreground reattachment cleared the same visible native history window while a dirty cache awaited fresh data."
+  ],
+  "changes": [
+    "Observe original bounded native turn responses after UI timeout, without sending again.",
+    "Record preflight versus dispatch durably; retry only definitively undelivered preflight with capped backoff.",
+    "Prioritize explicit saved outgoing work over optional watch discovery and hand off waiting direct input after the per-thread drain.",
+    "Use independent existing history read transports for remaining history calls; retain the original native control transport.",
+    "Retain visible same-environment/same-session history across foreground reattachment, while resetting freshness before notification/read acknowledgement."
+  ],
+  "verification": {
+    "backendFocused": {
+      "tests": 23,
+      "failed": 0
+    },
+    "configurationDelta": {
+      "tests": 7,
+      "failed": 0
+    },
+    "retainedFailures": [
+      "Original direct-send handoff HTTP test failed before the drain correction and passed unchanged afterward.",
+      "Owned emulator first launch lacked KVM access after reboot; no phone or other emulator changed. A transient owned service supplied the existing KVM supplementary group."
+    ],
+    "liveWorkstationReadMs": [
+      69,
+      77,
+      106
+    ],
+    "liveMacReadMs": {
+      "catalog": 74,
+      "timeline": 72
+    },
+    "nativeDaemonsRestarted": false,
+    "originalUnknownMessagesReplayed": false,
+    "pairingChanged": false
+  },
+  "limits": [
+    "These are bounded local live read measurements, not handset round-trip timings or proof that upstream native stalls cannot recur.",
+    "No actual human message was submitted as a test. Original unknown messages remain unchanged.",
+    "Phone SSH confirmed installed197; physical ADB unavailable, so handset transport logs and touch verification remain unavailable.",
+    "Wi-Fi roaming is not established as the cause of the local RPC failures.",
+    "Late native reply observation survives an ordinary request deadline, not process or transport loss; those outcomes remain unknown and are not blindly retried.",
+    "Android198 is not published until current-source native and exact optimized APK checks complete."
+  ]
+}
