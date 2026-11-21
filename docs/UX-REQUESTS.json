@@ -4178,6 +4178,7 @@
     "request": "Immediately clear immersion resource leakage and fix delayed human sends without interrupting active Codex work. User disabled immersion.",
     "implementation": "Each translation worker owns a bounded native connection and one original thread/turn identity; tools disabled; late mutation replies retained; cancellation awaits terminal identity; unsubscribe verifies native residency before replacement; unknown startup blocks replacement. Human send uses runtime metadata instead of transcript loading.",
     "qualification": "52 affected tests before final retirement guard; 40 focused tests after guard including delayed unload and lost-start reply; actual isolated Codex 0.171 four create/release cycles, no model turns or MCP requests. Deployment evidence tracked separately.",
-    "evidence": "docs/qualification/immersion-lifecycle-20261121.json"
+    "evidence": "docs/qualification/immersion-lifecycle-20261121.json",
+    "status": "Backend deployed on workstation and Mac; immersion disabled; Mac legacy unload compatibility remains limited and fails closed."
   }
 }
