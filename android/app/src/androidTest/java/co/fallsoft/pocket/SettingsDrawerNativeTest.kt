@@ -92,7 +92,7 @@ class SettingsDrawerNativeTest {
   // Immersion chooses a provider independently without enabling or sending work.
   main{Pocket.closeTask()}
   open()
-  compose.onNode(hasText("Settings").and(hasClickAction()),useUnmergedTree=true).performScrollTo().performClick()
+  compose.onNode(hasText("Settings").and(hasClickAction())).performScrollTo().performClick()
   compose.onNodeWithText("Immersion provider & model",useUnmergedTree=true).performScrollTo().performClick()
   await{compose.onAllNodesWithText("Provider: OpenAI",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()}
   compose.onNodeWithText("Provider: OpenAI",useUnmergedTree=true).performClick()
