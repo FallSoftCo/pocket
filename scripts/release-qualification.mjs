@@ -1,0 +1,118 @@
+import {createHash} from 'node:crypto';
+import {readFileSync,readdirSync,lstatSync,realpathSync,statSync,existsSync} from 'node:fs';
+import {resolve,relative,isAbsolute,join,basename,dirname} from 'node:path';
+const hex=/^[a-f0-9]{64}$/;
+const fail=message=>{throw Error(message);};
+export const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
+export const fileSha=path=>sha256(readFileSync(path));
+// Ignore only source-backed CPython bytecode and its numeric atomic-write temp files.
+// Source files, sourceless .pyc modules and unexpected cache contents stay bound.
+function sourceBackedPythonCache(path){
+ if(basename(dirname(path))!=='__pycache__')return false;
+ const match=/^(.+)\.cpython-\d+(?:\.opt-\d+)?\.pyc(?:\.\d+)?$/.exec(basename(path));
+ if(!match)return false;
+ try{return lstatSync(join(dirname(dirname(path)),match[1]+'.py')).isFile();}
+ catch(error){if(error.code==='ENOENT')return false;throw error;}
+}
+function inputSha(root,inputs,{ignorePythonCache=false}={}){
+ const files=[];const walk=path=>{let s;try{s=lstatSync(path);}catch(e){if(e.code==='ENOENT')return;throw e;}if(s.isDirectory())for(const name of readdirSync(path).sort())walk(join(path,name));else if(s.isFile()){if(!ignorePythonCache||!sourceBackedPythonCache(path))files.push(path);}else fail('Source fingerprint requires regular files, not symlinks.');};
+ inputs.forEach(name=>walk(resolve(root,name)));if(!files.length)fail('No source inputs.');
+ const hash=createHash('sha256');for(const path of files.sort()){hash.update(relative(root,path));hash.update('\0');hash.update(fileSha(path));hash.update('\0');}return hash.digest('hex');
+}
+// Fixtures execute shared production modules (including native timeline, request
+// contracts and browser history), not just their own source. Bind conservative
+// source families instead of a brittle hand-maintained transitive import list.
+// Keep runner/build helpers and locked dependencies in the same identity; do not
+// hash generated build/cache trees, node_modules or external private QA state.
+export const qualificationInputSha=root=>inputSha(root,[
+ 'android/app/src/test','android/app/src/androidTest','tests/fixtures','tests/helpers','server','web',
+ 'package.json','package-lock.json',
+ 'android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts',
+ 'android/gradle.properties','android/gradle','android/gradlew',
+ 'scripts/build-release.mjs','scripts/build-storage.mjs','scripts/native-test-plan.mjs',
+ 'scripts/release-policy.json','scripts/release-qualification.mjs','scripts/record-native-qualification.mjs',
+ 'scripts/owned-fixture.mjs','scripts/qualify-native-optimized.py',
+ 'scripts/prepare-app-update.mjs','scripts/publish-qualified-update.mjs'
+],{ignorePythonCache:true});
+export const productionSourceInputs=['android/app/src/main','android/app/src/debug','android/app/src/release','android/app/src/qualification','android/app/build.gradle.kts','android/build.gradle.kts','android/settings.gradle.kts','android/gradle.properties','android/gradle'];
+export function productionSourceSha(root){return inputSha(root,productionSourceInputs);}
+export function nativeOutputPassed(output,expectedTests=1){
+ const successes=output.split(/\r?\n/).map(line=>line.trim().match(/^OK \((\d+) tests?\)$/)).filter(Boolean);
+ return successes.length===1&&Number(successes[0][1])===expectedTests&&!/FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|shortMsg=|There (?:was|were) \d+ failures?|Error in [\w$]/i.test(output);
+}
+export function confinedFile(directory,name){
+ if(typeof name!=='string'||!name||isAbsolute(name)||name.includes('\0'))fail('Invalid qualification path.');
+ const root=realpathSync(directory),path=realpathSync(resolve(root,name)),rel=relative(root,path);
+ if((rel==='..'||rel.startsWith('../'))||isAbsolute(rel)||!statSync(path).isFile())fail('Qualification file escapes artifact directory.');return path;
+}
+export const footerVisualCase='co.fallsoft.pocket.ReaderPagingFooterNativeTest#bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme';
+// Retention/integrity gate only: actual optical review is a separate release observation.
+export function footerMatrixScenarios(matrix,qaRunId){
+ if(!/^[A-Za-z0-9_-]{1,128}$/.test(qaRunId||'')||matrix.qaRunId!==qaRunId||!Array.isArray(matrix.scenarios))fail('Footer matrix has missing or mismatched run identity.');
+ const rows=matrix.scenarios, widths=[...new Set(rows.filter(r=>r.usage===undefined).map(r=>r.widthDp))];
+ if(!widths.includes(320)||!widths.includes(360)||widths.some(w=>!Number.isInteger(w)||w<320||w>4096)||widths.length<2||widths.length>3)fail('Footer matrix widths missing or invalid.');
+ const expected=widths.flatMap(w=>[1,2].flatMap(f=>[false,true].map(ime=>`footer-paging-${w}-${f}.0-${ime}.png`))).concat(['allowance','credits'].flatMap(mode=>[1,2].map(f=>`footer-usage-${mode}-${f}.0.png`)));
+ if(rows.length!==expected.length||new Set(rows.map(r=>r.screenshot)).size!==expected.length)fail('Footer matrix cases missing or duplicated.');
+ for(const row of rows){
+  const mode=row.usage===undefined?null:row.usage==='<0.1%'?'allowance':row.usage==='99.9k cr'?'credits':'invalid';
+  const name=mode===null?`footer-paging-${row.widthDp}-${row.fontScale}.0-${row.ime}.png`:`footer-usage-${mode}-${row.fontScale}.0.png`;
+  if(!expected.includes(name)||row.screenshot!==name||![1,2].includes(row.fontScale)||typeof row.ime!=='boolean'||mode!==null&&(row.ime||row.widthDp!==Math.max(...widths)))fail('Footer matrix scenario metadata differs.');
+ }
+ return rows;
+}
+export function validateFooterVisualMatrix(directory,receipt){
+ const visual=receipt.visualMatrix;
+ if(!visual||visual.schema!==1||!hex.test(visual.sha256)||fileSha(confinedFile(directory,visual.path))!==visual.sha256)fail('Footer matrix missing or changed.');
+ const rows=footerMatrixScenarios(JSON.parse(readFileSync(confinedFile(directory,visual.path),'utf8')),receipt.qaRunId);
+ if(!Array.isArray(visual.artifacts)||visual.artifacts.length!==rows.length||new Set(visual.artifacts.map(a=>a.name)).size!==rows.length)fail('Footer screenshots missing or duplicated.');
+ for(const row of rows){
+  const a=visual.artifacts.find(a=>a.name===row.screenshot);
+  if(!a||!hex.test(a.sha256))fail('Footer screenshot missing.');
+  const bytes=readFileSync(confinedFile(directory,a.path));
+  if(sha256(bytes)!==a.sha256||bytes.length<33||bytes.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||bytes.toString('ascii',12,16)!=='IHDR'||bytes.readUInt32BE(16)<320||bytes.readUInt32BE(20)<320)fail('Footer screenshot changed or invalid.');
+ }
+}
+export function validNativeTargetReceipt(receipt){
+ if(receipt.avdName==='nextcomp_env_qa')return true; // Historical retained receipts.
+ return /^(?:nextcomp_[a-zA-Z0-9_]+|harness_native_room)$/.test(receipt.avdName||'')&&
+  /^emulator-[0-9]{4,5}$/.test(receipt.serial||'')&&
+  /^[0-9a-f]{8}-[0-9a-f-]{27}$/.test(receipt.actor||'')&&
+  /^[0-9]+$/.test(receipt.preflight?.emulatorStartTicks||'')&&
+  receipt.preflight?.installedApkVerified===true;
+}
+export function validateReleaseQualification({directory,manifest,build,native,policy,optimizedReview}){
+ if(existsSync(join(directory,'visual-rejection.json')))fail('This candidate was visually rejected; preserve it and qualify a new candidate.');
+ if(manifest.packageName!=='co.fallsoft.pocket'||!Number.isSafeInteger(manifest.versionCode)||manifest.versionCode<1||!Array.isArray(manifest.variants)||!manifest.variants.length)fail('Invalid prepared manifest.');
+ if(build.schema!==1||build.state!=='complete'||!hex.test(build.productionSourceSha)||build.productionSourceBefore!==build.productionSourceSha||build.manifestSha!==sha256(Buffer.from(JSON.stringify(manifest))))fail('Missing, stale or incomplete build qualification.');
+ const tasks=['testDebugUnitTest','testReleaseUnitTest','lintDebug','lintRelease','assembleDebug','assembleRelease','assembleQualification','assembleQualificationAndroidTest'];
+ if(!Number.isFinite(build.startedAt)||!Number.isFinite(build.finishedAt)||build.finishedAt<build.startedAt)fail('Invalid build timestamps.');
+ if(build.exitCode!==0||tasks.some(task=>!build.tasks?.includes(task)))fail('Required build tasks did not complete.');
+ for(const variant of ['debug','release']){const unit=build.unit?.[variant];if(!unit||!Number.isSafeInteger(unit.tests)||unit.tests<1||unit.failures!==0||unit.errors!==0)fail('Unit result is unavailable or failed.');}
+ if(!hex.test(build.qualificationInputSha)||!hex.test(build.qualificationApkSha)||!hex.test(build.testApkSha))fail('Native APK identities missing.');
+ const signers=new Set();for(const v of manifest.variants){if(!hex.test(v.signerSha256)||!hex.test(v.sha256)||signers.has(v.signerSha256)||!Number.isSafeInteger(v.size)||v.size<1||v.size>80*1024*1024)fail('Invalid update signing variant.');signers.add(v.signerSha256);const path=confinedFile(directory,v.path);if(statSync(path).size!==v.size||fileSha(path)!==v.sha256)fail('Prepared APK changed after build.');}
+ if(!Array.isArray(native))fail('Native receipts missing.');
+ if(policy.schema!==1||!Array.isArray(policy.requiredNativeCases)||!policy.requiredNativeCases.length||new Set(policy.requiredNativeCases).size!==policy.requiredNativeCases.length)fail('Invalid native release policy.');
+ if(policy.requiredNativeVisualMatrices!==undefined&&(!Array.isArray(policy.requiredNativeVisualMatrices)||policy.requiredNativeVisualMatrices.length!==1||policy.requiredNativeVisualMatrices[0]!==footerVisualCase||!policy.requiredNativeCases.includes(footerVisualCase)))fail('Invalid native visual matrix policy.');
+ if(build.policySha!==sha256(Buffer.from(JSON.stringify(policy))))fail('Release policy changed after build.');
+ const byCase=new Map();for(const receipt of native){
+  if(typeof receipt.case!=='string'||!policy.requiredNativeCases.includes(receipt.case)||receipt.schema!==1||receipt.state!=='complete'||receipt.exitCode!==0||receipt.productionSourceSha!==build.productionSourceSha||receipt.qualificationInputSha!==build.qualificationInputSha||receipt.qualificationApkSha!==build.qualificationApkSha||receipt.installedApkSha!==build.qualificationApkSha||receipt.testApkSha!==build.testApkSha||receipt.versionCode!==manifest.versionCode||receipt.finishedAt<receipt.startedAt||receipt.startedAt<build.finishedAt||!Number.isFinite(receipt.startedAt)||!Number.isFinite(receipt.finishedAt)||!validNativeTargetReceipt(receipt))fail('Native receipt is stale, incomplete or for another APK.');
+  const log=confinedFile(directory,receipt.log);if(fileSha(log)!==receipt.logSha||!nativeOutputPassed(readFileSync(log,'utf8')))fail('Native test failed or its log changed.');
+  if(receipt.visualMatrix||policy.requiredNativeVisualMatrices?.includes(receipt.case))validateFooterVisualMatrix(directory,receipt);
+  if(byCase.has(receipt.case))fail('Duplicate native receipt.');byCase.set(receipt.case,receipt);
+ }
+ for(const name of policy.requiredNativeCases)if(!byCase.has(name))fail('Required native case missing: '+name);
+ if(policy.requiredOptimizedReview){
+  const review=optimizedReview;
+  if(!review||review.schema!==1||review.state!=='complete'||review.kind!==policy.requiredOptimizedReview||review.versionCode!==manifest.versionCode||review.productionSourceSha!==build.productionSourceSha||review.qualificationInputSha!==build.qualificationInputSha||!manifest.variants.some(v=>v.sha256===review.apkSha256)||!Number.isFinite(review.reviewedAt)||review.reviewedAt<build.finishedAt)fail('Optimized review is missing, failed, stale or for another APK.');
+  const observations=policy.requiredOptimizedReview==='native-codex-catalog-and-history'?['codexCatalogDrawn','canonicalPairOrder','reopenOriginalPairExactlyOnce','questionSkipOnce','optimizedPayloadVerified']:policy.requiredOptimizedReview==='native-room-catalog-and-typing'?['typingDrawn','canonicalRoomSnapshot','originalAcceptedMessageSingle','optimizedPayloadVerified']:['searchSurvived','selectedIdentitiesReadable','recipientDraftsPreserved','correctSingleSend'];
+  if(policy.captureInteraction!==undefined&&policy.captureInteraction!=='volume-buttons')fail('Unknown capture interaction contract.');
+  if(policy.requiredNativeCases.some(name=>typeof name==='string'&&name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#')))observations.push('nativeVoiceHardwareKeys',policy.captureInteraction==='volume-buttons'?'nativeVolumeOnlyControls':'nativeVoiceTouch','nativeVoiceDraftAndOrigin');
+  const extra=policy.requiredOptimizedObservations??[];
+  if(!Array.isArray(extra)||extra.some(key=>typeof key!=='string'||!/^\w{1,80}$/.test(key)))fail('Invalid scoped review observations.');
+  observations.push(...extra);
+  if(observations.some(key=>review.observations?.[key]!==true))fail('Required optimized interaction/visual review did not pass.');
+  if(!Array.isArray(review.artifacts)||review.artifacts.length!==2||new Set(review.artifacts.map(a=>a.path)).size!==2)fail('Optimized review artifacts missing.');
+  for(const artifact of review.artifacts)if(!hex.test(artifact.sha256)||fileSha(confinedFile(directory,artifact.path))!==artifact.sha256)fail('Optimized review artifact changed.');
+ }
+ return {versionCode:manifest.versionCode,productionSourceSha:build.productionSourceSha,qualification:policy.qualification,nativeCases:policy.requiredNativeCases.length};
+}

@@ -1,0 +1,147 @@
+import {rememberRuntimeSettings} from './native-capabilities.mjs';
+import {ManagedDaemonRecovery} from './managed-daemon-recovery.mjs';
+import WebSocket from 'ws';
+import { EventEmitter } from 'node:events';
+import { homedir } from 'node:os';
+import {spawn} from 'node:child_process';
+import {createInterface} from 'node:readline';
+import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
+
+export class Codex extends EventEmitter {
+  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null,requestTimeoutMs=25000}={}) {
+    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;this.requestTimeoutMs=requestTimeoutMs;
+  }
+  executionOptions(){
+    const sandbox=process.env.POCKET_CODEX_SANDBOX,approvalPolicy=process.env.POCKET_CODEX_APPROVAL_POLICY;
+    return {...(sandbox?{sandbox}:{}),...(approvalPolicy?{approvalPolicy}:{})};
+  }
+  async connect() {
+    if (this.connecting) return this.connecting;
+    if (this.ready) return;
+    const attempt=(async()=>{
+      // A rejected initialization does not prove its owned OS process has exited.
+      // Do not replace that process until it has actually relinquished ownership.
+      const previous=this.child;
+      if(this.command&&previous?.pid&&previous.exitCode===null&&previous.signalCode===null){
+        await new Promise((resolve,reject)=>{
+          const done=()=>{clearTimeout(timer);resolve();};
+          const timer=setTimeout(()=>{previous.off('exit',done);reject(codexConnectionError('CODEX_UNAVAILABLE'));},2000);
+          previous.once('exit',done);previous.kill();
+        });
+      }
+      try{return await this.openConnection();}catch(error){
+        if(!this.command&&await this.managedRecovery.recover(error))return this.openConnection();
+        throw error;
+      }
+    })();
+    this.connecting=attempt;
+    try{return await attempt;}finally{if(this.connecting===attempt)this.connecting=null;}
+  }
+  openConnection(){
+    return new Promise((resolve, reject) => {
+      let failure=null;
+      const receive=data=>{
+        let m; try { m = JSON.parse(data); } catch { return; }
+        if (m.method) { this.emit('event', m); return; }
+        const p = this.pending.get(m.id);
+        if (p) {
+          clearTimeout(p.timer); this.pending.delete(m.id);
+          if(m.error){
+            const error=isServerDraining(m.error)?Object.assign(codexConnectionError('CODEX_DRAINING'),{rpc:m.error}):Object.assign(isHistoryLineageError(m.error)?historyLineageError(m.error):new Error(m.error.message),{rpc:m.error});
+            if(error.code==='CODEX_DRAINING'&&this.transport===transport){this.problem=error;this.emit('status',this.status());}
+            error.rpcMethod=p.method; // Bind read-availability evidence to the actual pending request.
+            p.reject(error);
+          }else {rememberRuntimeSettings(this,p.method,m.result);p.resolve(m.result);}
+        }
+      };
+      const opened=async()=>{
+        try {
+          this.runtimeSettings=new Map();
+          this.initializeResult=await this.call('initialize', { clientInfo: { name: 'codex_pocket', title: 'NextComp', version: '0.5.0-alpha.10' }, capabilities: { experimentalApi: true } });
+          this.send({method:'initialized'}); this.ready = true; this.problem=null;this.emit('connected'); resolve();
+        } catch(e) { reject(e); this.closeTransport(transport); }
+      };
+      const failed=error=>{
+        failure=codexConnectionError(error.code==='WS_ERR_UNSUPPORTED_MESSAGE_LENGTH'?'CODEX_HISTORY_TOO_LARGE':this.ready?'CODEX_DISCONNECTED':'CODEX_UNAVAILABLE',error);
+        if(this.transport===transport)this.problem=failure;reject(failure);
+      };
+      const closed=()=>{
+        if(this.transport!==transport)return;
+        this.ready = false;
+        failure||=codexConnectionError();this.problem=failure;
+        for (const p of this.pending.values()) { clearTimeout(p.timer); p.reject(failure); }
+        this.pending.clear(); this.emit('disconnected',failure); reject(failure);
+      };
+      let transport;
+      if(this.command){
+        const [file,...args]=this.command;
+        const child=spawn(file,args,{stdio:['pipe','pipe','pipe'],env:process.env,...(this.processCwd?{cwd:this.processCwd}:{})});transport=child;this.transport=child;this.child=child;
+        createInterface({input:child.stdout}).on('line',receive);
+        createInterface({input:child.stderr}).on('line',line=>console.error('Codex app-server',line));
+        child.once('error',failed);child.once('exit',closed);queueMicrotask(opened);
+      }else{
+        const ws = new WebSocket(`ws+unix://${this.socket}:/`,{maxPayload:this.maxPayload});transport=ws;this.transport=ws;this.ws=ws;
+        ws.on('message',receive);ws.once('open',opened);ws.once('error',failed);ws.once('close',closed);
+      }
+    });
+  }
+  // Explicit native mutation lifetime is distinct from the caller's ordinary 25 s wait.
+  // Native globally serializes these writes: retain at most one original reply.
+  operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation&&!['turn/start','turn/steer'].includes(p.method));}
+  callOperation(method,params,onOutcome){
+    if(!['plugin/install','plugin/uninstall','mcpServer/oauth/login','config/mcpServer/reload'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
+    return this.callPending(method,params,onOutcome);
+  }
+  call(method,params={}){return this.callPending(method,params);}
+  // A bounded owned background worker waits for the ORIGINAL lifecycle outcome.
+  // Its display deadline is not permission to forget a successful late start.
+  callWorker(method,params){
+    if(!['thread/start','thread/unsubscribe','thread/archive','thread/delete','turn/start','turn/interrupt'].includes(method)||[...this.pending.values()].filter(p=>p.operation).length>=4)return Promise.reject(Error('Worker lifecycle capacity unavailable.'));
+    return this.callPending(method,params,()=>{},true);
+  }
+  // Keep observing the original mutation after the UI deadline. A late native
+  // acknowledgement is authoritative; a second turn submission is not recovery.
+  callTurn(method,params,onOutcome){
+    if(!['turn/start','turn/steer'].includes(method)||typeof onOutcome!=='function')throw Error('Invalid observed turn mutation.');
+    if([...this.pending.values()].filter(p=>p.operation).length>=64)return Promise.reject(codexConnectionError('CODEX_UNAVAILABLE'));
+    return this.callPending(method,params,onOutcome);
+  }
+  callPending(method,params,onOutcome=null,waitForOutcome=false){
+    return new Promise((resolve,reject)=>{
+      const observe=outcome=>{if(onOutcome)try{onOutcome(outcome);}catch{console.error('CODEX_OPERATION_RECEIPT_UPDATE_FAILED');}};
+      const rejected=error=>{observe({error,terminal:!!error.rpc});reject(error);};
+      if(!this.canSend())return rejected(this.problem||codexConnectionError('CODEX_UNAVAILABLE'));
+      const id=this.seq++;
+      const timer=setTimeout(()=>{
+        // UI expiry never cancels or resubmits an admitted mutation. Its one
+        // observer remains until the original response or transport closure.
+        if(!onOutcome)this.pending.delete(id);
+        const error=Object.assign(codexConnectionError('CODEX_TIMEOUT'),{rpcMethod:method});
+        this.emit('rpcTimeout',{method,pending:this.pending.size,observedMutation:!!onOutcome});
+        if(!waitForOutcome)reject(error);
+      },this.requestTimeoutMs);
+      this.pending.set(id,{resolve:result=>{observe({result,terminal:true});resolve(result);},reject:rejected,timer,method,operation:!!onOutcome});
+      try{this.send({id,method,params});}catch(error){clearTimeout(timer);this.pending.delete(id);rejected(error);}
+    });
+  }
+
+  answer(id, result) {
+    if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
+    this.send({id, result});
+  }
+  reject(id, message, code=-32601) {
+    if (!this.ready) throw this.problem||codexConnectionError('CODEX_UNAVAILABLE');
+    this.send({id,error:{code,message}});
+  }
+  canSend(){return this.command?!!this.child?.stdin?.writable:this.ws?.readyState===WebSocket.OPEN;}
+  send(value){const raw=JSON.stringify(value);if(this.command)this.child.stdin.write(raw+'\n');else this.ws.send(raw);}
+  closeTransport(transport=this.transport){if(this.command)transport?.kill();else transport?.close();}
+  status(){return {connected:this.ready&&this.problem?.code!=='CODEX_DRAINING',problem:this.problem?{code:this.problem.code,message:this.problem.message}:null};}
+}
+
+function parseCommand(raw){
+  if(!raw)return null;
+  let value;try{value=JSON.parse(raw);}catch{throw Error('POCKET_CODEX_COMMAND must be a JSON array.');}
+  if(!Array.isArray(value)||!value.length||value.some(x=>typeof x!=='string'||!x))throw Error('POCKET_CODEX_COMMAND must be a non-empty JSON string array.');
+  return value;
+}

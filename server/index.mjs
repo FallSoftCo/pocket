@@ -1,0 +1,1098 @@
+import {registerAccountResetRoutes} from './account-reset-routes.mjs';
+import {registerNativeConfigurationRoutes} from './native-configuration.mjs';
+import {requestPresentation} from './native-request-contract.mjs';
+import {mountNativeExecution} from './native-execution.mjs';
+import {ConversationTools,registerConversationTools} from './conversation-tools.mjs';
+import {ProviderHandoff} from './provider-handoff.mjs';
+import {supportsNativeMethod} from './native-capabilities.mjs';
+import {inactiveArchiveReason} from './session-archive.mjs';
+import {mountOperatorNotifications} from './notification-requests.mjs';
+import {CoordinatorHeadReader} from './coordinator-head.mjs';
+import {CoordinatorCollector} from './coordinator-collector.mjs';
+import {coordinatorProvider} from './coordinator-provider.mjs';
+import {voiceAvailability,voiceInputAvailability} from './voice-availability.mjs';
+import {NativeLiveInput} from './native-live-input.mjs';
+import {createCoordinatorHub} from './coordinator-hub.mjs';
+import {NativeSubscriptions} from './native-subscriptions.mjs';
+import {restoreWatchedSubscriptions} from './watched-subscriptions.mjs';
+import {NativeTimelineReader,projectNativeTimeline} from './native-timeline.mjs';
+import {nativeJsonCompression} from './json-compression.mjs';
+import {readThreadProjection} from './thread-projection.mjs';
+import {cachedThreadMetadata,readThreadMetadata} from './thread-read-availability.mjs';
+import {MAX_RECORDING_WAV_BYTES,MAX_RECORDING_SECONDS} from './audio-limits.mjs';
+import {HumanIngress,admissionTransaction} from './human-ingress.mjs';
+import {loadFleet} from './fleet.mjs';
+import {LocalFleetAccess,enrollmentKey} from './fleet-enrollment.mjs';
+import {BackendArtifacts,mountBackendArtifacts} from './backend-artifacts.mjs';
+import {CreditObservations} from './credit-observations.mjs';
+import {CatalogContext} from './catalog-context.mjs';
+import {workAttention} from './work-attention.mjs';
+import {ThreadStatusProjection} from './thread-status.mjs';
+import {WorkObservations} from './work-observations.mjs';
+import {InternalSessions} from './internal-sessions.mjs';
+import {RecoveryQueue} from './recovery-queue.mjs';
+import {TurnRecovery,permissionRecoveryAudit} from './turn-recovery.mjs';
+import {recoveryStorageReady,recoveryUsagePolicy,recoveryAccountUsage} from './recovery-health.mjs';
+import {SessionDiscovery,INTERACTIVE_SOURCES} from './session-discovery.mjs';
+import {catalogFields,catalogName,sessionIdentity,sessionWorkTime,requireDirectSessionInput} from './session-catalog.mjs';
+import {SessionCatchup} from './session-catchup.mjs';
+import {CoordinatorReports} from './coordinator-reports.mjs';
+import {recoverReply} from './reply-recovery.mjs';
+import {ReplyDelivery} from './reply-delivery.mjs';
+import {OutgoingProjection} from './outgoing-projection.mjs';
+import {queuedDestination,replyDestination} from './queued-destination.mjs';
+import {confirmedFailedTurn} from './manual-turn-admission.mjs';
+import {loadHollywood} from './hollywood.mjs';
+import {teamNotificationFields} from './losangelex-attention.mjs';
+import {computerUseStatus} from './computer-use.mjs';
+import {NotificationTitles} from './notification-titles.mjs';
+import {NotificationReads} from './notification-reads.mjs';
+import {immersionProvider,immersionProviderChoices} from './immersion-provider.mjs';
+import {ImmersionWorker} from './immersion-worker.mjs';
+import {transgrammaticContract} from './immersion-transgrammatic.mjs';
+import {QuestionActions} from './question-actions.mjs';
+import {ConversationNotes} from "./conversation-notes.mjs";
+import {LiveActivityDelivery} from "./live-activity-delivery.mjs";
+import {ActivityBoard} from './activity-board.mjs';
+import {NativeVoice} from './native-voice.mjs';
+import {NativeSpeechMedia} from './native-speech-media.mjs';
+import {VoiceRenderings,SPEECH_POLICY} from './voice-renderings.mjs';
+import {NativeAudioTranscriber} from './native-audio-transcriber.mjs';
+import {VoiceRecordings} from './voice-recordings.mjs';
+import {RemoteAudioTranscriber} from './remote-audio-transcriber.mjs';
+import {ThreadPreviews,sessionInteraction} from './thread-previews.mjs';
+import express from 'express';
+import http from 'node:http';
+import { WebSocketServer, WebSocket } from 'ws';
+import { randomUUID, randomBytes, timingSafeEqual } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve, basename, extname } from 'node:path';
+import { readFileSync, writeFileSync, mkdirSync, statSync, realpathSync, existsSync, chmodSync } from 'node:fs';
+import { hostname } from 'node:os';
+import { Codex } from './codex.mjs';
+import {createTimelineConnection} from './timeline-connection.mjs';
+import { openStore, hash } from './store.mjs';
+import { loadPush } from './push.mjs';
+import { AppUpdates,mountAppUpdates } from './app-updates.mjs';
+import { SessionStarts,recentProjects,permissionOptions } from './sessions.mjs';
+import { CompletionRecovery } from './completions.mjs';
+import { spokenSummary,spokenText,promptContext,turnPrompt } from './speech.mjs';
+import { LiveTimeline,timelinePage } from './timeline.mjs';
+import {HistoryHeads} from './history-heads.mjs';
+import { ThreadHistory } from './history.mjs';
+import {SendIdentity} from './send-identity.mjs';
+import {TerminalForks,TerminalForkImports} from './terminal-forks.mjs';
+import {sshTerminalFork} from './terminal-fork-transport.mjs';
+import { WorkRecord } from './work-record.mjs';
+import { ambiguousDelivery,isThreadWriterConflict,threadWriterConflict } from './connection-errors.mjs';
+import { AccountRateLimits } from './rate-limits.mjs';
+import { ProviderUsage } from './provider-usage.mjs';
+import { modelCatalogue,validateTurnSettings,turnOverrides } from './turn-settings.mjs';
+import {registerModelProviderRoutes} from './model-providers.mjs';
+import { VoiceSpeech } from './voice-speech.mjs';
+import { VoiceController } from './voice-controller.mjs';
+
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const dir=process.env.POCKET_DATA || resolve(root,'data');
+const creditContinuationPath=resolve(dir,'existing-credit-continuation.json');
+const creditContinuation=existsSync(creditContinuationPath)?JSON.parse(readFileSync(creditContinuationPath,'utf8')):null;
+const appVersion=JSON.parse(readFileSync(resolve(root,'package.json'),'utf8')).version;
+const hostName=process.env.POCKET_HOST_NAME||hostname();
+const localMode=process.env.POCKET_LOCAL==='1';
+const defaultCwd=process.env.POCKET_DEFAULT_CWD||process.cwd();
+const {db,secrets}=openStore(dir);
+const outgoingProjection=new OutgoingProjection(db);
+const replyDelivery=new ReplyDelivery(db);
+const fleet=process.env.POCKET_FLEET_CONFIG?new LocalFleetAccess({db,credentialKey:enrollmentKey(dir),config:()=>loadFleet(process.env.POCKET_FLEET_CONFIG)}):null;
+if(fleet)fleet.config(); // Reject incomplete enrollment before opening a listener.
+const backendArtifacts=process.env.POCKET_BACKEND_ARTIFACTS_DIR?new BackendArtifacts({dir:process.env.POCKET_BACKEND_ARTIFACTS_DIR,keyFile:process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE,dataDir:dir}):null;
+if(process.env.POCKET_BACKEND_ARTIFACTS_KEY_FILE&&!backendArtifacts)throw Error('Artifact store directory is required.');
+const backendRelease=existsSync(resolve(root,'backend-release.json'))?JSON.parse(readFileSync(resolve(root,'backend-release.json'),'utf8')):null;
+// Never reinterpret a deployed room gateway as a stock execution host.
+if(process.env.POCKET_EXECUTION_BACKEND==='hollywood'||loadHollywood(dir)?.native)throw Error('This NextComp release supports vanilla Codex only. Keep the original room gateway/data separately; configure an authenticated stock Codex app-server.');
+const sendIdentity=new SendIdentity(db);
+const workObservations=new WorkObservations(db);
+const catalogContext=new CatalogContext(db);
+const notificationReads=new NotificationReads(db);
+const notificationTitles=new NotificationTitles(db);
+const voiceKeyPath=resolve(dir,'voice-key');
+const voiceSpeech=new VoiceSpeech({apiKey:process.env.POCKET_VOICE_API_KEY||(existsSync(voiceKeyPath)?readFileSync(voiceKeyPath,'utf8').trim():'')});
+let speechRequests=0;
+const automationPath=resolve(dir,'automation.json');
+const automation=localMode?(existsSync(automationPath)?JSON.parse(readFileSync(automationPath)):{secret:randomBytes(32).toString('hex')}):null;
+if(automation&&!existsSync(automationPath))writeFileSync(automationPath,JSON.stringify(automation),{mode:0o600});
+if(automation)chmodSync(automationPath,0o600);
+const push=loadPush(db,dir);
+setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
+const codex=new Codex(undefined,{managedStart:process.env.POCKET_CODEX_MANAGED_START});
+const knownThreadMetadata=id=>cachedThreadMetadata(db,id);
+const threadStatusProjection=new ThreadStatusProjection({codexHome:process.env.CODEX_HOME});
+// Keep interactive reads off the connection used for background resume/config work.
+const timelineCodex=createTimelineConnection();
+const observationCodex=createTimelineConnection();
+const nativeTimelineReader=new NativeTimelineReader(timelineCodex,{known:knownThreadMetadata});
+const observationTimelineReader=new NativeTimelineReader(observationCodex,{known:knownThreadMetadata});
+const coordinatorHeadReader=new CoordinatorHeadReader({codex:observationCodex,native:observationTimelineReader});
+const nativeSubscriptions=new NativeSubscriptions(codex);
+const app=express(); app.disable('x-powered-by'); app.use(express.json({limit:'1mb'}));
+app.use('/api',nativeJsonCompression());
+const server=http.createServer(app), sockets=new WebSocketServer({noServer:true,maxPayload:16384});
+
+const attached=new Set(), pending=new Map(), syncing=new Set();
+const historyReadOnly=process.env.POCKET_HISTORY_READ_ONLY==='1';
+db.exec('CREATE TABLE IF NOT EXISTS immersion_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
+const immersionCwd=resolve(dir,'immersion');mkdirSync(immersionCwd,{recursive:true,mode:0o700});
+const internalSessions=new InternalSessions(db,[{cwd:immersionCwd,kind:'immersion'}]);
+// Session, coordinator and immersion RPCs share one multiplexed stock runtime.
+// Separate threads retain their own instructions, model choices and routing.
+const voiceCodex=codex;
+const humanIngress=new HumanIngress(db,{deviceActive:device=>!fleet||fleet.deviceActive(device)});
+const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,provider:options=>coordinatorProvider(voiceCodex,options),
+  api:async(path,body,actor,options={})=>{const delegation=humanIngress.delegate(actor,body===undefined?'GET':'POST',path,body);try{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json',...(actor?.hollywoodBinding?{'X-Hollywood-Binding':actor.hollywoodBinding}:{}),...delegation.headers},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:options.signal?AbortSignal.any([AbortSignal.timeout(35000),options.signal]):AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Object.assign(Error(data.error||'Pocket control failed.'),{status:r.status,code:data.code});return data;}finally{delegation.release();}},
+  transcribe:async audio=>{
+    if(!voiceSpeech.apiKey)throw Object.assign(Error('Voice is not configured on this server.'),{status:503});
+    const form=new FormData();form.append('model','gpt-transcribe');form.append('file',new Blob([audio],{type:'audio/wav'}),'turn.wav');form.append('response_format','json');form.append('prompt','Pocket, Codex, steer, queue, workstation, session, full permissions.');
+    const r=await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:`Bearer ${voiceSpeech.apiKey}`},body:form,signal:AbortSignal.timeout(60000)});
+    if(!r.ok)throw Error(`Transcription provider returned HTTP ${r.status}.`);return (await r.json()).text||'';
+  }});
+
+voiceController.authorizeQueued=async device=>{
+ if(fleet)await fleet.authorizeAlias(device);
+ if(!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))throw Object.assign(Error('The original device is no longer authorized.'),{status:403});
+};
+
+const audioCommand=process.env.POCKET_LAX_AUDIO_COMMAND?JSON.parse(process.env.POCKET_LAX_AUDIO_COMMAND):null;
+if(audioCommand&&(!Array.isArray(audioCommand)||!audioCommand.length||audioCommand.some(v=>typeof v!=='string'||!v)))throw Error('Invalid installation-owned native audio command.');
+// Audio transport has no project workspace. Never inherit the backend checkout's local config or instructions.
+const nativeAudioWorkspace=resolve(dir,'native-audio-workspace');
+mkdirSync(nativeAudioWorkspace,{recursive:true,mode:0o700});
+const nativeVoiceCodex=new Codex(undefined,{command:audioCommand,processCwd:nativeAudioWorkspace});
+// Only exact scratch-thread identities are retained for interrupted cleanup.
+db.exec('CREATE TABLE IF NOT EXISTS immersion_runtime_ownership(worker TEXT PRIMARY KEY,state TEXT NOT NULL)');
+const immersionOwnership=worker=>({
+ loadOwnership:()=>{const row=db.prepare('SELECT state FROM immersion_runtime_ownership WHERE worker=?').get(worker);return row?JSON.parse(row.state):null;},
+ saveOwnership:state=>{if(state)db.prepare('INSERT INTO immersion_runtime_ownership VALUES(?,?) ON CONFLICT(worker) DO UPDATE SET state=excluded.state').run(worker,JSON.stringify(state));else db.prepare('DELETE FROM immersion_runtime_ownership WHERE worker=?').run(worker);}
+});
+const immersion=new ImmersionWorker({...immersionOwnership('legacy'),codex:new Codex(),ownsTransport:true,cwd:immersionCwd,registerThread:id=>internalSessions.register(id,'immersion'),load:id=>{const row=db.prepare('SELECT state FROM immersion_profiles WHERE device_id=?').get(id);return row?JSON.parse(row.state):null;},save:(id,state)=>db.prepare('INSERT INTO immersion_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}});
+// Existing devices retain their endpoint/cache. Each worker owns a bounded
+// connection to the shared authenticated daemon; no separate model process.
+db.exec('CREATE TABLE IF NOT EXISTS immersion_transgrammatic_profiles(device_id TEXT PRIMARY KEY,state TEXT NOT NULL)');
+const transgrammaticImmersion=new ImmersionWorker({
+ ...immersionOwnership('transgrammatic'),codex:new Codex(),ownsTransport:true,cwd:immersionCwd,contract:transgrammaticContract,
+ registerThread:id=>internalSessions.register(id,'immersion'),
+ load:id=>{const row=db.prepare('SELECT state FROM immersion_transgrammatic_profiles WHERE device_id=?').get(id);if(row)return JSON.parse(row.state);const old=immersion.snapshot(id);return {enabled:old.enabled,density:old.density,translations:[]};},
+ save:(id,state)=>db.prepare('INSERT INTO immersion_transgrammatic_profiles VALUES(?,?) ON CONFLICT(device_id) DO UPDATE SET state=excluded.state').run(id,JSON.stringify(state)),
+ publish:(id,event)=>{const message=JSON.stringify(event);for(const ws of sockets.clients)if(ws.deviceId===id&&ws.readyState===WebSocket.OPEN)ws.send(message);}
+});
+
+const audioController={db,
+ capture:device=>voiceController.capture(device),
+ get:(device,id)=>voiceController.get(device,id),
+ submitText:(device,id,text,destination)=>{
+  if(destination&&destination.backend!=='stock-codex-voice')throw Object.assign(Error('This recording belongs to retired room work; it was not redirected or submitted.'),{status:410});
+  return voiceController.submitText(device,id,text,null,destination);
+ },
+ mark:(device,id,...args)=>voiceController.mark(device,id,...args)
+};
+const nativeVoice=new NativeVoice({codex:nativeVoiceCodex,controller:audioController,cwd:nativeAudioWorkspace,requireFinalTranscript:false,observe:process.env.POCKET_NATIVE_AUDIO_TRACE?event=>import('node:fs/promises').then(fs=>fs.appendFile(process.env.POCKET_NATIVE_AUDIO_TRACE,JSON.stringify(event)+'\n',{mode:0o600})):null});
+const nativeLiveInput=new NativeLiveInput({db,voice:nativeVoice});
+// Validate a per-turn destination without consulting or changing mutable device focus.
+// Missing destination retains compatibility with already installed clients only.
+async function voiceDestination(device,value){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Object.assign(Error('Choose a voice destination.'),{status:400});
+ if(value.room)throw Object.assign(Error('Room voice is retired. Choose a Codex session.'),{status:410});
+ const threadId=value.threadId?requireId(value.threadId):null;
+ if(threadId){
+  if(catchupHidden(threadId))throw Object.assign(Error('Choose a work session.'),{status:400});
+  await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});
+  if(result.thread?.id!==threadId)throw Object.assign(Error('Session identity changed.'),{status:409});
+  requireDirectSessionInput(result.thread);
+ }
+ const current=voiceController.capture(device);
+ return voiceController.validateOrigin({...current,focus:threadId?'direct':'coordinator',selected:threadId,
+  full:typeof value.fullPermissions==='boolean'?value.fullPermissions:current.full});
+}
+
+const nativeAudioPython=process.env.POCKET_NATIVE_AUDIO_PYTHON||null;
+const remoteAudioCommand=process.env.POCKET_NATIVE_AUDIO_REMOTE?JSON.parse(process.env.POCKET_NATIVE_AUDIO_REMOTE):null;
+const nativeAudioIntake=!!(nativeAudioPython||remoteAudioCommand);
+const nativeTranscriber=remoteAudioCommand?new RemoteAudioTranscriber(remoteAudioCommand):new NativeAudioTranscriber({voice:nativeVoice,python:nativeAudioPython});
+const nativeSpeechEnabled=!!nativeAudioPython&&process.env.POCKET_NATIVE_SPEECH_ASSETS==='1';
+const nativeSpeechMedia=new NativeSpeechMedia({voice:nativeVoice,python:nativeAudioPython});
+const voiceRenderings=new VoiceRenderings({db,root:resolve(dir,'voice-renderings'),render:request=>nativeSpeechMedia.render(request)});
+const voiceRecordings=new VoiceRecordings({
+ db,root:resolve(dir,'voice-recordings'),
+ resolveDestination:voiceDestination,
+ transcribe:request=>nativeLiveInput.cached(request)||nativeTranscriber.transcribe(request),
+ submit:(device,id,text,destination,principal)=>{
+  humanIngress.record('voice-recording',voiceRecordings.key(device,id),principal);
+  return audioController.submitText(device,id,text,destination);
+ },
+ getReceipt:(device,id)=>audioController.get(device,id),
+ cancelTask:(device,id)=>{
+
+  return voiceController.cancelQueued(device,id);
+ },
+ authorize:async(device,principal)=>{
+  if(fleet)await fleet.authorizeAlias(device);
+  if(principal.deviceId!==device||!db.prepare('SELECT 1 FROM devices WHERE id=?').get(device))
+   throw Object.assign(Error('The original human device is no longer authorized. Recording retained.'),{status:403});
+ }
+});
+const sessionDiscovery=new SessionDiscovery({db,codex,hidden:(id,thread)=>internalSessions.owns(id,thread)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)});
+const catchupHidden=id=>internalSessions.owns(id)||voiceController.owns(id)||nativeVoice.owns(id)||immersion.ownsThread(id)||!!db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.archived;
+const sessionCatchup=new SessionCatchup({db,hidden:catchupHidden,resolvePending:(requestId,threadId)=>{
+  if(!requestId)return undefined;const live=pending.get(String(requestId));if(live?.params?.threadId===threadId)return true;
+  const attention=db.prepare('SELECT a.resolved_at FROM notification_attention a JOIN notifications n ON n.id=a.notification_id WHERE a.request_id=? AND n.thread_id=? ORDER BY n.id DESC LIMIT 1').get(String(requestId),threadId);
+  return attention?.resolved_at!=null?false:undefined;
+}});
+sessionCatchup.bootstrap();
+voiceController.catchup=sessionCatchup;
+voiceController.hidden=catchupHidden;
+db.exec('CREATE TABLE IF NOT EXISTS coordinator_report_notifications(report_id TEXT PRIMARY KEY,device_id TEXT NOT NULL,notification_id INTEGER UNIQUE NOT NULL)');
+const coordinatorReports=new CoordinatorReports({db,catchup:sessionCatchup,hidden:catchupHidden,
+  // Scheduled reports consume stored observations only: no runtime/model RPCs.
+  readThread:async threadId=>{const row=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(threadId);if(!row)throw Error('No stored session observation.');const thread=JSON.parse(row.metadata);return {thread:{...thread,status:{type:'unverified'}}};},
+  refreshRoster:async()=>{const threads=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE archived=0').all().map(row=>JSON.parse(row.metadata)).filter(thread=>!catchupHidden(thread.id));return {threads,threadCount:threads.length,complete:false,reason:'Stored public observations only; this scheduled report does not poll or wake workers.'};},
+  publish:async report=>{
+    let saved=db.prepare('SELECT notification_id FROM coordinator_report_notifications WHERE report_id=? AND device_id=?').get(report.id,report.device);
+    if(!saved){db.exec('BEGIN IMMEDIATE');try{
+      const row=db.prepare("INSERT INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,spoken_text) VALUES(NULL,?,?,'coordinator_report','[]',?,'','')").run('Work updates',report.response,report.createdAt);
+      saved={notification_id:Number(row.lastInsertRowid)};db.prepare('INSERT INTO coordinator_report_notifications(report_id,device_id,notification_id) VALUES(?,?,?)').run(report.id,report.device,saved.notification_id);
+      if(push.enabled)db.prepare("INSERT OR IGNORE INTO push_deliveries(notification_id,device_id,state,updated_at) SELECT ?,device_id,'queued',? FROM push_tokens WHERE device_id=? AND project_id=?").run(saved.notification_id,Date.now(),report.device,push.config.projectId);
+      db.exec('COMMIT');
+    }catch(error){db.exec('ROLLBACK');throw error;}}
+    const notification=notificationRow(db.prepare('SELECT * FROM notifications WHERE id=?').get(saved.notification_id));
+    const message=JSON.stringify({type:'coordinatorReport',reportId:report.id,notification});
+    for(const ws of sockets.clients)if(ws.deviceId===report.device&&ws.readyState===WebSocket.OPEN)ws.send(message);
+    void push.flush().catch(error=>console.error('Report push retry',error.message));
+  }});
+voiceController.reports=coordinatorReports;
+const coordinatorHub=createCoordinatorHub({db,controller:voiceController,catchup:sessionCatchup,hidden:catchupHidden,key:secrets.adminToken,sourceAllowed:base=>!fleet?.config().retiredOrigins?.includes(base.replace(/\/$/,'')),authorize:actor=>humanIngress.active(actor),app,route:fn=>route(fn),read:async path=>{const result=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`},signal:AbortSignal.timeout(2500)});if(!result.ok)throw Error('Native public evidence unavailable');return result.json();}});
+const coordinatorCollector=new CoordinatorCollector({db,discovery:sessionDiscovery,memory:coordinatorHub.memory,catchup:sessionCatchup,hidden:catchupHidden,
+ ready:()=>codex.ready,
+ read:path=>coordinatorHub.memory.read(path)});
+coordinatorHub.memory.collection=()=>coordinatorCollector.status();
+setInterval(()=>void coordinatorCollector.tick().catch(error=>console.error('Coordinator evidence collection unavailable',error.code||error.name)),15000).unref();
+setInterval(()=>void coordinatorReports.tick().catch(error=>console.error('Coordinator report',error.message)),60000).unref();
+
+const timeline=new LiveTimeline();
+const historyHeads=new HistoryHeads();
+setInterval(()=>timeline.prune(),60000).unref();
+const conversationNotes=new ConversationNotes(db,(threadId,notes)=>emit("contextNotes",{threadId,notes}));
+// Notes hydrate when their conversation opens, not while hundreds of list cards load.
+const inheritedHistoryCache=new Map();let inheritedHistoryCacheBytes=0;
+const history=new ThreadHistory(timelineCodex,{identity:sendIdentity,inheritedHistory:id=>{const cached=inheritedHistoryCache.get(id);if(cached){inheritedHistoryCache.delete(id);inheritedHistoryCache.set(id,cached);return cached.turns;}if(!db.prepare("SELECT 1 FROM sqlite_master WHERE name='terminal_fork_imports'").get())return [];const row=db.prepare("SELECT json_extract(packet,'$.publicHistory') AS history FROM terminal_fork_imports WHERE fork_id=? AND state IN ('prepared','accepted','unknown')").get(id);if(!row?.history)return [];const turns=JSON.parse(row.history),bytes=Buffer.byteLength(row.history);if(bytes<=8*1024*1024){while(inheritedHistoryCache.size&&(inheritedHistoryCacheBytes+bytes>8*1024*1024||inheritedHistoryCache.size>=16)){const key=inheritedHistoryCache.keys().next().value;inheritedHistoryCacheBytes-=inheritedHistoryCache.get(key).bytes;inheritedHistoryCache.delete(key);}inheritedHistoryCache.set(id,{turns,bytes});inheritedHistoryCacheBytes+=bytes;}return turns;}});
+const workRecord=new WorkRecord(db,{version:appVersion,scanAllowed:(id,thread)=>nativeSubscriptions.loaded?.has(id)&&!sessionDiscovery.hidden(id,thread)});
+const workRecordHistory=new ThreadHistory(createTimelineConnection(),{identity:sendIdentity});
+const recordWork=fn=>{try{fn();}catch(e){console.error("Work record storage unavailable:",e.code||e.name);}};
+for(const row of db.prepare("SELECT thread_id FROM watches WHERE enabled=1 UNION SELECT thread_id FROM outgoing UNION SELECT thread_id FROM session_starts WHERE thread_id IS NOT NULL").all())workRecord.enroll({id:row.thread_id});
+let scanningWork=false;
+setInterval(async()=>{
+  if(scanningWork||!codex.ready)return;
+  scanningWork=true;
+  try{await workRecord.scan(workRecordHistory,id=>JSON.parse(db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(id)?.metadata||'{}'));}
+  catch(e){console.error('Work record history unavailable:',JSON.stringify(e.workRecordDiagnostic||{code:'WORK_RECORD_SCAN_FAILED',operation:'work-record/scan'}));}
+  finally{scanningWork=false;}
+},15000).unref();
+const activityBoard=new ActivityBoard();
+const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
+const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
+const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);},humanIngress);
+const now=()=>Date.now();
+const emit=(type,payload)=>{const m=JSON.stringify({type,...outgoingProjection.event(type,payload)}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
+const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
+setInterval(()=>{if(sockets.clients.size)void rateLimits.refresh();},60000).unref();
+const providerUsage=new ProviderUsage({onUpdate:usage=>emit('providerUsage',{usage})});
+setInterval(()=>{if(sockets.clients.size)void providerUsage.refresh();},60000).unref();
+void providerUsage.refresh();
+const voiceCapability=()=>voiceAvailability(providerUsage.snapshot());
+const voiceInput=()=>voiceInputAvailability(providerUsage.snapshot());
+const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
+const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
+const identity=async req=>{const t=getToken(req);if(!t)return null;if(t&&safeEqual(t,secrets.adminToken))return {id:'owner',name:'Local owner'};
+ if(fleet&&t.includes('.')){try{const v=await fleet.authenticate(t);req.fleetPrincipal=v.principal;return v.device;}catch{return null;}}
+ if(fleet){try{const local=fleet.opaqueIdentity(t);if(local){req.fleetPrincipal=local.principal;return local.device;}return fleet.authorizeLocal(db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(t)));}catch{return null;}}
+ return db.prepare('SELECT id,name FROM devices WHERE token_hash=?').get(hash(t));};
+const requireAuth=async(req,res,next)=>{try{req.device=await identity(req);if(!req.device)return res.status(401).json({error:'Pair this device to continue.'});next();}catch{res.status(401).json({error:'Device authentication unavailable.'});}};
+const owner=(req,res,next)=>{if(req.device.id!=='owner')return res.status(403).json({error:'Local owner access required'});next();};
+const route=fn=>(req,res,next)=>Promise.resolve(fn(req,res)).catch(error=>next(isThreadWriterConflict(error)?threadWriterConflict(error):error));
+const requireId=id=>{if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(id))throw new Error('Invalid thread identifier');return id;};
+const terminalForkConfigPath=resolve(dir,'terminal-forks.json');
+const terminalForkConfig=existsSync(terminalForkConfigPath)?JSON.parse(readFileSync(terminalForkConfigPath,'utf8')):null;
+const terminalForkImports=terminalForkConfig?new TerminalForkImports({db,codex,codeHome:terminalForkConfig.codeHome,environmentId:terminalForkConfig.environmentId,directory:resolve(dir,'terminal-forks','imports'),onImportPlan:(result,packet)=>{for(const id of result.newIds)internalSessions.register(id,id===packet.bundle.forkId?'terminal-fork-pending':'terminal-fork-ancestor');},onPrepared:(nativeThread,packet)=>{
+  const thread={...nativeThread,name:packet.sourceName||nativeThread.name||'Transferred work',status:{type:'pending'},discoveryPending:true};
+  db.prepare("DELETE FROM pocket_internal_sessions WHERE thread_id=? AND kind='terminal-fork-pending'").run(thread.id);
+  history.fullSnapshotThreads.add(thread.id);sessionDiscovery.remember(thread);attached.add(thread.id);
+  db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET name=excluded.name,enabled=1').run(thread.id,thread.name||'Transferred work');
+  emit('sessionStarted',{threadId:thread.id,thread});
+}}):null;
+if(terminalForkImports)for(const row of db.prepare("SELECT fork_id FROM terminal_fork_imports WHERE state IN ('prepared','accepted','unknown')").all())history.fullSnapshotThreads.add(row.fork_id);
+const terminalForks=terminalForkConfig?new TerminalForks({db,codex,codeHome:terminalForkConfig.codeHome,directory:resolve(dir,'terminal-forks','exports'),environmentId:terminalForkConfig.environmentId,targets:terminalForkConfig.targets||{},transport:sshTerminalFork,publicHistory:thread=>[...history.inheritedHistory(thread.id),...(thread.turns||[])],onFork:id=>internalSessions.register(id,'terminal-fork-export'),publish:transfer=>emit('terminalFork',{transfer}),
+  readSource:async threadId=>{await codex.connect();let thread=(await codex.call('thread/read',{threadId,includeTurns:false})).thread;if(thread.status?.type==='active')return {thread,turn:null};let turns=(await codex.call('thread/turns/list',{threadId,limit:1,itemsView:'summary',sortDirection:'desc'})).data;
+    if(!turns.length){const full=(await codex.call('thread/read',{threadId,includeTurns:true})).thread;turns=full.turns||[];}
+    return {thread,turn:turns.at(-1)};},
+  checkSource:async threadId=>{
+    if([...pending.values()].some(p=>p.params?.threadId===threadId))throw Error('Resolve the source’s pending question or approval before transferring.');
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued','held')").get(threadId))throw Error('Reconcile or explicitly resolve the source’s pending outgoing messages before transferring.');
+    if(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(threadId)?.archived)throw Error('Archived work is not eligible for self transfer.');
+    const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)throw Error(policy.reason||'Source usage policy prevents continuation.');
+    const {goal}=await codex.call('thread/goal/get',{threadId});if(goal?.status==='active')throw Error('This source has an automatic native goal. Its budget and autonomous admission need an explicit ownership handover before terminal transfer can run.');
+  }
+}):null;
+if(terminalForks)setInterval(()=>{if(codex.ready)void terminalForks.tick().catch(e=>console.error('Terminal fork check',e.code||e.name));},30000).unref();
+const notificationSessionFields=id=>{const row=db.prepare("SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?").get(id);return row?sessionIdentity(JSON.parse(row.metadata)):{};};
+const notificationRow=r=>({...notificationSessionFields(r.thread_id),...r,...teamNotificationFields(db,r.id),title_revision:notificationTitles.revision(r.thread_id),spoken_text:r.spoken_text||spokenText(r.title,r.body),attachments:JSON.parse(r.attachments||'[]')});
+function rememberSpeechContext(threadId,turn){
+  const prompt=turnPrompt(turn);if(!threadId||!prompt)return;
+  db.prepare('INSERT INTO speech_contexts(thread_id,turn_id,context) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET turn_id=excluded.turn_id,context=excluded.context').run(threadId,turn.id||null,promptContext(prompt));
+}
+const recoveryQueue=new RecoveryQueue(db);
+const turnRecovery=new TurnRecovery({db,
+  read:async threadId=>{await codex.connect();const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});return history.read(thread,{summary:true});},
+  health:async(threadId,kind,thread)=>{
+    try{conversationTools.assertInputAllowed(threadId);}catch{return {ok:false,blocked:true,reason:'Conversation context control is pending or uncertain.'};}
+    try{terminalForkImports?.inputAllowed(threadId);}catch{return {ok:false,blocked:true,reason:'This destination is waiting for terminal-fork ownership release.'};}
+    if(terminalForks&&!terminalForks.recoveryAllowed(threadId))return {ok:false,blocked:true,reason:'This source has a terminal transfer checkpoint. Recovery must not restart its primary task.'};
+    if(!codex.ready||syncing.has(threadId))return false;
+    if(!recoveryStorageReady(dir))return false;
+    const policy=await recoveryUsagePolicy(codex,threadId);if(!policy.ok)return policy;
+    if(thread?.goal&&['paused','budgetLimited','usageLimited','tokenLimited'].includes(thread.goal.status))return {ok:false,blocked:true,reason:'The task’s usage-stop policy is paused. Recovery will not override it.'};
+    if([...pending.values()].some(m=>m.params?.threadId===threadId))return {ok:false,blocked:true,reason:'This task has an unresolved request that needs your answer before continuing.'};
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state='unknown'").get(threadId))return {ok:false,blocked:true,reason:'Earlier message delivery is uncertain. Reconcile that message before continuing; it has not been sent again.'};
+    if(db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('sending','queued')").get(threadId))return false;
+    await rateLimits.refresh();if(rateLimits.failed)return false;
+    const accountUsage=recoveryAccountUsage(rateLimits,creditContinuation);if(!accountUsage.ok)return accountUsage;
+    if(db.prepare('SELECT archived FROM pocket_discovered_threads WHERE thread_id=?').get(threadId)?.archived)return false;
+    if(kind==='permission'){
+      const intended=db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(threadId)||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(threadId);
+      if(intended?.permissions&&intended.permissions!=='full')return {ok:false,blocked:true,reason:'The task’s intended permissions have changed. Recovery will not restore full access.'};
+      // Audit inherited permissions, never reapply a saved/full profile over a revocation.
+      const inherited=await codex.call('thread/resume',{threadId,excludeTurns:true});
+      const audit=permissionRecoveryAudit(inherited);
+      if(audit==='waiting')return false; // An incomplete audit is not proof of revocation.
+      if(audit==='blocked')return {ok:false,blocked:true,reason:'The runtime no longer grants the task’s intended full permissions. Recovery will not override that change.'};
+      const probe=await fetch('https://chatgpt.com/backend-api/codex/responses',{method:'HEAD',signal:AbortSignal.timeout(8000)});
+      if(probe.status>=500)return false;
+    }
+    return true;
+  },
+  stop:async(threadId,turnId)=>codex.call('turn/interrupt',{threadId,turnId}),
+  start:async(threadId,requestId,text)=>{
+    conversationTools.assertInputAllowed(threadId);
+    // Inherit the runtime's exact model and permission settings. No original task replay.
+    await codex.call('thread/resume',{threadId,excludeTurns:true});attached.add(threadId);
+    const recovery=turnRecovery.get(threadId);if(recovery?.state!=='dispatching'||recovery.request_id!==requestId)throw Error('Recovery was cancelled before delivery.');
+    if(recovery.kind==='continuation'&&!turnRecovery.continuationEnabled()){turnRecovery.set(threadId,'awaitingAssessment');throw Error('Automatic successful-turn chaining is suspended.');}
+    return codex.call('turn/start',{threadId,clientUserMessageId:requestId,input:[{type:'text',text}]});
+  },
+  publish:(threadId,recovery)=>{if(recovery.state==='completed'&&recoveryQueue.release(threadId,recovery.source_turn)){emit('reply',{threadId,state:'queued'});void flush();}if(recovery.state==='cancelled')recoveryQueue.forget(threadId,recovery.source_turn);emit('turnRecovery',{threadId,recovery});if(recovery.message){sessionCatchup.put(threadId,{key:'recovery:'+recovery.source_turn,kind:'blocked',text:recovery.message,turnId:recovery.current_turn});notify(threadId,'Task recovery',recovery.message,'update');}}
+});
+sessionCatchup.recoverableFailure=(threadId,turnId)=>turnRecovery.recoverableFailure(threadId,turnId);
+setInterval(()=>void turnRecovery.tick().catch(error=>console.error('Turn recovery',error.message)),10000).unref();
+const completions=new CompletionRecovery(db,(threadId,title,body,kind,turnId,prompt)=>notify(threadId,title,body,kind,[],null,null,turnId,prompt?promptContext(prompt):null));
+function notify(threadId,title,body,kind='update',attachments=[],requestId=null,speech=null,turnId=null,context=null,onPersist=null) {
+  title=notificationTitles.title(threadId,title);
+  const saved=threadId?db.prepare('SELECT * FROM speech_contexts WHERE thread_id=?').get(threadId):null;
+  const speechContext=context||(saved&&(!turnId||saved.turn_id===turnId)?saved.context:'Task update');
+  const at=now();
+  let n;
+  db.exec('BEGIN IMMEDIATE');
+  try{
+    const r=db.prepare('INSERT OR IGNORE INTO notifications(thread_id,title,body,kind,attachments,created_at,spoken_summary,source_turn_id,spoken_text) VALUES(?,?,?,?,?,?,?,?,?)').run(threadId,title,body,kind,JSON.stringify(attachments),at,spokenSummary(title,body,speech,speechContext),turnId,spokenText(title,body,speech,speechContext));
+    if(!r.changes){db.exec('COMMIT');return null;}
+    n={...notificationSessionFields(threadId),id:Number(r.lastInsertRowid),thread_id:threadId,title_revision:notificationTitles.revision(threadId),title,body,kind,attachments,created_at:at,spoken_summary:spokenSummary(title,body,speech,speechContext),spoken_text:spokenText(title,body,speech,speechContext)};
+    if(threadId&&['question','approval','error'].includes(kind))db.prepare('INSERT INTO notification_attention(notification_id,request_id) VALUES(?,?)').run(n.id,requestId);
+    sessionCatchup.recordNotification({...n,turnId,requestId});onPersist?.(n);push.enqueue(n.id,{flush:false});db.exec('COMMIT');
+  }catch(e){db.exec('ROLLBACK');throw e;}
+  emit('notification',{notification:n});void push.flush().catch(e=>console.error('Push retry',e.message));return n;
+}
+function resolveAttention(where,...args){
+  const resolved=db.prepare(`SELECT notification_id,request_id FROM notification_attention WHERE resolved_at IS NULL AND (${where})`).all(...args);
+  const ids=resolved.map(x=>x.notification_id);for(const row of resolved)if(row.request_id)sessionCatchup.resolve(row.request_id);
+  if(!ids.length)return;
+  db.prepare(`UPDATE notification_attention SET resolved_at=? WHERE notification_id IN (${ids.map(()=>'?').join(',')})`).run(now(),...ids);
+  emit('attentionResolved',{ids});
+}
+// Native request IDs belong to the current bridge connection and cannot be answered after restart.
+resolveAttention('request_id IS NOT NULL');
+const questionActions=new QuestionActions({pending,codex,db,resolve:resolveAttention});
+const historyRecovery=new Map();
+const watchHistoryRecovered=new Set();
+function observeCompletionSnapshot(thread,{latest=false}={}){
+  const turn=thread.turns?.at(-1);
+  if(latest&&turn?.id&&db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(thread.id)){
+    const checkpoint=db.prepare('SELECT * FROM completion_watches WHERE thread_id=?').get(thread.id);
+    const recovered=turnRecovery.observeMissed(thread,checkpoint,!!completions.seen(thread.id,turn.id));
+    const recovery=turnRecovery.get(thread.id);
+    if(recovered||(recovery?.state==='waiting'&&recovery.current_turn===turn.id&&turn.status==='failed'))recoveryQueue.hold(thread.id,recovery.source_turn);
+    if(recovered)completions.mark(thread.id,turn.id);
+  }
+  completions.observe(thread);
+}
+function recoverHistory(metadata,reader=history){
+  if(historyRecovery.has(metadata.id))return historyRecovery.get(metadata.id);
+  const work=(async()=>{
+    const positions=[],seen=new Set();let cursor=null;
+    while(true){
+      const page=await reader.read(metadata,{before:cursor,summary:true});if(cursor===null)observeCompletionSnapshot(page,{latest:true});positions.push(cursor);
+      if(!completions.needsEarlier(page)||!page._pocketPage?.before)break;
+      cursor=page._pocketPage.before;if(seen.has(cursor))throw Error('Codex returned a repeated history cursor.');seen.add(cursor);
+    }
+    for(const position of positions.reverse())completions.observe(await reader.read(metadata,{before:position,summary:true}));
+  })();
+  historyRecovery.set(metadata.id,work);void work.finally(()=>historyRecovery.delete(metadata.id)).catch(()=>{});
+  return work;
+}
+async function attach(threadId,{before=null,recent=false}={}){
+  requireId(threadId); await codex.connect();
+  let metadata=threadStatusProjection.project([(await timelineCodex.call('thread/read',{threadId,includeTurns:false})).thread])[0],initial=null;sessionDiscovery.remember(metadata);recordWork(()=>workRecord.enroll(metadata));
+  if(sessionIdentity(metadata).isChild&&!sessionIdentity(metadata).canAcceptDirectInput){
+    attached.add(threadId);const snapshotRevision=timeline.version,snapshotHistoryHead=historyHeads.snapshot(threadId);const thread=await history.read(metadata,{before,preferPaging:true,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1}:{})});if(!before)timeline.seed(thread,{throughVersion:snapshotRevision});return {...thread,_pocketSnapshotRevision:snapshotRevision,_pocketSnapshotHistoryHead:snapshotHistoryHead};
+  }
+  if(!historyReadOnly&&!attached.has(threadId)){
+    // Opening history inherits the runtime profile; it must not undo an external permission change.
+    try{
+      metadata=(await codex.call('thread/resume',{threadId,excludeTurns:true})).thread;attached.add(threadId);
+      if(metadata.historyMode!=='paginated'&&!recent){initial=await history.read(metadata);observeCompletionSnapshot(initial,{latest:true});}
+      else if(metadata.historyMode==='paginated'&&db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId)){
+        if(recent)void recoverHistory(metadata).catch(e=>console.error('History recovery',e.message));
+        else await recoverHistory(metadata);
+      }
+    }catch(error){
+      // Persisted history below remains authoritative for viewing. Never evict
+      // the other process's writer or pretend NextComp owns this runtime.
+      if(!isThreadWriterConflict(error))throw error;
+    }
+  }
+  const latestTurn=initial?.turns?.at(-1);if(latestTurn)rememberSpeechContext(threadId,latestTurn);
+  const snapshotRevision=timeline.version,snapshotHistoryHead=historyHeads.snapshot(threadId);
+  const thread=initial||await history.read(metadata,{before,...(recent?{maxItems:8,maxBytes:512000,maxTurns:1,preferPaging:true}:{})});if(!before){timeline.seed(thread,{throughVersion:snapshotRevision});rememberSpeechContext(threadId,thread.turns?.at(-1));}return {...thread,_pocketSnapshotRevision:snapshotRevision,_pocketSnapshotHistoryHead:snapshotHistoryHead};
+}
+const isActive=t=>t.status?.type==='active';
+const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_settings WHERE thread_id=?').get(id);return row?JSON.parse(row.settings):null;};
+// Only an explicit queue promotion requests a wake after the current thread drain.
+const promotedOutgoing=new Map();
+async function sendOutgoing(row,initialThread=null){
+  try{conversationTools.assertInputAllowed(row.thread_id);}catch{return;}
+  const threadId=row.thread_id,id=row.id;
+  if(syncing.has(threadId)){
+    if(row.promoted&&(promotedOutgoing.has(threadId)||promotedOutgoing.size<64)){let ids=promotedOutgoing.get(threadId);if(!ids)promotedOutgoing.set(threadId,ids=new Set());if(ids.size<64)ids.add(id);}
+    // Overflow remains durable queued work for the existing flush, never a new timer.
+    return;
+  }
+  syncing.add(threadId);
+  try{
+    row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+    if(!row||row.state!=='queued'||!replyDelivery.ready(id))return;
+    replyDelivery.prepare(id);
+    let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
+    if(row.mode==='queue'&&db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(threadId,id))return;
+    const attachedMode=row.mode;
+    let t=initialThread||(attachedMode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput));requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+    sessionDiscovery.remember(t);recordWork(()=>workRecord.enroll(t));
+    // Re-read after attachment: the user may have edited or removed the waiting message.
+    row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
+    if(!row||row.state!=='queued')return;
+    // A queued metadata read has no active-turn identity. Promotion during that
+    // await requires a bounded current-turn read, then another edit/remove check.
+    if(attachedMode==='queue'&&row.mode==='steer'){
+      t=await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput);requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+      row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+      if(!row||row.state!=='queued')return;
+    }
+    if(row.mode==='queue'){
+      if(t.status?.type!=='idle')return;
+      const earlier=db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(row.thread_id,row.id);
+      if(earlier)return;
+    }
+    if(!db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=? AND state='queued'").run(now(),row.id).changes)return;
+    emit('reply',{id,threadId,state:'sending'});
+    const continuation=db.prepare("SELECT result FROM conversation_operations WHERE kind='continue' AND state='accepted' AND json_extract(result,'$.outgoingId')=? LIMIT 1").get(row.id);
+    const continuationOptions=continuation?JSON.parse(continuation.result).turnOptions||{}:{};
+    const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides={...continuationOptions,...turnOverrides(savedTurnSettings(t.id))};
+    const accepted=result=>{if(!replyDelivery.accept(row,result))return;
+      resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
+      emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
+    };
+    const submit=(method,params)=>{replyDelivery.dispatched(id);return codex.callTurn(method,params,outcome=>{
+      if(outcome.result)accepted(outcome.result);
+      else if(outcome.terminal&&outcome.error){const state=replyDelivery.rejectLate(row,outcome.error);if(state)emit('reply',{id,threadId,state,error:outcome.error.message});}
+    });};
+    let result;
+    const active=t.turns?.findLast(x=>x.status==='inProgress');
+    if(row.mode!=='queue'&&isActive(t)&&active) {
+      const steerTransport=codex.transport;
+      try {result=await submit('turn/steer',{threadId:t.id,expectedTurnId:active.id,clientUserMessageId:row.id,input});}
+      catch(e){
+        // Retry only when Codex explicitly reports that the turn has finished.
+        if(e.rpc && /no active turn|no turn in progress/i.test(e.message)){
+          replyDelivery.prepare(id);
+          const fresh=(await timelineCodex.call('thread/read',{threadId:t.id,includeTurns:false})).thread;
+          if(codex.transport!==steerTransport||fresh?.id!==t.id||fresh.status?.type!=='idle')throw e;
+          requireDirectSessionInput(fresh);
+          result=await submit('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+        }else throw e;
+      }
+    }else if(isActive(t))throw new Error('The active turn is not ready for replies. Try again shortly.');
+    else if(t.status?.type==='idle'||(row.mode!=='queue'&&await confirmedFailedTurn(codex,t,requireDirectSessionInput)))result=await submit('turn/start',{threadId:t.id,input,clientUserMessageId:row.id,...overrides});
+    else throw new Error('The conversation is not confirmed idle. Refresh before sending this message.');
+    accepted(result);
+  }catch(e){
+    console.error('Reply delivery failure',JSON.stringify({method:e.rpcMethod||null,code:e.code||'RPC_REJECTED',phase:db.prepare('SELECT phase FROM reply_dispatch WHERE id=?').get(id)?.phase||'beforePreflight'}));
+    if(replyDelivery.preflightFailed(id,e)){emit('reply',{id,threadId,state:'queued'});return;}
+    // A definite busy rejection is safe to retry as a queued next turn; lost acknowledgements aren't.
+    const state=row?.mode==='queue'&&e.rpc&&/already active|turn.*in progress|active turn/i.test(e.message)?'queued':ambiguousDelivery(e)?'unknown':'failed';
+    // Attachment may fail after a waiting reply was removed. Never resurrect
+    // that cancelled row, or overwrite a later accepted outcome.
+    const changed=db.prepare("UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=? AND state IN ('queued','sending')").run(state,e.message,now(),id);
+    if(changed.changes)emit('reply',{id,threadId,state,error:e.message});
+  }finally{
+    syncing.delete(threadId);
+    const ids=promotedOutgoing.get(threadId),next=ids?.values().next().value;
+    if(next){ids.delete(next);if(!ids.size)promotedOutgoing.delete(threadId);void sendOutgoing({id:next,thread_id:threadId,promoted:true});}
+    else {
+      // A direct human send can arrive while a queue-status read owns this
+      // thread. Drain that original saved intent as soon as the owner exits;
+      // do not leave it waiting for the periodic inventory loop.
+      const waiting=db.prepare("SELECT * FROM outgoing WHERE thread_id=? AND id<>? AND state='queued' AND mode='steer' ORDER BY rowid LIMIT 64").all(threadId,id).find(r=>replyDelivery.ready(r.id));
+      if(waiting)void sendOutgoing(waiting);
+    }
+  }
+}
+let outgoingFlush=null;
+async function flush(){
+ if(!codex.ready)return;
+ if(outgoingFlush)return outgoingFlush;
+ const rows=db.prepare("SELECT * FROM outgoing WHERE state='queued' ORDER BY rowid").all();let next=0;
+ const work=Promise.all(Array.from({length:Math.min(2,rows.length)},async()=>{
+  while(next<rows.length&&codex.ready)await sendOutgoing(rows[next++]);
+ }));outgoingFlush=work;
+ try{await work;}finally{if(outgoingFlush===work)outgoingFlush=null;}
+}
+db.prepare("UPDATE outgoing SET state='unknown',result='Server restarted during delivery; check the conversation before resending.' WHERE state='sending'").run();
+
+codex.on('event',m=>{
+  m=sendIdentity.event(m);
+  const p=m.params||{}, threadId=p.threadId || p.thread?.id || p.conversationId;
+  if(threadId&&(internalSessions.owns(threadId,p.thread)||voiceController.owns(threadId)||nativeVoice.owns(threadId)||immersion.ownsThread(threadId)))return;
+  const activity=sessionDiscovery.observe(m);
+  if(activity){
+    if(activity.status||m.method==='item/started'&&p.item?.type==='userMessage')emit('sessionActivity',activity);
+    if(!db.prepare('SELECT 1 FROM pocket_discovered_threads WHERE thread_id=?').get(threadId))void sessionDiscovery.discoverLive(threadId).then(thread=>{if(thread)emit('sessionStarted',{threadId,thread:{...thread,...catalogFields(thread)}});});
+  }
+  if(m.method==='thread/started'&&p.thread)emit('sessionStarted',{threadId,thread:{...p.thread,...catalogFields(p.thread)}});
+  const interaction=sessionInteraction(m);if(interaction)emit('sessionInteraction',{...interaction,activityAt:activity?.activityAt});
+  threadPreviews.observe(m);activityBoard.observe(m);recordWork(()=>workRecord.observe(m));
+  if(m.method==="item/completed"||p.item?.type==="userMessage")conversationNotes.observe(threadId,p.turnId,p.item);
+  if(m.method==="turn/completed")for(const item of p.turn?.items||[])conversationNotes.observe(threadId,p.turn.id,item);
+  if(threadId&&/^(item\/|turn\/completed)/.test(m.method))liveDelivery.activity(()=>activityBoard.snapshot());
+  if(['account/updated','account/login/completed'].includes(m.method))emit('nativeAuthBoundary',{});
+  if(m.method==='account/rateLimits/updated')rateLimits.liveUpdate(p);
+  if(m.method==='account/updated'){rateLimits.clear();void rateLimits.refresh({force:true});}
+  if(threadId){const update=timeline.ingest(m);if(update){historyHeads.observe(threadId,update.version);liveDelivery.timeline({...update,nativeMethod:m.method,nativeItemId:p.itemId||p.item?.id||null,historyHead:historyHeads.snapshot(threadId)});}}
+  if(threadId&&m.method==='thread/realtime/itemCompleted'){
+    const version=++timeline.version;historyHeads.observe(threadId,version);
+    liveDelivery.timeline({threadId,version,reload:true,historyHead:historyHeads.snapshot(threadId)});
+  }
+  if(m.method==='serverRequest/resolved'){pending.delete(String(p.requestId));resolveAttention('request_id=?',String(p.requestId));}
+  if(threadId&&attached.has(threadId)&&m.method==='turn/started'){
+    if(p.turn?.id)db.prepare('DELETE FROM speech_contexts WHERE thread_id=? AND turn_id IS NOT ?').run(threadId,p.turn.id);
+    rememberSpeechContext(threadId,p.turn);
+  }
+  if(threadId&&attached.has(threadId)&&p.item?.type==='userMessage')rememberSpeechContext(threadId,{id:p.turnId,items:[p.item]});
+  if(m.method==='turn/started'&&threadId)resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=?)',threadId);
+  if(m.id!==undefined && threadId){
+    const duplicate=pending.has(String(m.id));
+    if(!duplicate)pending.set(String(m.id),{...m,params:{...p,threadId},_pocketUI:{...requestPresentation(m),token:randomUUID()}});
+    const question=/requestUserInput/.test(m.method);
+    if(!duplicate)notify(threadId,question?'Codex has a question':'Codex needs your attention',p.questions?.map(q=>q.question).join('\n')||p.reason||p.command||p.message||'Open the task to review the request.',question?'question':'approval',[],String(m.id),null,p.turnId);
+  }
+  const recovering=m.method==='turn/completed'?turnRecovery.observe(threadId,p.turn):false;
+  sessionCatchup.observe(m);
+  coordinatorHub.memory.observe(m);
+  if(m.method==='item/completed' && p.item?.type==='agentMessage')emit('message',{threadId,item:p.item});
+  if(m.method==='turn/started'){const recovery=turnRecovery.get(threadId);if(recovery&&['waiting','running'].includes(recovery.state)&&recovery.current_turn!==p.turn?.id)turnRecovery.cancel(threadId);}
+  if(m.method==='turn/completed'){
+    if(recovering)completions.mark(threadId,p.turn.id);else completions.complete(threadId,p.turn);
+    if(['interrupted','failed'].includes(p.turn?.status)){
+      if(recovering)recoveryQueue.hold(threadId,turnRecovery.get(threadId).source_turn);
+      db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND mode='queue' AND state='queued'").run(now(),threadId);
+      emit('reply',{threadId,state:'held'});
+    }else if(p.turn?.status==='completed')void flush();
+  }
+  // Only forward subscribed task events, never unrelated global messages or credentials.
+  if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId,...(m.method==='thread/status/changed'?{status:p.status}:{})}}});
+});
+codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});void providerUsage.refresh({force:true});});
+codex.on('status',status=>emit('status',status));
+codex.on('rpcTimeout',value=>console.error('Codex RPC deadline',JSON.stringify(value)));
+codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();watchHistoryRecovered.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
+let reconnecting=false;
+setInterval(async()=>{
+  if(reconnecting)return;reconnecting=true;
+  try{
+    await codex.connect();
+    // Explicit saved input must not wait behind optional watch discovery.
+    await flush();
+    await sessionStarts.flush();
+    await restoreWatchedSubscriptions({watches:db.prepare('SELECT thread_id,enabled FROM watches WHERE enabled=1').all(),codex,subscriptions:nativeSubscriptions,attached,
+      onObserved:thread=>{sessionDiscovery.remember(thread);if(!watchHistoryRecovered.has(thread.id)){watchHistoryRecovered.add(thread.id);void recoverHistory(thread,workRecordHistory).catch(error=>{watchHistoryRecovered.delete(thread.id);console.error('Watch history recovery unavailable',error.code||error.name);});}}});
+    await flush();
+  }catch(e){ /* Reconnect without changing the running Codex process. */ }finally{reconnecting=false;}
+},5000).unref();
+codex.connect().catch(()=>{});
+
+app.use((req,res,next)=>{res.set('Cache-Control','no-store');res.set('X-Content-Type-Options','nosniff');next();});
+app.get('/health',(_req,res)=>res.json({ok:true,codex:codex.ready,push:push.enabled?'fcm':'unconfigured',version:appVersion,...(backendRelease?{releaseDigest:backendRelease.releaseDigest,sourceCommit:backendRelease.sourceCommit}:{})}));
+if(backendArtifacts)mountBackendArtifacts(app,{artifacts:backendArtifacts,nodeAuthorize:fleet?(token,scope)=>fleet.authorizeNode(token,scope):undefined});
+if(fleet)fleet.mountStatus(app);
+// A revoked credential may read ONLY its original deny receipt, never regain access.
+if(fleet)app.get('/api/fleet/revocations/:operationId',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.revocationReceipt(getToken(req),req.params.operationId))));
+const pairAttempts=new Map();
+setInterval(()=>{for(const [ip,v] of pairAttempts)if(now()-v.start>60000)pairAttempts.delete(ip);},60000).unref();
+app.post('/api/pair',(req,res)=>{
+  const ip=req.socket.remoteAddress, v=pairAttempts.get(ip)||{count:0,start:now()};
+  if(now()-v.start>60000){v.count=0;v.start=now();}v.count++;pairAttempts.set(ip,v);
+  if(v.count>10)return res.status(429).json({error:'Too many pairing attempts. Wait one minute.'});
+  const code=String(req.body.code||'').replace(/[-\s]/g,'').toUpperCase();
+  const row=db.prepare('SELECT * FROM pairing WHERE code_hash=? AND expires>?').get(hash(code),now());
+  if(!row)return res.status(401).json({error:'Pairing code expired or incorrect.'});
+  db.prepare('DELETE FROM pairing WHERE code_hash=?').run(row.code_hash);
+  const token=randomBytes(32).toString('hex'), id=randomUUID();
+  db.prepare('INSERT INTO devices(id,name,token_hash,created_at) VALUES(?,?,?,?)').run(id,String(req.body.name||'Android phone').slice(0,100),hash(token),now());
+  res.json({token,id,host:hostName,firebase:push.config,local:localMode,...(automation?{automationSecret:automation.secret}:{})});
+});
+app.use('/api',requireAuth);
+if(fleet){
+ app.post('/api/fleet/session',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.session(req.device,req.fleetPrincipal))));
+ app.post('/api/fleet/enroll',route(async(req,res)=>{if(!req.body||Object.keys(req.body).join(',')!=='operationId')return res.status(400).json({error:'Keep the original enrollment operationId.'});res.set('Cache-Control','no-store').json(await fleet.enroll(req.device,req.fleetPrincipal,req.body.operationId));}));
+ app.get('/api/fleet/enrollments/:operationId',route(async(req,res)=>res.set('Cache-Control','no-store').json(await fleet.enrollment(req.device,req.fleetPrincipal,req.params.operationId))));
+ app.post('/api/fleet/revoke',route(async(req,res)=>{if(!req.body||Object.keys(req.body).join(',')!=='operationId')return res.status(400).json({error:'Keep the original revocation operationId.'});res.set('Cache-Control','no-store').json(await fleet.revoke(req.device,req.fleetPrincipal,req.body.operationId));}));
+ app.get('/api/backends',(req,res,next)=>{const send=res.json.bind(res);res.json=value=>send({...value,fleet:fleet.discovery()});next();});
+}
+app.use('/api',(req,res,next)=>humanIngress.middleware(req,res,next));
+app.get('/api/terminal-forks',owner,(_req,res)=>res.json({enabled:!!terminalForks,targets:Object.keys(terminalForkConfig?.targets||{}),transfers:terminalForks?db.prepare('SELECT id FROM terminal_forks ORDER BY created_at DESC LIMIT 100').all().map(r=>terminalForks.view(r.id)):[]}));
+app.post('/api/terminal-forks',owner,route(async(req,res)=>{if(!terminalForks)return res.status(503).json({error:'The environment owner has not registered terminal-fork destinations.'});res.status(202).json(terminalForks.request(req.body));}));
+app.get('/api/terminal-forks/imports/:id',owner,(req,res)=>res.json(terminalForkImports?.view(requireId(req.params.id))||{id:req.params.id,state:'disabled'}));
+app.post('/api/terminal-forks/imports/:id/prepare',owner,route(async(req,res)=>{if(!terminalForkImports)return res.status(503).json({error:'This destination has not registered native terminal imports.'});await codex.connect();res.json(await terminalForkImports.prepare(requireId(req.params.id)));}));
+app.post('/api/terminal-forks/imports/:id/activate',owner,route(async(req,res)=>{if(!terminalForkImports)return res.status(503).json({error:'This destination has not registered native terminal imports.'});await codex.connect();res.json(await terminalForkImports.activate(requireId(req.params.id)));}));
+app.get('/api/terminal-forks/:id',owner,(req,res)=>{const result=terminalForks?.view(requireId(req.params.id));if(!result)return res.status(404).json({error:'Transfer not found.'});res.json(result);});
+app.post('/api/terminal-forks/:id/release',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.release(requireId(req.params.id)));if(codex.ready)void terminalForks.tick().catch(()=>{});}catch(e){res.status(e.status||409).json({error:e.message});}});
+app.post('/api/terminal-forks/:id/cancel',owner,(req,res)=>{try{if(!terminalForks)throw Error('Terminal transfers are not registered.');res.json(terminalForks.cancel(requireId(req.params.id)));}catch(e){res.status(e.status||409).json({error:e.message});}});
+// Explicit retirement prevents old clients from replaying room intents as stock input.
+app.use(['/api/hollywood','/api/losangelex','/api/room-progress'],(_req,res)=>res.status(410).json({code:'ROOMS_RETIRED',error:'Rooms and Losangelex are no longer supported in NextComp. Original records are retained.'}));
+app.get('/api/backends',(_req,res)=>res.json({defaultBackend:'codex',product:'codex',backends:[{id:'codex',name:'Codex',configured:true,available:codex.ready,modes:['session','coordinator'],voice:true}]}));
+app.get('/api/computer-use',route(async(_req,res)=>res.json(await computerUseStatus())));
+mountAppUpdates(app,{updates:new AppUpdates({dir,feedDir:process.env.POCKET_APP_UPDATES_DIR,db,push}),owner,route,onAnnounce:notification=>emit('notification',{notification})});
+coordinatorHub.mount();
+app.get('/api/coordinator/reporting',(req,res)=>res.json(coordinatorReports.settings(req.device.id)));
+app.post('/api/coordinator/reporting',route(async(req,res)=>res.json(coordinatorReports.configure(req.device.id,req.body))));
+app.get('/api/coordinator/reporting/:deviceId',owner,(req,res)=>res.json(coordinatorReports.settings(req.params.deviceId)));
+app.post('/api/coordinator/reporting/:deviceId',owner,route(async(req,res)=>res.json(coordinatorReports.configure(req.params.deviceId,req.body))));
+app.get('/api/coordinator/reports',(req,res)=>{try{res.json(coordinatorReports.inbox(req.device.id,{before:Number(req.query.before||Number.MAX_SAFE_INTEGER),limit:Number(req.query.limit||40)}));}catch(e){res.status(e.status||500).json({error:e.message});}});
+app.get('/api/voice/history',route(async(req,res)=>{const before=Number(req.query.before||Number.MAX_SAFE_INTEGER);if(!Number.isSafeInteger(before)||before<=0)return res.status(400).json({error:'Invalid history cursor.'});res.json(voiceController.history(req.device.id,before,{conversationOnly:req.query.conversationOnly==='1'}));}));
+app.post('/api/voice/start',route(async(req,res)=>{
+  if(req.body.room)throw Object.assign(Error('Room voice is retired. Choose a Codex session.'),{status:410});
+  let threadId=null;
+  if(req.body.threadId){threadId=requireId(req.body.threadId);if(catchupHidden(threadId))return res.status(400).json({error:'Choose a work session.'});await codex.connect();const result=await codex.call('thread/read',{threadId,includeTurns:false});if(result.thread?.id!==threadId)return res.status(409).json({error:'Session identity changed. Choose the intended session again.'});requireDirectSessionInput(result.thread);}
+  await voiceController.ensure(req.device.id);
+  const s=voiceController.setFocus(req.device.id,threadId,{mode:threadId?'direct':'coordinator'});
+  if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
+  res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),voice:voiceCapability(),voiceInput:voiceInput(),native:true});
+}));
+app.get('/api/voice/native/capabilities',(_req,res)=>{const voice=voiceCapability();res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake&&voice.input,cancellationTombstones:true,liveTranscriptionVersion:voice.input?1:0,renderedSpeechVersion:voice.output&&nativeSpeechEnabled?1:0,voice,voiceInput:voiceInput(),speechPolicy:SPEECH_POLICY});});
+app.post('/api/voice/renderings/:id',route(async(req,res)=>{
+ if(!voiceCapability().output)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
+ if(!nativeSpeechEnabled)throw Object.assign(Error('Native rendered speech is not installed on this environment. Text remains available.'),{status:503});
+ res.status(202).json(await voiceRenderings.create(req.device.id,req.params.id,req.body));
+}));
+app.get('/api/voice/renderings/:id',route(async(req,res)=>{
+ const row=voiceRenderings.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Speech request not found.'});res.json(row);
+}));
+app.get('/api/voice/renderings/:id/audio',route(async(req,res)=>{
+ if(!voiceCapability().output)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
+ const result=await voiceRenderings.audio(req.device.id,req.params.id);res.set('Cache-Control','private, no-store').set('X-NextComp-Audio-SHA256',result.sha256).type('audio/wav').send(result.audio);
+}));
+app.post('/api/voice/renderings/:id/cancel',route(async(req,res)=>res.json(voiceRenderings.cancel(req.device.id,req.params.id,req.body.attemptId))));
+app.post('/api/voice/recordings',route(async(req,res)=>{
+ if(!voiceCapability().input)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
+ if(!nativeAudioIntake)throw Object.assign(Error('Durable native audio intake is not installed on this environment. Recording remains on the device.'),{status:503});
+ res.status(202).json(await voiceRecordings.create(req.device.id,req.body,req.humanPrincipal));
+}));
+app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),route(async(req,res)=>{
+ if(!voiceCapability().input)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
+ if(!Buffer.isBuffer(req.body))throw Object.assign(Error('Expected recorded WAV audio.'),{status:415});
+ res.status(202).json(await voiceRecordings.upload(req.device.id,req.params.id,req.body));
+}));
+app.get('/api/voice/recordings/:id',route(async(req,res)=>{
+ const receipt=await voiceRecordings.inspect(req.device.id,req.params.id);
+ if(!receipt)return res.status(404).json({error:'Recording admission not found.'});
+ res.json(receipt);
+}));
+app.post('/api/voice/recordings/:id/cancel-request',route(async(req,res)=>res.json(await voiceRecordings.cancelRequest(req.device.id,req.params.id))));
+app.post('/api/voice/recordings/:id/retry-audio',route(async(req,res)=>{
+ const receipt=await voiceRecordings.retryAudio(req.device.id,req.params.id);
+ humanIngress.action('voice-recording',voiceRecordings.key(req.device.id,req.params.id),'retry-audio',req.humanPrincipal);
+ res.status(202).json(receipt);
+}));
+app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(await voiceRecordings.cancel(req.device.id,req.params.id,req.body,req.humanPrincipal))));
+app.post('/api/voice/native/start',route(async(req,res)=>{const voice=voiceCapability();const purpose=req.body.purpose??'voice';if(!voice.available||(purpose==='speech'?!voice.output:!voice.input))return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});if(!['voice','speech','transcription'].includes(purpose))throw Object.assign(Error('Invalid audio purpose.'),{status:400});res.json(await nativeVoice.start(req.device.id,req.body.sdp,purpose,req.body.text??null));}));
+app.post('/api/voice/native/input/begin',route(async(req,res)=>res.json(nativeLiveInput.begin(req.device.id,req.body.id,req.body.connectionId))));
+app.post('/api/voice/native/input/finalize',route(async(req,res)=>res.json(await nativeLiveInput.finalize(req.device.id,req.body))));
+app.post('/api/voice/native/input/cancel',route(async(req,res)=>{nativeLiveInput.cancel(req.device.id,req.body.id);res.json({ok:true});}));
+app.post('/api/voice/native/stop',route(async(req,res)=>{await nativeVoice.stop(req.device.id,req.body.connectionId);res.json({ok:true});}));
+app.post('/api/voice/native/input',route(async(req,res)=>{
+ const destination=Object.hasOwn(req.body,'destination')?await voiceDestination(req.device.id,req.body.destination):undefined;
+ res.json(nativeVoice.begin(req.device.id,req.body.connectionId,req.body.turnId,destination));
+}));
+app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId,req.body.audioSha256??null))));
+app.post('/api/voice/native/speak',route(async(req,res)=>{const voice=voiceCapability();if(!voice.output)return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId));}));
+app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
+app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),(req,res,next)=>{try{const voice=voiceCapability();if(!voice.input)return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
+app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
+app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=voiceController.get(req.device.id,req.params.id);if(!row){const admission=nativeVoice.receipt(req.device.id,req.params.id);if(admission)return res.json(admission);return res.status(404).json({error:'Voice turn not found.'});}if(row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');const admission=nativeVoice.admission(req.device.id,req.params.id);res.json(admission?{...row,audioSha256:admission.audio_sha256||null}:row);}));
+app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(await voiceController.presented(req.device.id,req.params.id))));
+app.get('/api/voice/speech',(_req,res)=>res.json({...voiceSpeech.status(),voice:voiceCapability()}));
+app.post('/api/voice/speech',route(async(req,res)=>{
+  const voice=voiceCapability();if(!voice.output)return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});
+  if(speechRequests>=2)return res.status(429).json({error:'Speech is busy. Retry shortly.'});
+  const controller=new AbortController();
+  const cancel=()=>{if(!res.writableEnded)controller.abort();};
+  res.on('close',cancel);speechRequests++;
+  try{
+    const result=await voiceSpeech.synthesize(req.body.text,{signal:controller.signal});
+    if(!res.destroyed)res.set({'Content-Type':'audio/wav','Cache-Control':'no-store','X-Pocket-Speech-Model':result.model}).send(result.audio);
+  }finally{speechRequests--;res.off('close',cancel);}
+}));
+app.post('/api/pairing',owner,(_req,res)=>{
+  const code=randomBytes(5).toString('hex').toUpperCase();
+  db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
+});
+app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();void providerUsage.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),capabilities:{readOnlyTimeline:true,canonicalTimeline:1,voice:voiceCapability(),voiceInput:voiceInput()},usage:rateLimits.snapshot(),providerUsage:providerUsage.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.post('/api/device/push',(req,res)=>{
+  if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
+  if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
+  const {token,projectId}=req.body;
+  if(typeof token!=='string'||!/^[-_A-Za-z0-9:]{20,4096}$/.test(token)||projectId!==push.config.projectId)return res.status(400).json({error:'Invalid push registration for this server.'});
+  db.prepare('DELETE FROM push_tokens WHERE token=? AND device_id<>?').run(token,req.device.id);
+  db.prepare('INSERT INTO push_tokens VALUES(?,?,?,?) ON CONFLICT(device_id) DO UPDATE SET token=excluded.token,project_id=excluded.project_id,updated_at=excluded.updated_at').run(req.device.id,token,projectId,now());
+  res.json({ok:true,transport:'fcm'});
+});
+app.post('/api/device/disconnect',(req,res)=>{
+  if(req.device.id==='owner')return res.status(403).json({error:'Device access required.'});
+  if(fleet)fleet.revokeLocal(req.device.id);
+  db.prepare('DELETE FROM devices WHERE id=?').run(req.device.id);
+  for(const s of sockets.clients)if(s.deviceId===req.device.id)s.close();
+  res.json({ok:true});
+});
+app.get('/api/notifications/:id/delivery',owner,(req,res)=>res.json({deliveries:db.prepare('SELECT p.device_id,d.name,p.state,p.attempts,p.message_id,p.error,p.updated_at FROM push_deliveries p JOIN devices d ON d.id=p.device_id WHERE p.notification_id=?').all(req.params.id)}));
+app.get('/api/projects',route(async(_req,res)=>{
+  await codex.connect();const r=await codex.call('thread/list',{modelProviders:[],limit:100,sortKey:'updated_at',sortDirection:'desc',archived:false,useStateDbOnly:true});
+  res.json({projects:recentProjects(r.data||[])});
+}));
+app.post('/api/threads',route(async(req,res)=>{
+  // Resolve once at admission, not after waiting in the creation queue. An
+  // original receipt is inspected without consulting a changed host default.
+  const selection=sessionStarts.get(req.body.id)?req.body.selection:await modelProviders.selection(req.body.selection);
+  const row=sessionStarts.enqueue({...req.body,selection},req.humanPrincipal);res.status(row.state==='started'?200:202).json(row);
+}));
+app.get('/api/session-starts/:id',(req,res)=>{const row=sessionStarts.get(req.params.id);if(!row)return res.status(404).json({error:'Task request not found.'});res.json(row);});
+app.get('/api/work-record',(req,res)=>res.json({...workRecord.list({before:req.query.before,limit:req.query.limit}),team:workRecord.teamList(req.device.id),voice:voiceController.history(req.device.id).turns.slice(-30).reverse().map(turn=>({id:turn.id,status:turn.state,request:turn.transcript,output:turn.response,createdAt:turn.created_at,evidence:'agent-reported',source:{backend:'voice',turnId:turn.id}}))}));
+app.get('/api/activity',(_req,res)=>res.json({items:activityBoard.snapshot()}));
+app.get('/api/threads',route(async(req,res)=>{
+  await codex.connect();
+  if(req.query.view==='coordinator'){
+    const cursor=typeof req.query.cursor==='string'?req.query.cursor:null;
+    if(cursor&&cursor.length>4096)return res.status(400).json({error:'Invalid discovery cursor.'});
+    const includeChildren=req.query.includeChildren==='true';
+    const archived=req.query.archived==='true';
+    const result=await sessionDiscovery.page({limit:100,sortKey:'recency_at',sortDirection:'desc',archived,useStateDbOnly:true,sourceKinds:includeChildren?[...INTERACTIVE_SOURCES,'subAgentThreadSpawn']:INTERACTIVE_SOURCES,...(cursor?{cursor}:{})});
+    const found=new Map();for(const thread of result.data||[]){if(internalSessions.owns(thread.id,thread)||voiceController.owns(thread.id)||nativeVoice.owns(thread.id)||immersion.ownsThread(thread.id)||(!includeChildren&&!archived&&catchupHidden(thread.id)))continue;sessionDiscovery.remember(thread,{archived});found.set(thread.id,thread);}
+    if(!cursor&&!includeChildren&&!archived)for(const row of db.prepare("SELECT d.metadata FROM session_starts s JOIN pocket_discovered_threads d ON d.thread_id=s.thread_id WHERE s.state='started' AND d.archived=0 ORDER BY s.updated_at DESC LIMIT 100").all()){
+      const thread=JSON.parse(row.metadata);if(!found.has(thread.id)&&!catchupHidden(thread.id))found.set(thread.id,{...thread,...sessionDiscovery.live.get(thread.id)});
+    }
+    const foundThreads=threadStatusProjection.project([...found.values()]);
+    const attention=workAttention({db,pending,codex,threads:foundThreads});
+    return res.json({threads:foundThreads.map(thread=>({attention:attention.get(thread.id),id:thread.id,name:catalogName(thread),preview:thread.preview||'',cwd:thread.cwd,status:thread.status,statusSource:thread.statusSource,updatedAt:thread.updatedAt,createdAt:thread.createdAt,activityAt:thread.activityAt,source:thread.source,discoveryPending:!!thread.discoveryPending,...catalogFields(thread)})),nextCursor:result.nextCursor||null,refreshPending:false});
+  }
+  const r=await sessionDiscovery.list({archived:req.query.archived==='true',cursor:typeof req.query.cursor==='string'?req.query.cursor:null,searchTerm:typeof req.query.search==='string'?req.query.search.slice(0,200):null});
+  const listedThreads=threadStatusProjection.project((r.data||[]).filter(t=>!internalSessions.owns(t.id,t)&&!voiceController.owns(t.id)&&!nativeVoice.owns(t.id)&&!immersion.ownsThread(t.id)));
+  const attention=workAttention({db,pending,codex,threads:listedThreads,refreshPending:!!r.refreshPending});
+  const watches=db.prepare('SELECT * FROM watches').all();
+  const unread=new Map(db.prepare("SELECT n.thread_id,COUNT(*) AS total FROM notifications n LEFT JOIN notification_reads r ON r.device_id=? AND r.thread_id=n.thread_id WHERE n.kind!='coordinator_report' AND (n.id>COALESCE(r.through_id,0) OR EXISTS(SELECT 1 FROM notification_attention a WHERE a.notification_id=n.id AND a.resolved_at IS NULL)) GROUP BY n.thread_id").all(req.device.id).map(row=>[row.thread_id,row.total]));
+  for(const renamed of notificationTitles.reconcile(r.data||[])){emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));}
+  res.json({threads:listedThreads.map(t=>{
+    const followed=!!watches.find(w=>w.thread_id===t.id&&w.enabled);
+    const updatedMs=sessionWorkTime(t);
+    const preview=threadPreviews.get(t,{hydrate:followed||t.status?.type==='active'||Date.now()-updatedMs<15*60000});
+    const start=db.prepare("SELECT state FROM outgoing WHERE thread_id=? AND id LIKE 'start-%' ORDER BY created_at DESC LIMIT 1").get(t.id);
+    const awaitingStart=start&&['queued','sending'].includes(start.state)&&['idle','notLoaded','pending',undefined].includes(t.status?.type);
+    return {...catalogContext.get(t),attention:attention.get(t.id),unreadCount:unread.get(t.id)||0,id:t.id,name:catalogName(t),...preview,...(awaitingStart&&!preview.preview?{preview:'Starting…',previewRole:'activity',previewKind:'pending'}:{}),cwd:t.cwd,status:awaitingStart?{type:'pending'}:t.status,statusSource:awaitingStart?'admission':t.statusSource,discoveryPending:!!t.discoveryPending||!!awaitingStart,activityAt:t.activityAt,updatedAt:t.updatedAt,archived:req.query.archived==='true',watched:followed,...catalogFields(t)};
+  }),nextCursor:r.nextCursor||null,refreshPending:!!r.refreshPending});
+}));
+app.post('/api/threads/:id/recovery',route(async(req,res)=>{
+ const threadId=requireId(req.params.id);
+ if(req.body.cancel){turnRecovery.cancel(threadId);return res.json({recovery:turnRecovery.get(threadId)});}
+ if(req.device.id!=='owner')return res.status(403).json({error:'Only the local owner can schedule recovery of an older failed turn.'});
+ const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
+ const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
+ if(!latest||latest.id!==req.body.turnId)return res.status(409).json({error:'The failed turn is no longer the latest turn.'});
+ const scheduled=turnRecovery.observe(threadId,latest);res.json({scheduled,recovery:turnRecovery.get(threadId)});
+}));
+app.post('/api/threads/:id/continuation',owner,route(async(req,res)=>{
+ if(typeof req.body.evidence!=='string'||!req.body.evidence.trim()||req.body.evidence.length>8000)return res.status(400).json({error:'Provide a bounded evidence-backed continuation assessment.'});
+ const threadId=requireId(req.params.id);await codex.connect();
+ const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
+ const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
+ if(!latest||latest.id!==req.body.turnId)return res.status(409).json({error:'Read the current task before authorizing continuation.'});
+ const managedChild=sessionIdentity(thread).isChild;
+ const needsInput=[...pending.values()].some(m=>m.params?.threadId===threadId);
+ const uncertainDelivery=!!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued')").get(threadId);
+ const policy=await recoveryUsagePolicy(codex,threadId);
+ const usageStopped=!policy.ok||['paused','budgetLimited','usageLimited','tokenLimited'].includes(thread.goal?.status);
+ const scheduled=turnRecovery.authorizeContinuation(snapshot,{...req.body,managedChild,needsInput,uncertainDelivery,usageStopped});
+ if(!scheduled)return res.status(409).json({error:'Continuation was not admitted; inspect stop, input and delivery state.',recovery:turnRecovery.get(threadId)||null});
+ res.json({scheduled,recovery:turnRecovery.get(threadId)});
+}));
+app.post('/api/threads/:id/continuation/checkpoint',owner,route(async(req,res)=>{
+ if(!['continue','completed','needsInput','waitingDependency'].includes(req.body.state)||typeof req.body.evidence!=='string'||!req.body.evidence.trim()||req.body.evidence.length>8000)return res.status(400).json({error:'Provide a task checkpoint and concrete evidence.'});
+ const threadId=requireId(req.params.id);await codex.connect();
+ const {thread}=await codex.call('thread/read',{threadId,includeTurns:false});
+ const snapshot=await history.read(thread,{summary:true});const latest=snapshot.turns?.at(-1);
+ const turnId=req.body.turnId||latest?.id;
+ const accepted=workObservations.record(snapshot,{...req.body,turnId});
+ if(!accepted)return res.status(409).json({error:'Checkpoint is stale or conflicts with an already saved observation. Read the current turn before reporting.'});
+ res.json({accepted:true,observationOnly:true,admission:'none',observation:workObservations.latest(threadId),recovery:turnRecovery.get(threadId)||null});
+}));
+app.post('/api/threads/:id/timeline/position',route(async(req,res)=>{
+  const id=requireId(req.params.id);await codex.connect();
+  res.json(await history.locateItemSuccessor(id,req.body));
+}));
+app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
+ const id=requireId(req.params.id),cursor=req.query.before??null;
+ if(cursor!==null&&(typeof cursor!=='string'||!cursor||cursor.length>16384))
+  return res.status(400).json({error:'Invalid native timeline cursor.'});
+ const observationOnly=req.query.observeOnly==='1',reader=observationOnly?observationCodex:timelineCodex;
+ await reader.connect();
+ const thread=threadStatusProjection.project([await readThreadMetadata(reader,id,{known:knownThreadMetadata})])[0];
+ if(cursor===null&&!observationOnly&&!historyReadOnly)void nativeSubscriptions.observe(thread,{alreadyAttached:attached.has(id)}).then(ok=>{if(ok)attached.add(id);}).catch(error=>console.error('Native live subscription unavailable',error.message));
+ const revision=timeline.version,historyHead=historyHeads.snapshot(id);
+ const head=observationOnly?await coordinatorHeadReader.read(id,{cursor,limit:64,observationOnly:true}):{page:await nativeTimelineReader.read(id,{cursor,limit:64})};
+ const requests=[...pending.values()].filter(m=>m.params.threadId===id);
+ const response={
+  thread:{...thread,...catalogFields(thread),turns:[]},
+  timeline:head.observation||projectNativeTimeline(head.page,{identity:sendIdentity,threadId:id,revision}),
+  revision,historyHead,pending:requests,
+  usage:conversationTools.usageFor(id),
+  notes:conversationNotes.list(id),recovery:turnRecovery.get(id)||null,turnSettings:savedTurnSettings(id),
+  notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(id).map(notificationRow),req.device.id),
+  ...outgoingProjection.fields(id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(id)
+ };
+ if(cursor===null){if(req.query.observeOnly!=='1'&&!catchupHidden(id))response.catchup=sessionCatchup.capture(req.device.id,id,response);coordinatorHub.memory.capture(id,response);}
+ res.set('Cache-Control','no-store').json(response);
+}));
+app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
+  const timelineView=req.query.view==='timeline'||req.path.endsWith('/head');
+  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery,known:knownThreadMetadata},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
+  const merged=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
+  const t=threadStatusProjection.project([merged])[0];
+  const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);
+  const page=timelinePage(t,requests,{before:raw._pocketPage?null:req.query.before||null,limit:8,notifications:db.prepare('SELECT * FROM notifications WHERE thread_id=?').all(t.id).map(notificationRow)});
+  if(raw._pocketPage)Object.assign(page,raw._pocketPage);
+  // Paging is bounded on the wire; retain the original thread on the Codex host.
+  const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
+  conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),usage:conversationTools.usageFor(t.id),thread:{...t,...catalogFields(t),turns:timelineView?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),...outgoingProjection.fields(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  if(!req.query.before&&!catchupHidden(t.id))response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
+  res.json(response);
+}));
+app.post('/api/threads/:id/catchup/read',route(async(req,res)=>res.json(sessionCatchup.acknowledgeCapture(req.device.id,requireId(req.params.id),req.body.token))));
+registerAccountResetRoutes(app,{dir,root,secrets,rateLimits,route,admissions:humanIngress});
+const modelProviders=registerModelProviderRoutes(app,{codex,route});
+registerNativeConfigurationRoutes(app,{codex,db,admissions:humanIngress,accountEvidence:boundaryAt=>codex.ready&&!rateLimits.failed&&!rateLimits.loading&&!rateLimits.inflight&&rateLimits.updatedAt>=boundaryAt&&Date.now()-rateLimits.updatedAt<=rateLimits.ttl&&typeof rateLimits.accountId==='string'&&rateLimits.accountId.trim()?{accountId:rateLimits.accountId,generation:rateLimits.generation}:null,route,requireId,host:hostName,savedSettings:savedTurnSettings,requestedPermissions:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null});
+const conversationTools=new ConversationTools({db,codex,
+ handoff:new ProviderHandoff({codex,db,providers:modelProviders,directory:resolve(dir,'provider-handoffs')}),admissions:humanIngress,
+ admitContinuation:(thread,request,handoff)=>{
+  const id='continue-'+request.id;
+  db.prepare("INSERT INTO outgoing(id,thread_id,text,state,created_at,updated_at) VALUES(?,?,?,'queued',?,?)").run(id,thread.id,handoff.prompt,now(),now());
+  humanIngress.inherit('conversation',request.id,'reply',id);
+  db.prepare('INSERT OR IGNORE INTO watches(thread_id,name,enabled) VALUES(?,?,1)').run(thread.id,'Continuation · '+handoff.checkpoint.providerId);
+  return id;
+ },
+ dispatchContinuation:(id,thread)=>{attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);void sendOutgoing(db.prepare('SELECT * FROM outgoing WHERE id=?').get(id),thread);},
+ supports:method=>supportsNativeMethod(codex,method),publish:emit,
+ checkSource:id=>{terminalForkImports?.inputAllowed(id);terminalForks?.inputRole(id);},
+ hasPending:id=>syncing.has(id)||['dispatching','unknown','running'].includes(turnRecovery.get(id)?.state)||!!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state NOT IN ('accepted','cancelled') LIMIT 1").get(id),
+ onFork:thread=>{sessionDiscovery.remember(thread);recordWork(()=>workRecord.enroll(thread));emit('sessionStarted',{threadId:thread.id,thread});},
+ onChanged:(id,kind)=>{if(kind==='revert'){timeline.dropThread(id);history.positions.clear();historyHeads.invalidate(id);if(['waiting','awaitingAssessment'].includes(turnRecovery.get(id)?.state))turnRecovery.set(id,'cancelled');}emit('conversationChanged',{threadId:id,kind,historyHead:historyHeads.snapshot(id)});return historyHeads.snapshot(id);}
+});
+registerConversationTools(app,conversationTools,route);
+async function modelContext(threadId){
+ await codex.connect();
+ if(!threadId)return {providerId:null};
+ const id=requireId(threadId),{thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+ if(thread?.id!==id)throw Object.assign(Error('Session identity changed.'),{status:409});
+ return {providerId:thread.modelProvider||null};
+}
+app.get('/api/models',route(async(req,res)=>{
+  const {providerId}=await modelContext(req.query.threadId);
+  const manual=!!providerId&&providerId!=='openai';
+  res.json({providerId,manual,models:manual?[]:(await modelCatalogue(codex,providerId)).map(m=>({model:m.model,name:m.displayName,defaultEffort:m.defaultReasoningEffort,efforts:m.supportedReasoningEfforts,serviceTiers:m.serviceTiers||[],defaultServiceTier:m.defaultServiceTier||null}))});
+}));
+app.post('/api/threads/:id/notes',(req,res)=>{try{const id=requireId(req.params.id);conversationNotes.put(id,{...req.body,manual:true});res.json({notes:conversationNotes.list(id)});}catch(e){res.status(e.status||400).json({error:e.message});}});
+app.post('/api/threads/:id/notes/remove',(req,res)=>{const id=requireId(req.params.id);conversationNotes.remove(id,String(req.body.id||''));res.json({notes:conversationNotes.list(id)});});
+app.post('/api/threads/:id/settings',route(async(req,res)=>{
+  const threadId=requireId(req.params.id);await codex.connect();
+  const {providerId}=await modelContext(threadId);
+  let settings;
+  if(providerId&&providerId!=='openai'){
+    const selected=await modelProviders.selection({providerId,model:req.body.model,effort:req.body.effort});
+    if(!['default','plan'].includes(req.body.mode))throw Object.assign(Error('Choose Build or Plan mode.'),{status:400});
+    settings={model:selected.model,effort:selected.effort,mode:req.body.mode};
+  }else settings=validateTurnSettings(req.body,await modelCatalogue(codex,providerId));
+  db.prepare('INSERT INTO turn_settings(thread_id,settings) VALUES(?,?) ON CONFLICT(thread_id) DO UPDATE SET settings=excluded.settings').run(threadId,JSON.stringify(settings));
+  res.json({settings});
+}));
+app.post('/api/threads/:id/catalog-context',owner,route(async(req,res)=>{
+  const id=requireId(req.params.id),summary=String(req.body.summary||'').trim();
+  if(!summary||summary.length>500)return res.status(400).json({error:'Provide a concise evidence-backed context, up to 500 characters.'});
+  await codex.connect();const {thread}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+  if(thread?.id!==id)return res.status(409).json({error:'Session identity changed.'});
+  catalogContext.put(id,summary,req.body.needsInput===true);res.json({ok:true});
+}));
+app.post('/api/threads/:id/rename',route(async(req,res)=>{
+  const threadId=requireId(req.params.id),name=String(req.body.name||'').trim();
+  if(!name||name.length>120)return res.status(400).json({error:'Name must be 1–120 characters.'});
+  await codex.connect();await codex.call('thread/name/set',{threadId,name});
+  const renamed=notificationTitles.rename(threadId,name);
+  emit('threadRenamed',renamed);void push.renameThread(renamed).catch(error=>console.error('Rename push',error.message));
+  res.json({ok:true,...renamed});
+}));
+app.post('/api/threads/:id/unarchive',route(async(req,res)=>{
+  const threadId=requireId(req.params.id);await codex.connect();
+  await codex.call('thread/unarchive',{threadId});sessionDiscovery.markArchived(threadId,false);res.json({ok:true});
+}));
+app.post('/api/threads/:id/archive',route(async(req,res)=>{
+  const id=requireId(req.params.id);await codex.connect();
+  const {thread:t}=await codex.call('thread/read',{threadId:id,includeTurns:false});
+  if(t?.id!==id)throw Error('Session identity unavailable');
+  if(isActive(t))return res.status(409).json({error:'Stop the running turn before archiving.'});
+  if(req.body.inactiveBefore!==undefined){
+    const cutoff=req.body.inactiveBefore;
+    if(!Number.isSafeInteger(cutoff)||cutoff<=0||cutoff>Date.now()-28*86400000)return res.status(400).json({error:'Automatic archive requires an inactivity cutoff at least 28 days ago.'});
+    const reason=inactiveArchiveReason({...t,...sessionDiscovery.live.get(id)},cutoff);
+    const protectedWork=[...pending.values()].some(m=>m.params?.threadId===id)||
+      !!db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND state IN ('unknown','sending','queued','held')").get(id)||
+      !!db.prepare('SELECT 1 FROM notifications n JOIN notification_attention a ON a.notification_id=n.id WHERE n.thread_id=? AND a.resolved_at IS NULL').get(id)||
+      catalogContext.get(t).needsInput===true;
+    if(reason||protectedWork)return res.status(409).json({error:reason||'Session has pending messages or needs attention.'});
+  }
+  await codex.call('thread/archive',{threadId:t.id});turnRecovery.cancel(t.id);sessionDiscovery.markArchived(t.id,true);
+  db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND state='queued'").run(now(),t.id);
+  db.prepare('UPDATE watches SET enabled=0 WHERE thread_id=?').run(t.id);attached.delete(t.id);res.json({ok:true});
+}));
+app.post('/api/threads/:id/interrupt',route(async(req,res)=>{
+  turnRecovery.cancel(requireId(req.params.id));
+  const t=await attach(req.params.id);const active=t.turns?.findLast(x=>x.status==='inProgress');
+  if(!active)return res.status(409).json({error:'This task has already stopped.'});
+  // Hold the queue before stopping so an idle snapshot cannot restart the task.
+  db.prepare("UPDATE outgoing SET state='held',updated_at=? WHERE thread_id=? AND mode='queue' AND state='queued'").run(now(),t.id);
+  emit('reply',{threadId:t.id,state:'held'});
+  await codex.call('turn/interrupt',{threadId:t.id,turnId:active.id});res.json({ok:true});
+}));
+app.post('/api/threads/:id/watch',route(async(req,res)=>{
+  const t=await attach(req.params.id);
+  const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(t.id);
+  db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,?) ON CONFLICT(thread_id) DO UPDATE SET name=excluded.name,enabled=excluded.enabled').run(t.id,t.name||t.preview?.slice(0,60)||'Codex',req.body.enabled?1:0);
+  if(req.body.enabled&&!wasFollowing)completions.follow(t.id,t);
+  res.json({ok:true});
+}));
+app.post('/api/threads/:id/reply',route(async(req,res)=>{
+  if(historyReadOnly)return res.status(503).json({error:'NextComp viewing is available, but sending is temporarily disabled while the shared Codex daemon is busy.'});
+  conversationTools.assertInputAllowed(requireId(req.params.id));
+  terminalForkImports?.inputAllowed(requireId(req.params.id));terminalForks?.inputRole(requireId(req.params.id));
+  const threadId=requireId(req.params.id), text=String(req.body.text||'').trim(), id=String(req.body.id||randomUUID()), mode=req.body.mode||'auto';
+  if(!text||text.length>32000||id.length>100)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
+  if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});
+  const existing=db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);
+  if(existing){if(existing.thread_id!==threadId||existing.text!==text||existing.mode!==mode)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state,...outgoingProjection.fields(threadId)});}
+  // Resolve writer ownership before durable admission so an externally owned
+  // session cannot report a queued reply that Codex is guaranteed to reject.
+  await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput);
+  const cachedDestination=db.prepare('SELECT metadata FROM pocket_discovered_threads WHERE thread_id=?').get(threadId);
+  if(cachedDestination){const known=JSON.parse(cachedDestination.metadata);if(sessionIdentity(known).isChild){const destination=codex.ready?(await codex.call('thread/read',{threadId,includeTurns:false})).thread:known;requireDirectSessionInput(destination);}else requireDirectSessionInput(known);}
+  turnRecovery.cancel(threadId);
+  admissionTransaction(db,()=>{humanIngress.record('reply',id,req.humanPrincipal);db.prepare('INSERT INTO outgoing(id,thread_id,text,mode,state,created_at,updated_at) VALUES(?,?,?,?,?,?,?)').run(id,threadId,text,mode,'queued',now(),now());});
+  const wasFollowing=!!db.prepare('SELECT 1 FROM watches WHERE thread_id=? AND enabled=1').get(threadId);
+  // A phone reply explicitly opts this task into a completion notification.
+  db.prepare('INSERT INTO watches(thread_id,name,enabled) VALUES(?,?,1) ON CONFLICT(thread_id) DO UPDATE SET enabled=1').run(threadId,'Codex replied');
+  if(!wasFollowing)completions.follow(threadId);
+  const admitted=sessionDiscovery.recordIntent(threadId);emit('sessionActivity',admitted);
+  // Record accepted user guidance without claiming older results were read.
+  sessionCatchup.interact(req.device.id,threadId);
+  emit('reply',{threadId,id,state:'queued'});
+  res.status(202).json({id,state:'queued',...outgoingProjection.fields(threadId)}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,mode,created_at:now()});
+}));
+app.post('/api/threads/:id/queue/resume',route(async(req,res)=>{
+  const threadId=requireId(req.params.id);
+  humanIngress.action('queue',threadId,'resume',req.humanPrincipal);
+  db.prepare("UPDATE outgoing SET state='queued',updated_at=? WHERE thread_id=? AND mode='queue' AND state='held'").run(now(),threadId);
+  emit('reply',{threadId,state:'queued'});res.json({ok:true,...outgoingProjection.fields(threadId)});void flush();
+}));
+app.post('/api/threads/:id/replies/:replyId',route(async(req,res)=>{
+  const threadId=requireId(req.params.id),id=req.params.replyId;
+  const outcome=admissionTransaction(db,()=>{const value=recoverReply(db,threadId,id,req.body,now());if(!value.error)humanIngress.action('reply',id,req.body.action,req.humanPrincipal);return value;});
+  if(outcome.error)return res.status(outcome.status).json({error:outcome.error});
+  emit('reply',{threadId,id,state:outcome.state});res.json({id,state:outcome.state,mode:outcome.mode,...outgoingProjection.fields(threadId)});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId,promoted:req.body.action==='send'});
+}));
+app.get('/api/replies/:id',(req,res)=>{
+  const row=db.prepare('SELECT id,thread_id,mode,state,result FROM outgoing WHERE id=?').get(req.params.id);
+  if(!row)return res.status(404).json({error:'Reply not found.'});
+  res.json({...row,...outgoingProjection.fields(row.thread_id)});
+});
+mountNativeExecution(app,{codex,route,requireId});
+app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActions.answer(req.params.id,req.body))));
+app.post('/api/notifications/:id/presented',route(async(req,res)=>res.json(sessionCatchup.presentedNotification(req.device.id,req.params.id,requireId(req.body.threadId)))));
+app.post('/api/notifications/:id/skip',route(async(req,res)=>res.json(questionActions.skipNotification(req.params.id))));
+app.get('/api/immersion',(req,res)=>res.json(immersion.snapshot(req.device.id)));
+app.post('/api/immersion',route(async(req,res)=>res.json(immersion.setEnabled(req.device.id,req.body.enabled,req.body.density,req.body.selection))));
+app.post('/api/immersion/translate',route(async(req,res)=>res.json(immersion.submit(req.device.id,req.body.sources))));
+app.get('/api/immersion/v2',route(async(req,res)=>res.json({...transgrammaticImmersion.snapshot(req.device.id),...(req.query.settings==='1'?await immersionProviderChoices(codex):{})})));
+app.post('/api/immersion/v2',route(async(req,res)=>{if(req.body.selection)await immersionProvider(codex,req.body.selection);immersion.setEnabled(req.device.id,false);res.json(transgrammaticImmersion.setEnabled(req.device.id,req.body.enabled,req.body.density,req.body.selection));}));
+app.post('/api/immersion/v2/translate',route(async(req,res)=>res.json(transgrammaticImmersion.submit(req.device.id,req.body.sources))));
+
+app.post('/api/threads/:id/notifications/read',route(async(req,res)=>res.json(notificationReads.ack(req.device.id,requireId(req.params.id),req.body.throughId))));
+app.get('/api/attention',(req,res)=>res.json({notifications:notificationReads.decorate(db.prepare('SELECT n.* FROM notifications n JOIN notification_attention a ON a.notification_id=n.id WHERE a.resolved_at IS NULL ORDER BY n.id DESC LIMIT 100').all().map(notificationRow),req.device.id)}));
+app.get('/api/notifications/:id/attention',(req,res)=>{
+  const row=db.prepare('SELECT * FROM notification_attention WHERE notification_id=?').get(req.params.id);
+  res.json({needsAttention:!!row&&row.resolved_at===null});
+});
+app.get('/api/notifications/:id',(req,res)=>{const n=db.prepare('SELECT * FROM notifications WHERE id=?').get(req.params.id);if(!n||n.kind==='coordinator_report'&&!db.prepare('SELECT 1 FROM coordinator_report_notifications WHERE notification_id=? AND device_id=?').get(n.id,req.device.id))return res.status(404).json({error:'Notification not found.'});res.json({notification:notificationReads.decorate([notificationRow(n)],req.device.id)[0]});});
+app.get('/api/notifications',(req,res)=>{const after=Math.max(0,Number(req.query.after)||0);res.json({notifications:notificationReads.decorate(db.prepare("SELECT * FROM notifications WHERE id>? AND kind!='coordinator_report' ORDER BY id DESC LIMIT 100").all(after).reverse().map(notificationRow),req.device.id)});});
+app.post('/api/test-notification',(req,res)=>res.json(notify(null,'Your work, within reach.','NextComp is connected. Updates from Codex will arrive here, with a direct route back to your task.','test')));
+const mimeFor=n=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.pdf':'application/pdf','.mp4':'video/mp4','.txt':'text/plain','.md':'text/plain'})[extname(n).toLowerCase()]||'application/octet-stream';
+function saveAttachment(file,threadId){
+  const actual=realpathSync(file), st=statSync(actual);if(!st.isFile()||st.size>12*1024*1024)throw new Error('Attachment must be a regular file under 12 MB.');
+  const id=randomUUID(), name=basename(actual), mime=mimeFor(name), folder=resolve(dir,'files');mkdirSync(folder,{recursive:true,mode:0o700});
+  const dest=resolve(folder,id);writeFileSync(dest,readFileSync(actual),{mode:0o600});db.prepare('INSERT INTO files VALUES(?,?,?,?,?)').run(id,name,mime,dest,threadId);
+  return {id,name,mime,url:`/api/files/${id}`,size:st.size};
+}
+mountOperatorNotifications(app,{db,codex,owner,route,requireId,saveAttachment,notify,promptContext});
+app.get('/api/files/:id',(req,res)=>{const f=db.prepare('SELECT * FROM files WHERE id=?').get(req.params.id);if(!f)return res.sendStatus(404);res.set('Content-Type',f.mime);res.set('Content-Disposition',`inline; filename*=UTF-8''${encodeURIComponent(f.name)}`);res.sendFile(f.disk_path);});
+app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id,name,created_at,last_seen FROM devices').all()}));
+app.delete('/api/devices/:id',owner,(req,res)=>{if(fleet)fleet.revokeLocal(req.params.id);db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
+server.on('upgrade',async(req,socket,head)=>{
+  const device=await identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
+  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));ws.send(JSON.stringify({type:'providerUsage',usage:providerUsage.snapshot()}));for(const snapshot of outgoingProjection.bootstrap()){if(ws.readyState!==WebSocket.OPEN)break;ws.send(JSON.stringify({type:'reply',id:'',state:'snapshot',...snapshot}));}void rateLimits.refresh();void providerUsage.refresh();sockets.emit('connection',ws,req);});
+  if(fleet&&device.id!=='owner'){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
+});
+setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();
+app.use((err,req,res,next)=>{console.error(req.method,req.path,err.code||'',err.message);if(res.destroyed||res.headersSent)return;res.status(err.status||400).json({error:err.message,...(err.code?{code:err.code}:{}),...(err.readAvailability?{readAvailability:err.readAvailability}:{})});});
+const port=Number(process.env.PORT||18880);
+server.listen(port,'127.0.0.1',()=>{
+ if(fleet)fleet.startRevocationSync();
+ console.log(`NextComp listening on 127.0.0.1:${port}`);
+ {voiceController.restoreQueued();void coordinatorCollector.tick().catch(()=>{});}
+ if(nativeAudioIntake)void voiceRecordings.start().catch(error=>console.error('Voice recording recovery unavailable',error.message));
+});
