@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { recoverReply } from '../server/reply-recovery.mjs';
 import { readThreadProjection } from '../server/thread-projection.mjs';
 import { ThreadStatusProjection } from '../server/thread-status.mjs';
 import { workAttention } from '../server/work-attention.mjs';
@@ -154,4 +155,23 @@ test('head projects a registered empty session when metadata is no longer loaded
   assert.deepEqual(result.status, { type: 'idle' });
   assert.equal(result.statusSource, 'persisted-empty');
   assert.equal(result._pocketSnapshotRevision, 3);
+});
+
+test('a held steer message becomes a dispatchable queued steer', () => {
+  const db = new DatabaseSync(':memory:');
+  db.exec(`
+    CREATE TABLE outgoing(
+      id TEXT PRIMARY KEY, thread_id TEXT, text TEXT, state TEXT, result TEXT,
+      created_at INTEGER, updated_at INTEGER, mode TEXT
+    );
+  `);
+  db.prepare('INSERT INTO outgoing VALUES (?,?,?,?,?,?,?,?)').run(
+    'reply', 'thread', 'Follow up', 'held', 'Waiting for Codex before sending.', 1, 1, 'steer');
+  const result = recoverReply(db, 'thread', 'reply', { action: 'send' }, 2);
+  assert.deepEqual(result, { status: 200, id: 'reply', state: 'queued', mode: 'steer', dispatch: true });
+  assert.deepEqual(
+    { ...db.prepare('SELECT state,mode,text,updated_at FROM outgoing WHERE id=?').get('reply') },
+    { state: 'queued', mode: 'steer', text: 'Follow up', updated_at: 2 },
+  );
+  db.close();
 });

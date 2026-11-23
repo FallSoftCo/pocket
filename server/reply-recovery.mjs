@@ -4,7 +4,7 @@ export function recoverReply(db,threadId,id,{action,text,confirmUnknown=false},u
   if(!row)return fail(404,'Reply not found.');
   if(!['queued','held','failed','unknown'].includes(row.state))return fail(409,'This message cannot be changed while sending or after acceptance. Refresh the conversation.');
   if(!['edit','remove','send','retry'].includes(action))return fail(400,'Choose edit, remove, send, or retry.');
-  if(action==='send'&&(row.mode!=='queue'||!['queued','held'].includes(row.state)))return fail(409,row.state==='unknown'?'Delivery is uncertain. Inspect the original receipt and use explicit retry; it could send a duplicate.':'Only a queued or held next-turn message can be sent now. Refresh the original message.');
+  if(action==='send'&&!['queued','held'].includes(row.state))return fail(409,row.state==='unknown'?'Delivery is uncertain. Inspect the original receipt and use explicit retry; it could send a duplicate.':'Only a queued or held message can be sent now. Refresh the original message.');
   if(action==='retry'&&!['failed','unknown'].includes(row.state))return fail(409,'This message is already waiting to send.');
   if(['retry','send'].includes(action)&&row.state==='unknown'&&confirmUnknown!==true)return fail(409,'Delivery is uncertain. Check the conversation before explicitly confirming a retry; it could send a duplicate.');
   const nextText=action==='edit'?String(text||'').trim():row.text;
