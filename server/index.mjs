@@ -126,7 +126,7 @@ const push=loadPush(db,dir);
 setInterval(()=>void push.flush().catch(e=>console.error('Push retry',e.message)),5000).unref();
 const codex=new Codex(undefined,{managedStart:process.env.POCKET_CODEX_MANAGED_START});
 const knownThreadMetadata=id=>cachedThreadMetadata(db,id);
-const threadStatusProjection=new ThreadStatusProjection({codexHome:process.env.CODEX_HOME});
+const threadStatusProjection=new ThreadStatusProjection({codexHome:process.env.CODEX_HOME,known:knownThreadMetadata});
 // Keep interactive reads off the connection used for background resume/config work.
 const timelineCodex=createTimelineConnection();
 const observationCodex=createTimelineConnection();
@@ -894,7 +894,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
 }));
 app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   const timelineView=req.query.view==='timeline'||req.path.endsWith('/head');
-  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery,known:knownThreadMetadata},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
+  const raw=timelineView?await readThreadProjection(requireId(req.params.id),{codex,history,timeline,historyHeads,discovery:sessionDiscovery,known:knownThreadMetadata,emptyThread:thread=>threadStatusProjection.isPersistedEmpty(thread)},{before:req.query.before||null}):await attach(req.params.id,{before:req.query.before||null});
   const merged=raw._pocketPage&&req.query.before?raw:timeline.merge(raw,{includeMissing:!raw._pocketPage,includeMissingItems:!raw._pocketPage});
   const t=threadStatusProjection.project([merged])[0];
   const requests=[...pending.values()].filter(m=>m.params.threadId===t.id);

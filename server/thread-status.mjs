@@ -9,8 +9,9 @@ const RESOLVED = new Set(['idle', 'active', 'systemError']);
 // task state. Project the latest durable turn status so clients see whether the
 // conversation is working or ready for input.
 export class ThreadStatusProjection {
-  constructor({ codexHome = process.env.CODEX_HOME } = {}) {
+  constructor({ codexHome = process.env.CODEX_HOME, known = () => null } = {}) {
     this.codexHome = codexHome;
+    this.known = known;
     this.db = null;
     this.dbPath = null;
   }
@@ -47,19 +48,61 @@ export class ThreadStatusProjection {
     }
   }
 
+  emptyDurableThreadIds(ids) {
+    if (!ids.length) return new Set();
+    try {
+      const db = this.historyDb();
+      if (!db) return new Set();
+      const rows = db.prepare(`SELECT requested.value AS thread_id FROM json_each(?) AS requested
+        WHERE NOT EXISTS (
+          SELECT 1 FROM thread_turns WHERE thread_turns.thread_id=requested.value
+        ) AND NOT EXISTS (
+          SELECT 1 FROM thread_items WHERE thread_items.thread_id=requested.value
+        )`).all(JSON.stringify(ids));
+      return new Set(rows.map((row) => row.thread_id));
+    } catch (error) {
+      console.error('Empty thread projection unavailable:', error.code || error.name);
+      return new Set();
+    }
+  }
+
+  // A registered, non-ephemeral thread with no durable turns or items is an
+  // empty session, not unknown task state. Require both catalog identity and
+  // durable-history evidence so an unavailable non-empty history stays visible.
+  isPersistedEmpty(thread) {
+    const metadata = this.known(thread.id);
+    if (metadata?.id !== thread.id || metadata.ephemeral !== false) return false;
+    return this.emptyDurableThreadIds([thread.id]).has(thread.id);
+  }
+
   project(threads) {
     const unresolved = threads.filter((thread) => !RESOLVED.has(thread.status?.type));
     if (!unresolved.length) return threads;
     const latest = this.latestTurnStatuses(unresolved.map((thread) => thread.id));
-    if (!latest.size) return threads;
+    const registered = unresolved.filter((thread) => {
+      const metadata = this.known(thread.id);
+      return metadata?.id === thread.id && metadata.ephemeral === false;
+    });
+    const empty = this.emptyDurableThreadIds(registered.map((thread) => thread.id));
+    if (!latest.size && !empty.size) return threads;
     return threads.map((thread) => {
-      if (RESOLVED.has(thread.status?.type) || !latest.has(thread.id)) return thread;
-      const active = latest.get(thread.id) === 'inProgress';
-      return {
-        ...thread,
-        status: active ? { type: 'active', activeFlags: [] } : { type: 'idle' },
-        statusSource: 'persisted-turn',
-      };
+      if (RESOLVED.has(thread.status?.type)) return thread;
+      if (latest.has(thread.id)) {
+        const active = latest.get(thread.id) === 'inProgress';
+        return {
+          ...thread,
+          status: active ? { type: 'active', activeFlags: [] } : { type: 'idle' },
+          statusSource: 'persisted-turn',
+        };
+      }
+      if (empty.has(thread.id)) {
+        return {
+          ...thread,
+          status: { type: 'idle' },
+          statusSource: 'persisted-empty',
+        };
+      }
+      return thread;
     });
   }
 }
