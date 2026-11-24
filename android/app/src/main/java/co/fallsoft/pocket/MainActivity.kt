@@ -279,6 +279,7 @@ class MainActivity:ComponentActivity(){
     }
 }
 @Composable fun SpeechPlayer(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    if(!Pocket.voiceAvailable)return
     if(PocketSpeech.count==0)return
     Surface(color=containerColor,modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
@@ -648,6 +649,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 /** Captions supply the playback context, so conversations need only one speech surface. */
 @Composable fun ConversationSpeechDock(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    if(!Pocket.voiceAvailable)return
     ForegroundWorkNotice()
     if(PocketVoice.captureFeedbackVisible)return
     if(PocketSpeechCaptions.state.visible)SpeechCaptionBanner(playbackControls=PocketSpeech.count>0,containerColor=containerColor)

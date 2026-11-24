@@ -1,8 +1,9 @@
 package co.fallsoft.pocket
 
 internal data class ForegroundCaptureTarget(val threadId:String?,val eligible:Boolean,val roomDestination:String?=null,val sourceLabel:String?=null)
-internal fun foregroundCaptureTarget(inbox:Boolean,coordinator:Boolean,selected:String?,identityKnown:Boolean,directInput:Boolean,recording:Boolean=false,recordingThread:String?=null):ForegroundCaptureTarget {
+internal fun foregroundCaptureTarget(inbox:Boolean,coordinator:Boolean,selected:String?,identityKnown:Boolean,directInput:Boolean,recording:Boolean=false,recordingThread:String?=null,voiceAvailable:Boolean=true):ForegroundCaptureTarget {
     if(recording)return ForegroundCaptureTarget(recordingThread,true)
+    if(!voiceAvailable)return ForegroundCaptureTarget(null,false)
     if(inbox||coordinator||selected==null)return ForegroundCaptureTarget(null,true)
     return ForegroundCaptureTarget(selected,identityKnown&&directInput)
 }
@@ -14,5 +15,5 @@ internal fun currentForegroundCaptureTarget():ForegroundCaptureTarget {
     val task=Pocket.tasks.firstOrNull{it.id==selected}
     val thread=Pocket.detail?.optJSONObject("thread")?.takeIf{it.s("id")==selected}
     val direct=if(thread!=null&&thread.has("canAcceptDirectInput")&&!thread.isNull("canAcceptDirectInput"))thread.optBoolean("canAcceptDirectInput")else task?.canAcceptDirectInput==true
-    return foregroundCaptureTarget(PocketWorkUpdates.visible,PocketCoordinator.visible,selected,selected==null||task!=null||thread!=null,direct,captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND,PocketVoice.targetThread)
+    return foregroundCaptureTarget(PocketWorkUpdates.visible,PocketCoordinator.visible,selected,selected==null||task!=null||thread!=null,direct,captureControl(PocketVoice.active,PocketVoice.state,false)==CaptureControl.STOP_SEND,PocketVoice.targetThread,Pocket.voiceAvailable)
 }

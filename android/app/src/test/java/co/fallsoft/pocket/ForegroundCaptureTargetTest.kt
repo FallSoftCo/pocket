@@ -18,4 +18,8 @@ class ForegroundCaptureTargetTest {
         assertFalse(foregroundCaptureTarget(false,false,"child",true,false).eligible)
         assertEquals(ForegroundCaptureTarget(null,true),foregroundCaptureTarget(false,false,null,false,false))
     }
+    @Test fun unavailableVoiceDoesNotHijackVolumeKeysButAnExistingCaptureCanStillStop(){
+        assertFalse(foregroundCaptureTarget(false,true,null,false,false,false,null,false).eligible)
+        assertTrue(foregroundCaptureTarget(false,true,null,false,false,true,"original",false).eligible)
+    }
 }

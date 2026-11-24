@@ -42,3 +42,43 @@ test('actual app ignores delayed model success and failure after source change a
  await waitFor(()=>f.$('model').value==='LATEST-MODEL','latest model selection');fourth.reply(200,model('STALE-REOPEN-MODEL'));await settle();await settle();
  assert.equal(f.$('model').value,'LATEST-MODEL','STALE_REOPEN_MODEL_MUST_BE_IGNORED');assert.equal(f.$('models-status').textContent,'');f.assertClean();
 });
+
+test('actual Send control submits one message without cancelling its pointer gesture',{timeout:15000},async t=>{
+ const f=await webAppFixture(t);
+ assert.equal(f.$('send').getAttribute('type'),'submit','Send must be an explicit form submit control');
+ f.$('draft').focus();
+ const pointerdown=new f.w.Event('pointerdown',{bubbles:true,cancelable:true});
+ f.$('send').dispatchEvent(pointerdown);
+ assert.equal(pointerdown.defaultPrevented,false,'Send must not cancel pointerdown or depend on suppressing click');
+ f.$('draft').value='   ';f.click(f.$('send'));
+ await waitFor(()=>!f.$('error').hidden&&/message before sending/i.test(f.$('error').textContent),'empty draft feedback');
+ f.$('draft').value='One exact send';f.click(f.$('send'));
+ await waitFor(()=>f.reads.filter(r=>r.method==='POST'&&r.path==='/api/threads/parent-123/reply').length===1,'one reply request');
+ await waitFor(()=>f.$('draft').value==='','accepted send clears draft');
+ await waitFor(()=>f.$('transcript').textContent.includes('One exact send'),'accepted send renders');
+ await new Promise(resolve=>setTimeout(resolve,100));
+ const replies=f.reads.filter(r=>r.method==='POST'&&r.path==='/api/threads/parent-123/reply');
+ assert.equal(replies.length,1,'Send must submit exactly once');
+ assert.equal(JSON.parse(replies[0].body).text,'One exact send');
+ assert.deepEqual(f.errors,[]);
+ assert.equal(f.$('error').hidden,true,f.$('error').textContent);
+});
+
+test('DeepSeek balance and session tokens replace generic unavailable usage in the footer and Settings',{timeout:15000},async t=>{
+ const now=Date.now();
+ const providerUsage={providerId:'deepseek',configured:true,available:true,currency:'USD',totalBalance:'17.11',updatedAt:now,stale:false,state:'available'};
+ const conversationUsage={last:{totalTokens:164932},total:{totalTokens:136368454},modelContextWindow:258400};
+ const f=await webAppFixture(t,{providerUsage,conversationUsage});
+ await waitFor(()=>f.$('usage').textContent.includes('$17.11'),'provider balance in footer');
+ assert.match(f.$('conversation-usage').textContent,/\$17\.11/);
+ assert.match(f.$('conversation-usage').textContent,/DeepSeek/);
+ assert.match(f.$('conversation-usage').textContent,/164\.9k ctx/);
+ await waitFor(()=>f.$('account-usage').textContent.includes('$17.11'),'settings usage renders');
+ assert.match(f.$('account-usage').textContent,/\$17\.11 · DeepSeek API balance/);
+ assert.match(f.$('account-usage').textContent,/164,932 tokens in the last context/);
+ assert.match(f.$('account-usage').textContent,/136,368,454 tokens total/);
+ assert.match(f.$('account-usage').textContent,/not a session charge or ChatGPT quota/);
+ assert.equal(f.$('conversation-usage').dataset.providerUsage,'deepseek');
+ f.assertClean();
+ t.diagnostic(JSON.stringify({evidence:'actual web ESM graph with provider balance and native conversation usage',provider:f.$('conversation-usage').dataset.providerUsage}));
+});

@@ -21,6 +21,7 @@ test('same-thread steering, idle continuation, and exact pending request respons
  // This retained older protocol has no provider registry. Unknown methods must
  // reject like native Codex, rather than return a malformed successful catalog.
  if(m.method==='modelProvider/list'){ws.send(JSON.stringify({id:m.id,error:{code:-32601,message:'Method not found'}}));return;}
+ if(m.method==='config/read')result={config:{model:'gpt-6.1-sol'}};
  if(m.method==='thread/resume'||m.method==='thread/read')result={thread:thread()};
  if(m.method==='thread/turns/list')result={data:thread().turns.map(t=>({id:t.id,status:t.status,items:[]})),nextCursor:null};
  if(m.method==='turn/steer')result={turnId:'turn-original'};

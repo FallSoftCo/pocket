@@ -20,7 +20,7 @@ import {sessionIdentity,workTime} from '../web/model.mjs';
 
 // Separate loopback gateway: backends retain task admission and durable receipts.
 // Paired source credentials stay server-side; no arbitrary RPC/admin proxy.
-export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null,tailnetAuth=null,environments=null,catalogMetadata=null,fleet=null}={}) {
+export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=true,metadata=null,key=randomBytes(32),basePath='/',migrationSourceOrigin=null,migrationTargetOrigin=null,tailnetAuth=null,environments=null,catalogMetadata=null,fleet=null,assetRoot=null}={}) {
  if(fleet){environments??=new WebEnvironments();environments.fleet=fleet;}
  const presentation=new CatalogPresentation();
  const target=new URL(backend);if(!['127.0.0.1','localhost','[::1]'].includes(target.hostname))throw Error('Web backend must be loopback.');
@@ -130,28 +130,40 @@ export function createWebClient({backend='http://127.0.0.1:18880',origin,secure=
    sendJson(req,res.status(r.status),data);
   }catch(e){next(e);}
  });
- const assets=resolve(dirname(fileURLToPath(import.meta.url)),'../web');
- app.get('/migration.html',(_req,res)=>{if(!migrationTargetOrigin)return res.sendStatus(404);res.set('Content-Security-Policy',`default-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors ${migrationTargetOrigin}; base-uri 'none'`);res.type('html').send('<!doctype html><meta charset="utf-8"><title>NextComp local profile transfer</title><script type="module" src="/migration-frame.mjs"></script>');});
- app.get('/',(req,res)=>{let html=readFileSync(resolve(assets,'index.html'),'utf8').replace(/(src|href)="\/([^"]+)"/g,(_match,attribute,path)=>`${attribute}="${basePath}${path}"`);if(migrationSourceOrigin)res.set('Content-Security-Policy',res.get('Content-Security-Policy')+`; frame-src ${migrationSourceOrigin}`);if(migrationTargetOrigin)html=html.replace('</body>',`<p class="access-link"><a href="${migrationTargetOrigin}/nextcomp/">Open NextComp at its cleaner address ↗</a></p></body>`);res.type('html');sendBytes(req,res,Buffer.from(html));});
- app.get('/manifest.webmanifest',(_req,res)=>{const manifest=JSON.parse(readFileSync(resolve(assets,'manifest.webmanifest'),'utf8'));Object.assign(manifest,{id:basePath,start_url:basePath,scope:basePath});manifest.icons=manifest.icons.map(icon=>({...icon,src:basePath+icon.src.replace(/^\//,'')}));res.type('application/manifest+json').json(manifest);});
- // Immutable release assets: coalesce encoding once per file, retain private
- // conditional caching, and leave binary/range delivery to express.static.
+ const assets=assetRoot?resolve(assetRoot):resolve(dirname(fileURLToPath(import.meta.url)),'../web');
+ // Coalesce encoding once per asset revision, retain private conditional
+ // caching, and leave binary/range delivery to express.static.
  const textAssets=new Map(),encode=promisify(gzip);
+ async function textAsset(name){
+  const file=resolve(assets,name),info=await stat(file);
+  if(!info.isFile()||info.size>512*1024)return null;
+  const cacheKey=name+'\0'+info.ino+'\0'+info.size+'\0'+info.mtimeMs;let pending=textAssets.get(cacheKey);
+  if(!pending){
+   pending=(async()=>{
+    const raw=await readFile(file),digest=createHash('sha256').update(raw).digest('hex');
+    return {raw,gzip:raw.length>=1024?await encode(raw,{level:4}):null,etag:'W/"'+digest+'"',build:digest.slice(0,16)};
+   })();
+   if(textAssets.size>=32)textAssets.delete(textAssets.keys().next().value);
+   textAssets.set(cacheKey,pending);
+   pending.catch(()=>{if(textAssets.get(cacheKey)===pending)textAssets.delete(cacheKey)});
+  }
+  return pending;
+ }
+ app.get('/migration.html',(_req,res)=>{if(!migrationTargetOrigin)return res.sendStatus(404);res.set('Content-Security-Policy',`default-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors ${migrationTargetOrigin}; base-uri 'none'`);res.type('html').send('<!doctype html><meta charset="utf-8"><title>NextComp local profile transfer</title><script type="module" src="/migration-frame.mjs"></script>');});
+ app.get('/',async(req,res,next)=>{try{
+  const appAsset=await textAsset('app.mjs').catch(()=>null);
+  let html=readFileSync(resolve(assets,'index.html'),'utf8');
+  if(appAsset)html=html.replace(/\/app\.mjs\?v=[^"\s]+/g,'/app.mjs?v='+appAsset.build);
+  html=html.replace(/(src|href)="\/([^"]+)"/g,(_match,attribute,path)=>`${attribute}="${basePath}${path}"`);
+  if(migrationSourceOrigin)res.set('Content-Security-Policy',res.get('Content-Security-Policy')+`; frame-src ${migrationSourceOrigin}`);
+  if(migrationTargetOrigin)html=html.replace('</body>',`<p class="access-link"><a href="${migrationTargetOrigin}/nextcomp/">Open NextComp at its cleaner address ↗</a></p></body>`);
+  res.type('html');sendBytes(req,res,Buffer.from(html));
+ }catch(error){next(error);}});
+ app.get('/web/build',async(req,res,next)=>{try{const appAsset=await textAsset('app.mjs');if(!appAsset)return res.status(404).json({error:'Web build is unavailable.'});sendJson(req,res,{build:appAsset.build});}catch(error){next(error);}});
+ app.get('/manifest.webmanifest',(_req,res)=>{const manifest=JSON.parse(readFileSync(resolve(assets,'manifest.webmanifest'),'utf8'));Object.assign(manifest,{id:basePath,start_url:basePath,scope:basePath});manifest.icons=manifest.icons.map(icon=>({...icon,src:basePath+icon.src.replace(/^\//,'')}));res.type('application/manifest+json').json(manifest);});
  app.get(/^\/[a-zA-Z0-9][a-zA-Z0-9_.-]*\.(?:mjs|js|css)$/,async(req,res,next)=>{
   try{
-   const name=req.path.slice(1);let pending=textAssets.get(name);
-   if(!pending){
-    pending=(async()=>{
-     const file=resolve(assets,name),info=await stat(file);
-     if(!info.isFile()||info.size>512*1024)return null;
-     const raw=await readFile(file);
-     return {raw,gzip:raw.length>=1024?await encode(raw,{level:4}):null,etag:'W/"'+createHash('sha256').update(raw).digest('hex')+'"'};
-    })();
-    if(textAssets.size>=32)textAssets.delete(textAssets.keys().next().value);
-    textAssets.set(name,pending);
-    pending.catch(()=>{if(textAssets.get(name)===pending)textAssets.delete(name)});
-   }
-   const value=await pending;if(!value)return next();
+   const name=req.path.slice(1),value=await textAsset(name);if(!value)return next();
    // Preserve byte-range semantics rather than compressing an arbitrary range.
    if(req.headers.range)return next();
    res.set({'Cache-Control':'private, no-cache',ETag:value.etag});res.vary('Accept-Encoding');

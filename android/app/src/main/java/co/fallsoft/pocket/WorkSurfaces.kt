@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONObject
 
 /** Shared catalog geometry; each backend owns identities, ordering and pagination. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
@@ -103,13 +104,14 @@ internal val WorkCardShape=RoundedCornerShape(8.dp)
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun ConversationActionsMenu(expanded:Boolean,onExpandedChange:(Boolean)->Unit,
     modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,contextLabel:String?=null,
+    providerUsage:ProviderUsage?=Pocket.providerUsage,providerId:String?=null,conversationUsage:JSONObject?=null,
     accountUsage:WeeklyUsage?=null,accountSourceLabel:String?=null,
     content:@Composable ColumnScope.()->Unit){
     val context=androidx.compose.ui.platform.LocalContext.current
     Box{
         val usage=accountUsage?:Pocket.weeklyUsage
-        val dockWidth=if(accountSourceLabel!=null)compactUsageDockWidth(account=true)else conversationUsageDockWidth(usage,contextLabel)
-        UsageDock(modifier.width(dockWidth),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=usage,accountSourceLabel=accountSourceLabel)
+        val dockWidth=if(accountSourceLabel!=null)compactUsageDockWidth(account=true,providerUsage=null)else conversationUsageDockWidth(usage,contextLabel,providerUsage,providerId,conversationUsage)
+        UsageDock(modifier.width(dockWidth),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=usage,providerUsage=providerUsage,providerId=providerId,conversationUsage=conversationUsage,accountSourceLabel=accountSourceLabel)
         SettingsDrawer(expanded,{onExpandedChange(false)},title="Conversation"){
             content()
             DrawerAction(if(ResponsivenessReport.measuring)"Finish responsiveness report" else "Report a slowdown",{

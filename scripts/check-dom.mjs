@@ -88,7 +88,7 @@ try{
  await run('app-controls-dom',['--experimental-vm-modules','--test','--test-reporter=tap','tests/web-app-controls.dom.mjs'],{...env,NEXTCOMP_TEST_WEB_SOURCE_ROOT:''},(output,check)=>{
   const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));
   check.summary=summary;
-  assert.deepEqual(summary,{tests:2,pass:2,fail:0,cancelled:0,skipped:0,todo:0},'Actual app Controls journeys must execute against this checkout without skips.');
+  assert.deepEqual(summary,{tests:4,pass:4,fail:0,cancelled:0,skipped:0,todo:0},'Actual app Controls, Send and provider-usage journeys must execute against this checkout without skips.');
  });
  await run('production-composition',['scripts/qualify-production-integration.mjs',join(directory,'production-composition')],env,async(_output,check)=>{
   const path=join(directory,'production-composition','receipt.json'),bytes=await readFile(path),result=JSON.parse(bytes);

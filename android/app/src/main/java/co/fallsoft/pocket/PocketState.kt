@@ -48,6 +48,10 @@ object Pocket {
     var codexConnectionMessage by mutableStateOf("")
     var weeklyUsage by mutableStateOf(WeeklyUsage())
     internal var weeklyUsageOwner by mutableStateOf<String?>(null)
+    var providerUsage by mutableStateOf<ProviderUsage?>(null)
+    internal var providerUsageOwner by mutableStateOf<String?>(null)
+    var voiceAvailable by mutableStateOf(true)
+    var voiceReason by mutableStateOf("")
     var openWithKeyboard by mutableStateOf(false)
     var usageSamples by mutableStateOf(emptyList<UsageSample>())
     var error by mutableStateOf(""); var busy by mutableStateOf(false)
@@ -112,7 +116,7 @@ object Pocket {
         if(body!=null&&parts.size==5&&parts[1]=="api"&&parts[2]=="threads"&&parts[4]=="reply"&&response.s("state") in listOf("queued","sending","accepted"))rememberSessionInteraction(parts[3],"reply:"+body.s("id"),forLocal)
     }
     fun init(c:Context){
-        context=c.applicationContext;val profile=environmentProfiles.selected();environmentId=profile.id;local=profile.local;base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0);restoreUsage()
+        context=c.applicationContext;val profile=environmentProfiles.selected();environmentId=profile.id;local=profile.local;base=savedBase(local);token=savedToken(local);lastNotification=prefs.getLong(key("lastNotification"),0);restoreUsage();restoreProviderUsage()
         if(!prefs.contains(key("seenIds")))prefs.edit().putStringSet(key("seenIds"),((lastNotification-511).coerceAtLeast(1)..lastNotification).map{it.toString()}.toSet()).apply()
         context.getSystemService(android.app.NotificationManager::class.java).apply{cancel(1);deleteNotificationChannel("connection")}
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
@@ -174,12 +178,12 @@ object Pocket {
         CodexCatalog.reset();statusRevision++;sessionOrderRequest=0;sessionOrderHandled=0
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
         PocketLive.stop();PocketTranscript.clear();environmentId=id;local=forLocal;base=nextBase;token=nextToken;host=destination.environment.name
-        sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";selected=null;detail=null;newTask=false
+        sending=false;starting=false;busy=false;error="";startStatus="";connected=false;codexOnline=false;connectionError="";codexConnectionMessage="";defaultCwd="";selected=null;detail=null;newTask=false;voiceAvailable=true;voiceReason=""
         lastNotification=prefs.getLong(key("lastNotification"),0);environmentProfiles.select(id)
         fullPermissions=prefs.getBoolean(key("fullPermissions"),prefs.getBoolean("fullPermissions",true))
         pushStatus=if(local)"Notifications stay on this phone" else if(prefs.getBoolean(key("pushReady"),false))"Firebase push is ready" else "Setting up notifications…"
         if(savedToken(true).isNotBlank())LocalMonitorService.start(context) else LocalMonitorService.stop(context)
-        restoreUsage();CodexSessionRepository.activate();PocketImmersion.restore();PocketSpeech.init();PocketReplies.profileChanged();PocketLive.start();refresh()
+        restoreUsage();restoreProviderUsage();CodexSessionRepository.activate();PocketImmersion.restore();PocketSpeech.init();PocketReplies.profileChanged();PocketLive.start();refresh()
     }
     fun disconnect(){
         val wasLocal=local;val oldBase=base;val oldToken=token
@@ -190,9 +194,9 @@ object Pocket {
         androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pocket-push-registration-$environmentId")
         androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag("pocket-attention-$environmentId")
         PocketSpeech.profileLeaving();PocketVoice.stop();PocketCoordinator.close();PocketWorkUpdates.close()
-        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("weeklyUsageOwner",wasLocal)).remove(key("usageSamples",wasLocal))
+        val edit=prefs.edit().remove(key("server",wasLocal)).remove(key("token",wasLocal)).remove(key("deviceId",wasLocal)).remove(key("seenIds",wasLocal)).remove(key("lastNotification",wasLocal)).remove(key("weeklyUsage",wasLocal)).remove(key("weeklyUsageOwner",wasLocal)).remove(key("providerUsage",wasLocal)).remove(key("providerUsageOwner",wasLocal)).remove(key("usageSamples",wasLocal))
         if(wasLocal)edit.remove(key("automationSecret",true)).putBoolean("automationAllowed",false)
-        edit.apply();weeklyUsage=WeeklyUsage();weeklyUsageOwner=null;CodexCatalog.reset();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
+        edit.apply();weeklyUsage=WeeklyUsage();weeklyUsageOwner=null;providerUsage=null;providerUsageOwner=null;voiceAvailable=true;voiceReason="";CodexCatalog.reset();PocketTranscript.clear();PocketLive.stop();connected=false;tasks=emptyList();detail=null;selected=null;notifications=emptyList();lastNotification=0
         val fallback=environmentProfiles.all().firstOrNull{it.id!=environmentId&&captureEnvironment(it.id)!=null}
         if(fallback!=null){activateEnvironment(fallback.id)}else{token="";base="";pushStatus="Not paired";local=false;prefs.edit().putBoolean("activeLocal",false).apply();LocalMonitorService.stop(context);PocketSpeech.init()}
     }
@@ -212,6 +216,28 @@ object Pocket {
         usageSamples=UsageForecast.record(usageSamples,weeklyUsage)
         prefs.edit().putString(key("usageSamples"),JSONArray().apply{usageSamples.forEach{put(JSONObject().put("at",it.at).put("remaining",it.remaining).put("reset",it.reset))}}.toString()).apply()
         val edit=prefs.edit().putString(key("weeklyUsageOwner"),weeklyUsageOwner);if(json==null)edit.remove(key("weeklyUsage"))else edit.putString(key("weeklyUsage"),json.toString());edit.apply()
+    }
+    private fun restoreProviderUsage(){
+        val source=captureEnvironment()
+        val trusted=accountUsageCacheMatches(prefs.getString(key("providerUsageOwner"),null),source)
+        providerUsageOwner=source?.takeIf{trusted}?.let(::accountUsageOwner)
+        providerUsage=if(!trusted)null else try{prefs.getString(key("providerUsage"),null)?.let{ProviderUsage.fromJson(JSONObject(it))?.copy(stale=true)}}catch(_:Exception){null}
+    }
+    internal fun acceptProviderUsage(json:JSONObject?,source:EnvironmentRequest?=captureEnvironment()){
+        if(source==null||captureEnvironment()?.matches(source)!=true)return
+        providerUsageOwner=accountUsageOwner(source)
+        providerUsage=ProviderUsage.fromJson(json)
+        val edit=prefs.edit().putString(key("providerUsageOwner"),providerUsageOwner)
+        if(providerUsage==null)edit.remove(key("providerUsage"))else edit.putString(key("providerUsage"),json.toString())
+        edit.apply()
+    }
+    internal fun acceptVoiceAvailability(json:JSONObject?){
+        val was=voiceAvailable
+        if(json==null){voiceAvailable=true;voiceReason="";return}
+        val available=json.optBoolean("available",true)
+        voiceAvailable=available&&json.optBoolean("input",available)&&json.optBoolean("output",available)
+        voiceReason=json.s("reason")
+        if(was&&!voiceAvailable)PocketSpeech.unavailable()
     }
     fun refresh()=CodexCatalog.refresh(explicit=true)
     val sessionCursor get()=CodexCatalog.cursor
@@ -322,6 +348,8 @@ object Pocket {
             "hollywoodInbox" -> {coroutineContext[EnvironmentRequestContext]?.destination?.let{HollywoodNotifications.socket(it,json)}}
             "threadRenamed" -> {val applied=PocketNotificationTitles.rename(json.s("threadId"),json.s("name"),json.optJSONArray("notificationIds")?.let{a->(0 until a.length()).map{a.optLong(it)}}?:emptyList(),revision=json.optLong("revision"));if(applied)tasks=tasks.map{if(it.id==json.s("threadId"))it.copy(title=json.s("name"))else it}}
             "rateLimits" -> acceptUsage(json.optJSONObject("usage"),coroutineContext[EnvironmentRequestContext]?.destination)
+            "providerUsage" -> acceptProviderUsage(json.optJSONObject("usage"),coroutineContext[EnvironmentRequestContext]?.destination)
+            "conversationUsage" -> {val id=json.s("threadId");if(selected==id)detail=detail?.let{JSONObject(it.toString()).put("usage",json.optJSONObject("usage"))}}
             "sessionInteraction" -> {rememberSessionInteraction(json.s("threadId"),"item:"+json.s("interactionId"));discoverSession(json.s("threadId"))}
             "nativeAuthBoundary" -> {nativeAuthGeneration++}
             "status" -> {

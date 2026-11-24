@@ -445,6 +445,7 @@ internal object CodexSessionRepository {
         }
         val allowed=capabilities?.optBoolean("readOnlyTimeline")==true
         val previous=readOnlyCapabilities.put(source.scope,allowed)
+        (capabilities?.optJSONObject("voice")?:capabilities?.optJSONObject("voiceInput"))?.let{voice->Pocket.scope.launch(Dispatchers.Main.immediate){if(current(source))Pocket.acceptVoiceAvailability(voice)}}
         if(previous==allowed||!allowed)return
         io.launch{
             if(!current(source))return@launch

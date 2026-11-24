@@ -4,7 +4,7 @@ android {
     compileSdk = 36
     testBuildType = "qualification"
     defaultConfig { applicationId = "co.fallsoft.pocket"; minSdk = 28; targetSdk = 36; testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 199; versionName = "0.5.0-alpha.181" }
+        versionCode = 200; versionName = "0.5.0-alpha.182" }
     signingConfigs {
         // Retained QA devices may already use the maintained release identity.
         // Configure that existing signer explicitly; never erase their data or

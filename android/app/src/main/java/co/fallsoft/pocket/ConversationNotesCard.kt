@@ -78,7 +78,7 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
                     if(entry.note!=null&&onReply!=null)IconButton({onReply(entry.note)}){SymbolIcon(Icons.Rounded.ArrowUpward,"Reply to this answer",Modifier.size(28.dp))}
                     if(onGoTo!=null&&(entry.sourceId.isNotBlank()||entry.thread!=null&&entry.thread!=Pocket.selected))IconButton({onGoTo(entry)}){SymbolIcon(Icons.Rounded.OpenInNew,"Go to source",Modifier.size(28.dp))}
                     if(expanded&&entry.note!=null&&onRemove!=null)IconButton({onRemove(entry.note)}){Icon(Icons.Rounded.DeleteOutline,"Remove retained answer",Modifier.size(24.dp),tint=Muted)}
-                    IconButton({if(speaking)stop()else if(entry.captionId!=null&&PocketSpeech.queue.current?.id==entry.captionId&&PocketSpeech.paused)PocketSpeech.control("resume")else PocketSpeech.speakDisplayed(owner,displayedText.ifBlank{entry.text},entry.label)},modifier=Modifier.size(48.dp)){
+                    if(Pocket.voiceAvailable)IconButton({if(speaking)stop()else if(entry.captionId!=null&&PocketSpeech.queue.current?.id==entry.captionId&&PocketSpeech.paused)PocketSpeech.control("resume")else PocketSpeech.speakDisplayed(owner,displayedText.ifBlank{entry.text},entry.label)},modifier=Modifier.size(48.dp)){
                         SymbolIcon(if(speaking)Icons.Rounded.Stop else Icons.Rounded.VolumeUp,if(speaking)"Stop speaking context" else "Speak this context",Modifier.size(30.dp),tint=if(speaking)Coral else Mint)
                     }
                 }
@@ -105,7 +105,7 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     }){
         BilingualLabel(if(questions>0)"Needs you · $questions" else if(results>0)"Results · $results" else "Questions",fontSize=12.sp,color=if(questions>0)Coral else Paper)
     }
-    IconButton({
+    if(Pocket.voiceAvailable)IconButton({
         if(PocketSpeech.displayedRunning)PocketSpeech.displayedOwner?.let{PocketSpeech.stopDisplayed(it)}
         else if(PocketSpeech.count>0)PocketSpeech.control(if(PocketSpeech.paused)"resume" else "pause")
         else speechText().takeIf{it.isNotBlank()}?.let{PocketSpeech.speakDisplayed(host,it,"Conversation")}
