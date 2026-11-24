@@ -131,6 +131,7 @@ import androidx.lifecycle.repeatOnLifecycle
 
 /** Three deliberate playback presets; mounting never changes an existing mute. */
 @Composable fun InlineSpeechVolume(modifier:Modifier=Modifier){
+    if(!Pocket.voiceAvailable)return
     val context=LocalContext.current
     val audio=context.getSystemService(android.media.AudioManager::class.java)
     val max=remember(audio){audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)}

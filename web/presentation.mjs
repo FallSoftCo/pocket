@@ -40,6 +40,16 @@ export function usageSummary(usage,now=Date.now()){
  const balance=usage?.credits?.balance,knownCredit=typeof balance==='number'&&Number.isFinite(balance)&&balance>=0;
  return {compact:percent,remaining:valid?remaining:null,reset:reset>0?`Resets ${new Date(reset*1000).toLocaleString()}`:'Reset time unavailable',stale:usage?.stale===true||!Number.isSafeInteger(usage?.updatedAt)||usage.updatedAt<=0||now-usage.updatedAt>120000,credits:knownCredit?`${balance} credits`:usage?.credits?.unlimited===true?'Unlimited credits':'Credits unavailable',continuation:usage?.continuation?.label||'Credit continuation status unavailable'};
 }
+export function tokenUsageSummary(usage){
+ const last=usage?.last?.totalTokens,total=usage?.total?.totalTokens,window=usage?.modelContextWindow;
+ const valid=value=>Number.isSafeInteger(value)&&value>=0;
+ if(!valid(last)&&!valid(total))return null;
+ const compact=value=>value>=1_000_000?`${Math.round(value/100_000)/10}m`:value>=1_000?`${Math.round(value/100)/10}k`:String(value);
+ const context=valid(last)?`${compact(last)} ctx${valid(window)&&window>0?` · ${Math.min(100,Math.round(last/window*100))}% of window`:''}`:null;
+ const totalLabel=valid(total)?`${compact(total)} total tokens`:null;
+ const detail=valid(last)?`${last.toLocaleString()} tokens in the last context${valid(window)&&window>0?` / ${window.toLocaleString()} token window (${Math.min(100,Math.round(last/window*100))}%)`:''}.${valid(total)?` ${total.toLocaleString()} tokens total on this session.`:''}`:valid(total)?`${total.toLocaleString()} tokens total on this session.`:null;
+ return {label:[context,totalLabel].filter(Boolean).join(' · '),detail};
+}
 export function sessionState(thread){if(thread?.environmentUnavailable)return {label:'Status unavailable',tone:'unknown'};const type=thread?.status?.type||'unavailable';if(type==='active')return {label:'Working',tone:'working'};if(type==='pending'||thread?.pendingCount>0)return {label:'Needs you',tone:'attention'};if(type==='idle')return {label:'Idle',tone:'idle'};return {label:type==='unavailable'?'Status unavailable':type,tone:'unknown'};}
 export function canonicalPage(previous,incoming,{older=false}={}){
  const key=r=>r.turnId||r.id,order=[],groups=new Map(),versions=new Map(previous.map(r=>[r.id,r]));

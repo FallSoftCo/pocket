@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.*
 @Composable fun CoordinatorCard(){
     val shape=RoundedCornerShape(8.dp)
     val height=with(androidx.compose.ui.platform.LocalDensity.current){(if(PocketImmersion.enabled&&PocketImmersion.supportEnabled)84.sp else 64.sp).toDp()+32.dp}.coerceAtLeast(96.dp)
+    val hint=if(Pocket.voiceAvailable)"Text or talk to coordinate your sessions." else Pocket.voiceReason.ifBlank{"Text to coordinate your sessions. Voice mode requires OpenAI Realtime."}
     LaunchedEffect(Pocket.environmentId,Pocket.token){PocketCoordinator.loadHistory()}
     LaunchedEffect(PocketCoordinator.preview,PocketImmersion.enabled,PocketImmersion.planVersion){PocketImmersion.offer("coordinator:preview",PocketCoordinator.preview,"coordinator message")}
     Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Panel).border(1.dp,Mint.copy(alpha=.55f),shape)){
@@ -45,7 +46,7 @@ import kotlinx.coroutines.flow.*
                 SymbolIcon("Codex",PocketImmersion.label("Coordinator"),Modifier.size(24.dp),spinning=PocketCoordinator.state in listOf("Sending","Thinking"))
                 BilingualLabel("Coordinator",fontSize=16.sp,fontWeight=FontWeight.Medium,color=Mint,centered=false)
             }
-            MarkdownPreview(PocketImmersion.display("coordinator:preview",PocketCoordinator.preview).ifBlank{PocketImmersion.label("Text or talk to coordinate your sessions.")},fontSize=13.sp,lineHeight=19.sp,color=Paper,maxLines=2,overflow=TextOverflow.Ellipsis)
+            MarkdownPreview(PocketImmersion.display("coordinator:preview",PocketCoordinator.preview).ifBlank{PocketImmersion.label(hint)},fontSize=13.sp,lineHeight=19.sp,color=Paper,maxLines=2,overflow=TextOverflow.Ellipsis)
         }
     }
 }
@@ -109,6 +110,7 @@ import kotlinx.coroutines.flow.*
         }
         CoordinatorSpeechControls()
         InlineCaptureStatus()
+        if(!Pocket.voiceAvailable&&Pocket.voiceReason.isNotBlank())Text(Pocket.voiceReason,modifier=Modifier.padding(horizontal=16.dp),color=Muted,fontSize=12.sp,lineHeight=17.sp)
         Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
             if(typing)Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 OutlinedTextField(draft,{value->
@@ -139,6 +141,7 @@ import kotlinx.coroutines.flow.*
 
 /** Playback controls never repeat a coordinator reply or saved notification passage. */
 @Composable internal fun CoordinatorSpeechControls(){
+    if(!Pocket.voiceAvailable)return
     ForegroundWorkNotice()
     if(PocketVoice.captureFeedbackVisible)return
     val owner="speech-coordinator:${Pocket.local}:${Pocket.base}:${Pocket.token.hashCode()}"

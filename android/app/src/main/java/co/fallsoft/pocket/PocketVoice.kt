@@ -119,6 +119,7 @@ object PocketVoice {
     }
     internal var pendingLaunchId:String?=null;private set
     fun start(c:Context,threadId:String?=null,recordImmediately:Boolean=true,inPlace:Boolean=false,checkSaved:Boolean=false,roomDestination:JSONObject?=null,sourceLabel:String?=null){
+        if(!Pocket.voiceAvailable){captureFailure(Pocket.voiceReason.ifBlank{"Voice is unavailable on this environment. Use a typed message."},inPlace);return}
         if(ContextCompat.checkSelfPermission(c,Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){problem="Allow microphone access to use voice.";return}
         if(checkSaved&&Pocket.prefs.getString("voicePendingId",null)!=null&&Pocket.prefs.getString("voicePendingEnvironment",null).isNullOrBlank()){resolveLegacySavedOwner(inPlace);return}
         if(checkSaved&&!savedTurnMatchesCurrentEnvironment()){captureFailure("Switch to the recording’s original environment and pairing before checking it. Legacy recordings without verified ownership remain saved; they have not been resent.",inPlace);return}

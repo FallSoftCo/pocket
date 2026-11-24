@@ -144,3 +144,23 @@ test('cold-start documents and modules compress without breaking conditional or 
  const html=await read('/',{'Accept-Encoding':'gzip'});assert.equal(html.headers['content-encoding'],'gzip');assert.equal(html.headers['cache-control'],'no-store');assert.match(gunzipSync(html.body).toString(),/<!doctype html>/i);
  assert.equal((await read('/missing-module.mjs',{'Accept-Encoding':'gzip'})).status,404);
 });
+
+test('gateway refreshes changed text assets without a process restart',async t=>{
+ const {gunzipSync}=await import('node:zlib');
+ const {mkdtemp,writeFile,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');
+ const {join}=await import('node:path');
+ const assets=await mkdtemp(join(tmpdir(),'nextcomp-mutable-assets-'));
+ t.after(()=>rm(assets,{recursive:true,force:true}));
+ const file=join(assets,'mutable.mjs'),oldSource='export const build = "old";\n'.repeat(80),newSource='export const build = "new-and-longer";\n'.repeat(80);
+ await writeFile(file,oldSource);
+ const g=createWebClient({origin:'https://private.example.test',assetRoot:assets});
+ g.server.listen(0,'127.0.0.1');await once(g.server,'listening');
+ t.after(()=>{g.server.closeAllConnections();g.server.close();});
+ const port=g.server.address().port;
+ const read=()=>new Promise((resolve,reject)=>{http.get({host:'127.0.0.1',port,path:'/mutable.mjs',headers:{'Accept-Encoding':'gzip'}},res=>{const chunks=[];res.on('data',x=>chunks.push(x));res.on('end',()=>resolve({status:res.statusCode,headers:res.headers,body:Buffer.concat(chunks)}));}).on('error',reject);});
+ const first=await read();assert.equal(first.status,200);assert.equal(gunzipSync(first.body).toString(),oldSource);
+ await writeFile(file,newSource);
+ const second=await read();assert.equal(second.status,200);assert.equal(gunzipSync(second.body).toString(),newSource);
+ assert.notEqual(second.headers.etag,first.headers.etag);
+});

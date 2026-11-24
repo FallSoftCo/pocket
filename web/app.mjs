@@ -17,7 +17,7 @@ import {SessionStore} from './session-store.mjs';
 import {animatedSymbol,setSymbolMotionReady} from './symbol-motion.mjs';
 import {ReadFeedback} from './read-feedback.mjs';
 import {ImmersionLayer} from './immersion.mjs';
-import {richText,foldRuns,usageSummary,sessionState,canonicalPage,ReadLanes} from './presentation.mjs';
+import {richText,foldRuns,usageSummary,tokenUsageSummary,sessionState,canonicalPage,ReadLanes} from './presentation.mjs';
 import {sessionIdentity,workTime,compareWork,mergeRows,pendingFor} from './model.mjs';
 import {purgeRetiredStorage,retiredValue} from './retirement.mjs';
 import {voiceJournal} from './voice-journal.mjs';
@@ -30,8 +30,11 @@ import {roomState,RoomHistory} from './room-model.mjs';
 import {deliveryAccepted,bindingMatches,jsonEqual} from './receipt-policy.mjs';
 import {AccountUsageCache} from './account-usage.mjs';
 import {panelFrame,anchoredPanelPlacement} from './anchored-panel.mjs';
+import {PendingSends} from './pending-sends.mjs';
 const base=clientBase(import.meta.url);
+const currentBuild=new URL(import.meta.url).searchParams.get('v')||'';
 const localSends=new LocalSendPresentation({read,write});
+const pendingSends=new PendingSends({read,write});
 const ux=new UxMeasurements();
 let uxOpen=0,uxFresh=0,uxSend=0,uxFrame=0;
 let queueNavigation=0,queueAuthority=0,queueVerifiedNavigation=-1;const queueActions=new Map();
@@ -50,12 +53,13 @@ function measureContentLayout(){
 setSymbolMotionReady(false);
 function setLabel(node,text){const source=String(text??'');if(node.dataset.labelSource!==source){node.dataset.labelSource=source;node.textContent=source;if(node.tagName==='BUTTON')node.setAttribute('aria-label',source);}}
 const $=id=>document.getElementById(id),el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)setLabel(n,text);return n;};
+function setComposerStatus(text){const node=$('send-state');if(!node)return;setLabel(node,text||'');node.hidden=!text;}
 let scope=read('scope','coordinator'),deviceId='',threads=[],current=null,status=null,ws=null,authenticated=false,polling=false,installEvent=null,models=[],loadSerial=0,earlierBusy=false,reconnectTimer,follow=true;
 // Preserve saved room drafts/receipts; a retired selection never becomes a stock ID.
 if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}
 let openedScope=null,openedDraftKey=null,catalogSettled=false,catalogFailure=false,catalogChecksIncomplete=false;const readerViews=new Map();
 const readerKey=(id=scope)=>id+(isRoom(id)?'/'+roomView:'');
-let seatOrder=[],deliveryFlight=null,startFlight=null,review=null,continuationFlight=null;let attentionItems=[];
+let seatOrder=[],deliveryFlights=new Map(),startFlight=null,review=null,continuationFlight=null;let attentionItems=[];
 const lanes=new ReadLanes();
 const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
 readFeedback.select(scope);
@@ -70,8 +74,8 @@ const accountUsage=new AccountUsageCache(),accountFlights=new Map();
 let roomEntries=[],roomView='all';const roomTargets=new Map();
 const targetFor=id=>{if(!roomTargets.has(id))roomTargets.set(id,read('roomTarget.'+deviceId+'.'+id,{recipientId:null,audience:'room',sourceEventId:null}));return roomTargets.get(id);};
 const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();cache.protect(scope);
-cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let pending=read('pending',null),newPending=read('newPending',null);
-if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}
+cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let newPending=read('newPending',null);
+retireRoomPendings();
 async function api(path,body,options={}){
  const outgoingThread=/^\/api\/threads\/([^/?]+)\/(?:reply|replies\/[^/?]+|queue\/resume)$/.exec(path)?.[1]||(path.startsWith('/api/replies/')?options.scope:null);
  path=environmentPath(path,options.scope);
@@ -79,6 +83,26 @@ async function api(path,body,options={}){
  const r=await fetch(clientURL(base,path),{method,credentials:'same-origin',headers:{'Content-Type':binary?'audio/wav':'application/json',...(options.headers||{})},...(body===undefined?{}:{body:binary?body:JSON.stringify(body)}),priority:options.priority||'high',...(method==='GET'?{signal:AbortSignal.any([AbortSignal.timeout(options.timeout||20000),...(options.signal?[options.signal]:[])])}:{})});
  let data;try{data=await r.json();}catch{data={error:`Backend returned HTTP ${r.status}.`};}
  if(!r.ok){if(r.status===401&&authenticated){authenticated=false;queueAuthority++;queueVerifiedNavigation=-1;ux.foreground(false);ws?.close();$('app').hidden=true;$('pairing').hidden=false;}throw Object.assign(Error(data.error||`Request failed (${r.status}).`),{status:r.status,code:data.code,readAvailability:data.readAvailability});}if(outgoingThread&&data.outbox&&(!options.acceptOutbox||options.acceptOutbox(data)))observeOutbox(outgoingThread,data.outbox,!options.paintOutbox||options.paintOutbox());return data;
+}
+let buildCheckAt=0,buildCheckFlight=null;
+async function checkWebBuild(force=false){
+ if(!authenticated||!currentBuild)return;
+ if(!force&&Date.now()-buildCheckAt<300000)return;
+ if(buildCheckFlight)return buildCheckFlight;
+ buildCheckFlight=(async()=>{
+  buildCheckAt=Date.now();
+  try{
+   const response=await fetch(clientURL(base,'web/build'),{credentials:'same-origin',cache:'no-store'});
+   if(!response.ok)return;
+   const data=await response.json();
+   if(!data.build||data.build===currentBuild)return;
+   let alreadyRequested=false;try{alreadyRequested=sessionStorage.getItem('nextcomp.reloadBuild')===data.build;}catch{}
+   if(alreadyRequested)return;
+   try{sessionStorage.setItem('nextcomp.reloadBuild',data.build);}catch{}
+   location.reload();
+  }catch{}finally{buildCheckFlight=null;}
+ })();
+ return buildCheckFlight;
 }
 const error=e=>{if($('startup')){$('startup').hidden=true;if($('app').hidden&&$('pairing').hidden)$('pairing').hidden=false;}$('error').textContent=e.message||String(e);$('error').hidden=false;};
 const run=fn=>async(...args)=>{try{$('error').hidden=true;await fn(...args);}catch(e){error(e);}};
@@ -94,9 +118,25 @@ const voice=new BrowserVoice(api,(text,p)=>{
  for(const record of voice.records.filter(r=>!['cancelled','submitted','completed'].includes(r.state))){const row=el('div','recording-receipt',`${record.scope===scope?'This conversation':'Another conversation'} · ${record.error||record.state}`);if(!voice.jobs.has(record.id)&&record.state!=='unknown')row.append(button('Send saved recording',()=>voice.sendRecord(record.id)));row.append(button('Cancel',()=>voice.discard(record.id)),button('Forget local copy',()=>{if(confirm('This removes only the local recording. Any submitted work and original server receipt remain. Forget this copy?'))return voice.forget(record.id);}));if(record.scope!==scope)row.append(button('Open original conversation',()=>open(record.scope)));holder.append(row);}
  $('mic').classList.toggle('recording',!!voice.recording);$('mic').textContent=voice.recording?'■ Stop and send':'● Record';$('voice-send').hidden=true;$('voice-clear').hidden=true;
 });
+const voiceCapability=()=>status?.capabilities?.voice||status?.capabilities?.voiceInput||{available:true,input:true,output:true,reason:''};
+const voiceInputCapability=()=>{const value=voiceCapability();return {...value,available:value.available!==false&&value.input!==false};};
+const voiceOutputCapability=()=>{const value=voiceCapability();return {...value,available:value.available!==false&&value.output!==false};};
+const voiceInputReady=()=>voiceInputCapability().available!==false&&voice.supported();
+const voiceOutputReady=()=>voiceOutputCapability().available!==false;
+const browserCapture=voice.capture.bind(voice);
+voice.capture=(...args)=>{const voiceInput=voiceInputCapability();if(voiceInput.available===false)throw Error(voiceInput.reason);return browserCapture(...args);};
+const browserSpeak=voice.speak.bind(voice);
+voice.speak=(...args)=>{const voiceOutput=voiceOutputCapability();if(voiceOutput.available===false)throw Error(voiceOutput.reason);return browserSpeak(...args);};
 function draftKey(s=scope){if(isRoom(s)){if(!rooms.entries.has(s)&&s===openedScope&&openedDraftKey)return openedDraftKey;const r=rooms.route(s,{requireAvailable:false});return 'draft.'+JSON.stringify([deviceId,r.environment,r.binding.bindingId,r.binding.installationId,r.binding.authorityId,r.binding.principalId,rooms.entry(s).roomId,targetFor(s)]);}return `draft.${deviceId}.${s}`;}
 function saveDraft(edited=false){if(deviceId&&openedScope===scope){const key=openedDraftKey||draftKey(),text=$('draft').value;if(edited||read(key,'')!==text)write('revision.'+key,read('revision.'+key,0)+1);write(key,text);}}
-function persistPending(value){write('pending',value);pending=value;if(value)localSends.remember(value);renderOutbox();}
+function pendingForScope(s=scope){return pendingSends.forScope(s,deviceId)[0]??null;}
+function retireRoomPendings(){for(const saved of pendingSends.all())if(saved.room){write('retiredRoomPending.'+saved.deviceId+'.'+saved.id,saved);pendingSends.remove(saved);}}
+function persistPending(value){pendingSends.save(value);localSends.remember(value);renderOutbox();}
+function discardPendingSend(saved=pendingForScope()){
+ if(!saved)return;
+ if(!confirm(`Only discard this saved send after checking the original conversation. Discarding cannot undo a message that was delivered.\n\n${String(saved.text||'').slice(0,240)}`))return;
+ localSends.remove(saved.deviceId||deviceId,saved.scope,new Set([saved.id]));pendingSends.remove(saved);renderHeader();renderOutbox();
+}
 function button(label,action){const b=el('button','',label);b.type='button';b.onclick=run(action);return b;}
 function stamp(ms){if(!ms)return 'Recency unknown';const d=Math.max(0,Date.now()-ms);return d<60000?'Just now':d<3600000?`${Math.floor(d/60000)}m ago`:d<86400000?`${Math.floor(d/3600000)}h ago`:new Date(ms).toLocaleDateString();}
 let listReadingUntil=0,lastSeatRefresh=0;const expandedParents=new Set();
@@ -220,17 +260,18 @@ async function renameCard(thread,card){
  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();void finish(true);}else if(e.key==='Escape'){e.preventDefault();void finish(false);}};input.onblur=()=>void finish(true);
 }
 function renderHeader(){
+ setComposerStatus('');
  if($('conversation-tools-toggle'))$('conversation-tools-toggle').hidden=scope==='coordinator';
- if(isRoom(scope)){if(rooms.entries.has(scope))renderRoomHeader();else{setLabel($('session-state'),'Original room access is unavailable. Saved draft retained.');$('send').disabled=true;$('mic').disabled=!voice.recording;$('room-controls').hidden=true;}return;}
+ if(isRoom(scope)){if(rooms.entries.has(scope))renderRoomHeader();else{setLabel($('session-state'),'Original room access is unavailable. Saved draft retained.');$('send').disabled=true;$('send').setAttribute('aria-disabled','true');setComposerStatus('This room is unavailable. Your draft is saved.');$('mic').disabled=!voice.recording;$('room-controls').hidden=true;}return;}
  $('room-controls').hidden=true;delete $('main').dataset.roomId;setLabel($('draft-note'),'Enter to send · Shift+Enter for a new line');
- const t=scope==='coordinator'?null:current?.thread||threads.find(t=>t.id===scope),identity=sessionIdentity(t);setLabel($('title'),t?catalogTitle(t):'Coordinator');$('context-label').textContent=t?identity.isChild?'DELEGATED WORK':'DIRECT SESSION':'DIRECT YOUR COMPUTING';setLabel($('session-state'),t?`${sessionState(t).label} · ${t.cwd||'Work environment'}${identity.isChild&&!identity.canAcceptDirectInput?' · Guide through the parent task':''}`:status?.backend==='lax'?'Choose a Hollywood room. Stock coordinator is unavailable on this gateway.':'Ask here, or open work to guide it directly.');$('coordinator').classList.toggle('active',scope==='coordinator');$('session-menu').hidden=!t||(identity.isChild&&!identity.canAcceptDirectInput);$('parent').hidden=!identity.parentThreadId;$('parent').onclick=run(()=>open(identity.parentThreadId));const enabled=scope==='coordinator'?status?.backend!=='lax':!!current&&identity.canAcceptDirectInput;$('draft').disabled=!enabled;$('send').disabled=!enabled||!!deliveryFlight||!!pending;$('mic').disabled=!enabled||!voice.supported();$('draft').placeholder=!enabled?'Choose an available work conversation…':t?'Guide this session…':'Tell the coordinator what you need…';$('send-mode').hidden=!t;
+ const t=scope==='coordinator'?null:current?.thread||threads.find(t=>t.id===scope),identity=sessionIdentity(t),voiceInput=voiceInputCapability();setLabel($('title'),t?catalogTitle(t):'Coordinator');$('context-label').textContent=t?identity.isChild?'DELEGATED WORK':'DIRECT SESSION':'DIRECT YOUR COMPUTING';setLabel($('session-state'),t?`${sessionState(t).label} · ${t.cwd||'Work environment'}${identity.isChild&&!identity.canAcceptDirectInput?' · Guide through the parent task':''}`:status?.backend==='lax'?'Choose a Hollywood room. Stock coordinator is unavailable on this gateway.':voiceInput.available===false?voiceInput.reason:'Ask here, or open work to guide it directly.');$('coordinator').classList.toggle('active',scope==='coordinator');$('session-menu').hidden=!t||(identity.isChild&&!identity.canAcceptDirectInput);$('parent').hidden=!identity.parentThreadId;$('parent').onclick=run(()=>open(identity.parentThreadId));const enabled=scope==='coordinator'?status?.backend!=='lax':!!current&&identity.canAcceptDirectInput;const savedSend=!!pendingForScope(scope),flighting=deliveryFlights.has(scope);$('draft').disabled=!enabled;$('send').disabled=!enabled||flighting||savedSend;$('send').setAttribute('aria-disabled',String(!enabled||flighting||savedSend));$('send').title=savedSend?'Check the saved send above before sending another message.':!enabled?'This conversation cannot accept direct input.':'Send message';if(savedSend)setComposerStatus('Check the saved send above before sending another message.');else if(flighting)setComposerStatus('Sending the previous message…');else if(!enabled)setComposerStatus('This conversation cannot accept direct input. Your draft is saved.');$('mic').disabled=!enabled||!voiceInputReady();$('mic').title=voiceInput.available===false?voiceInput.reason:'';$('mic').setAttribute('aria-label',voiceInput.available===false?voiceInput.reason:'Record a voice message');$('draft').placeholder=!enabled?'Choose an available work conversation…':t?'Guide this session…':'Tell the coordinator what you need…';$('send-mode').hidden=!t;
 }
 function rowNode(row){let n;if(['turn','turnEnd'].includes(row.kind))return el('div','turn-label',row.kind==='turn'?`${row.status||'Turn'}${row.startedAt?' · '+new Date(row.startedAt*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}`:`${row.status||'Finished'}${row.text?' · '+row.text:''}`);
  if(row.kind==='request')return el('div','turn-label','Decision needed — open Needs you');
  if(row.kind==='attachments'){n=el('div','message');n.append(el('header','',row.title));for(const a of row.attachments||[]){if(!/^\/api\/files\/[a-zA-Z0-9_.-]+$/.test(a.url||''))continue;const url=clientURL(base,environmentPath(a.url,scope));if(/^image\//.test(a.mime||'')||/\.(png|jpe?g|webp|gif)$/i.test(a.name||a.url)){const image=el('img','attachment-image');image.src=url;image.alt=a.name||'Image attachment';image.loading='lazy';image.decoding='async';n.append(image);}const link=el('a','attachment-link',a.name||'Open attachment');link.href=url;link.target='_blank';link.rel='noopener noreferrer';n.append(link);}return n;}
  if(row.kind==='runs'){const details=el('details','activity run-block');const actions=row.rows.filter(r=>r.kind==='activity');details.append(el('summary','',`${actions.length||row.rows.length} operations · ${actions.at(-1)?.title||row.rows.at(-1)?.status||'Work activity'}`));for(const item of row.rows){const entry=el('div','run-entry');if(item.actionId)entry.dataset.roomActionId=item.actionId;entry.append(el('strong','',(item.title||item.type||'Operation')+' · '+(item.status||'')));if(item.text||item.detail)entry.append(el('pre','',item.detail||item.text));if(item.type==='commandExecution')entry.append(commandOutputButton({row:item,threadId:scope,api:executionApi(scope),isCurrent:executionCurrent(scope),create:el,button}));details.append(entry);}details.ontoggle=()=>{$('collapse-runs').hidden=!document.querySelector('.run-block[open]');};return details;}
  if(row.kind==='activity'){n=el('details','activity');n.append(el('summary','',`${row.title||row.type} · ${row.text||row.status||''}`));if(row.detail)n.append(el('pre','',row.detail));if(row.type==='commandExecution')n.append(commandOutputButton({row,threadId:scope,api:executionApi(scope),isCurrent:executionCurrent(scope),create:el,button}));return n;}
- n=el('article','message'+(row.kind==='user'?' user':''));const header=el('header');const icon=animatedSymbol(row.kind==='user'?'user':'codex',{size:28,label:row.roomAuthor||(row.kind==='user'?'You':'Codex')});header.append(icon);if(row.roomAuthor)header.append(el('span','',row.roomAuthor+(row.roomAudience==='direct'?' · Private':'')));const stamp=messageTime(row);if(stamp){const time=el('time','message-time',stamp.label);time.dateTime=stamp.iso;time.title=stamp.full;time.setAttribute('aria-label',stamp.full);header.append(time);}n.append(header);const body=el('div','body');body.dataset.immersionText=row.text||'';body.dataset.immersionId='web-message/'+row.id;const sourceScope=scope,route=isRoom(scope)?structuredClone(rooms.route(scope,{requireAvailable:false})):null;body._resolveUrl=url=>url.startsWith('/api/')?route?sourcePath(route.environment,url):environmentPath(url,sourceScope):url;body.append(richText(row.text,body._resolveUrl));n.append(body);if(row.kind!=='user'){const actions=el('div','message-actions');actions.append(button('Reply to this',()=>{if(scope!==sourceScope)throw Error('Open the original conversation first.');if(row.roomEventId)changeRoomTarget({...targetFor(scope),sourceEventId:row.roomEventId});$('draft').value=`About this update: “${String(row.text||'').slice(0,220)}”\n\n${$('draft').value}`;saveDraft(true);$('draft').focus();}),button('Speak',()=>voice.speak(row.text,{scope:sourceScope,environment:route?.environment})));n.append(actions);}return n;
+ n=el('article','message'+(row.kind==='user'?' user':''));const header=el('header');const icon=animatedSymbol(row.kind==='user'?'user':'codex',{size:28,label:row.roomAuthor||(row.kind==='user'?'You':'Codex')});header.append(icon);if(row.roomAuthor)header.append(el('span','',row.roomAuthor+(row.roomAudience==='direct'?' · Private':'')));const stamp=messageTime(row);if(stamp){const time=el('time','message-time',stamp.label);time.dateTime=stamp.iso;time.title=stamp.full;time.setAttribute('aria-label',stamp.full);header.append(time);}n.append(header);const body=el('div','body');body.dataset.immersionText=row.text||'';body.dataset.immersionId='web-message/'+row.id;const sourceScope=scope,route=isRoom(scope)?structuredClone(rooms.route(scope,{requireAvailable:false})):null;body._resolveUrl=url=>url.startsWith('/api/')?route?sourcePath(route.environment,url):environmentPath(url,sourceScope):url;body.append(richText(row.text,body._resolveUrl));n.append(body);if(row.kind!=='user'){const actions=el('div','message-actions');actions.append(button('Reply to this',()=>{if(scope!==sourceScope)throw Error('Open the original conversation first.');if(row.roomEventId)changeRoomTarget({...targetFor(scope),sourceEventId:row.roomEventId});$('draft').value=`About this update: “${String(row.text||'').slice(0,220)}”\n\n${$('draft').value}`;saveDraft(true);$('draft').focus();}));if(voiceOutputReady())actions.append(button('Speak',()=>voice.speak(row.text,{scope:sourceScope,environment:route?.environment})));n.append(actions);}return n;
 }
 function renderTranscript(){const data=cache.get(scope);if(!data)return;const list=$('transcript'),anchor=[...list.children].find(n=>n.getBoundingClientRect().bottom>list.getBoundingClientRect().top),anchorId=anchor?.dataset.id,anchorOffset=anchor?anchor.getBoundingClientRect().top-list.getBoundingClientRect().top:0,bottom=list.scrollHeight-list.scrollTop-list.clientHeight<90,previousHeight=list.scrollHeight,previousTop=list.scrollTop;
  const sourceRows=scope==='coordinator'?(data.turns||[]).flatMap(t=>[{id:t.id+'/user',kind:'user',title:'You',text:t.transcript||'',turnId:t.id,startedAtMs:t.created_at},{id:t.id+'/response',kind:'message',title:`Coordinator · ${t.state}`,text:t.response||t.error||'Working…',turnId:t.id,actions:t.actions,startedAtMs:t.timings?.first_response||t.timings?.first_final_response||t.timings?.response_completed}]):data.rows||[];
@@ -257,7 +298,7 @@ function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const 
   const row=el('div','outbox-row local-send');row.dataset.localSendId=saved.id;row.dataset.deliveryState=saved.state;
   row.append(el('strong','',label));const body=el('div','local-send-body',saved.text);body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';row.append(body);if(saved.state==='accepted'){const originalDevice=deviceId,originalScope=scope;row.append(button('Hide local copy',()=>{localSends.remove(originalDevice,originalScope,new Set([saved.id]));if(deviceId===originalDevice&&scope===originalScope)renderOutbox();}));}holder.append(row);
  }
- if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send — ${canonical.has(pending.id)?'message visible; original receipt still needs checking':'check original delivery'}`);row.append(button('Check delivery',reconcilePending));holder.append(row);}for(const o of outgoing){
+ if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}for(const savedPending of pendingSends.forDevice(deviceId)){if(savedPending.scope===scope&&outgoing.some(o=>o.id===savedPending.id))continue;const row=el('div','outbox-row',`${savedPending.scope===scope?'':'Another conversation · '}Saved send — ${canonical.has(savedPending.id)?'message visible; original receipt still needs checking':'check original delivery'}`);if(savedPending.scope!==scope)row.append(button('Open conversation',()=>open(savedPending.scope)));row.append(button('Check delivery',()=>reconcilePending(savedPending)),button('Discard saved send…',()=>discardPendingSend(savedPending)));holder.append(row);}for(const o of outgoing){
  if(accepted.has(o.id)||['accepted','cancelled'].includes(o.state))continue;
  const origin={thread:scope,device:deviceId,navigation:queueNavigation,authority:queueAuthority};
  const sourceCurrent=()=>authenticated&&deviceId===origin.device&&queueAuthority===origin.authority;
@@ -335,7 +376,7 @@ async function refreshConversation(before=null){
     const page=cache.head(selected,data,{older:!!before,ticket:metadataTicket,cursor:before,anchor:!follow?currentReadAnchor(selected):null});
     if(scope===selected){current=page.snapshot;if(!before&&queueNavigation===queueReadNavigation&&queueAuthority===queueReadAuthority)queueVerifiedNavigation=queueReadNavigation;if(!before&&uxOpen===measurement)uxFresh=measurement;}
    }
-   if(scope===selected){renderHeader();renderTranscript();renderRequests();renderOutbox();renderNotes();}
+   if(scope===selected){renderHeader();renderTranscript();renderRequests();renderOutbox();renderNotes();renderUsage();}
  });
  try{return await (before?request:readFeedback.track(selected,request,{hasContent:hasSnapshot}));}
  catch(error){if(scope===selected)throw error;}
@@ -384,13 +425,13 @@ async function refreshList({invalidate=false}={}){
   for(const id of cache.catalogChanges){historyReader.invalidate(id);if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
  },{invalidate});
 }
-async function send(){const text=$('draft').value.trim();if(!text)return;if(deliveryFlight)await deliveryFlight;if(pending)throw Error('Check the saved message delivery before sending another.');if($('send').disabled)throw Error('This conversation is currently unavailable for input. Your draft remains saved.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId,draftKey:draftKey(),draftRevision:read('revision.'+draftKey(),0),state:'prepared'};
+async function send(){const text=$('draft').value.trim();if(!text){$('draft').focus();throw Error('Write a message before sending.');}const currentFlight=deliveryFlights.get(scope);if(currentFlight)await currentFlight;if(pendingForScope(scope)){$('outbox').scrollIntoView?.({block:'nearest'});throw Error('Check the saved message delivery above before sending another.');}if($('send').disabled)throw Error('This conversation is currently unavailable for input. Your draft remains saved.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId,draftKey:draftKey(),draftRevision:read('revision.'+draftKey(),0),state:'prepared'};
  if(isRoom(scope)){if(new TextEncoder().encode(text).length>6000)throw Error('Room messages are limited to 6000 UTF-8 bytes. Draft retained.');const entry=rooms.entry(scope),route=structuredClone(rooms.route(scope)),target={...targetFor(scope)};assertLeadTarget(entry.room,target);if(roomLead(entry.room)&&['coordination','archive'].includes(roomView))throw Error('Open the lead conversation to send new input. Your draft is retained.');message.room=entry.roomId;message.route=route;message.body={operationId:message.id,kind:'request',body:text,audience:target.audience,...(target.recipientId?{recipientId:target.recipientId}:{}),...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})};}
  else if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose an exact Hollywood room on this gateway.');
  ux.end(uxSend,'superseded');uxSend=!isRoom(scope)&&scope!=='coordinator'?ux.begin('send'):0;
  const measurement=uxSend;
  try{persistPending(message);}catch(error){ux.end(measurement,'failed');throw error;}
- ux.mark(measurement,'send_feedback_committed');try{await deliverPending();}catch(error){ux.end(measurement,'unknown');throw error;}}
+ ux.mark(measurement,'send_feedback_committed');try{await deliverPending(message);}catch(error){ux.end(measurement,'unknown');throw error;}}
 function saveDelivered(message,receipt){
  const key='delivered.'+message.deviceId+'.'+message.id,previous=read(key);
  const presentationAccepted=receipt.state==='accepted'||previous?.intent?.scope===message.scope&&previous.intent.deviceId===message.deviceId&&previous.presentationAccepted===true||localSends.list(message.deviceId,message.scope).some(r=>r.id===message.id&&r.state==='accepted');
@@ -401,14 +442,18 @@ function acceptPresentedDelivery(thread,id){
  if(saved?.intent?.id===id&&saved.intent.deviceId===deviceId&&saved.intent.scope===thread&&deliveryAccepted(saved.intent,saved.receipt)&&!saved.presentationAccepted)write(key,{...saved,presentationAccepted:true});
 }
 function clearDelivered(message,receipt){
- if(pending?.id!==message.id||!deliveryAccepted(message,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
+ if(pendingSends.get(message.id,message.scope)?.deviceId!==message.deviceId||!deliveryAccepted(message,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
  saveDelivered(message,receipt);
  const key=message.draftKey||(!isRoom(message.scope)?draftKey(message.scope):null);
  // Legacy journals have no generation: keep their text conservatively.
  if(key&&message.draftRevision!==undefined&&read('revision.'+key,0)===message.draftRevision&&read(key,'').trim()===message.text){write(key,'');if(message.scope===scope&&key===draftKey()&&$('draft').value.trim()===message.text)$('draft').value='';}
- persistPending(null);
+ pendingSends.remove(message);renderOutbox();
 }
-async function deliverPending(){if(deliveryFlight)return deliveryFlight;deliveryFlight=performPending();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}}
+async function deliverPending(message){
+ const running=deliveryFlights.get(message.scope);if(running)return running;
+ const flight=performPending(message);deliveryFlights.set(message.scope,flight);
+ try{return await flight;}finally{if(deliveryFlights.get(message.scope)===flight)deliveryFlights.delete(message.scope);renderHeader();}
+}
 function followContinuation(sourceId,successorId){
  if(!successorId||successorId===sourceId)return Promise.resolve();
  const key=sourceId+'>'+successorId;
@@ -417,7 +462,7 @@ function followContinuation(sourceId,successorId){
  continuationFlight={key,promise};return promise;
 }
 async function readOriginal(p){return p.room?rooms.call(p.route,'commands/'+encodeURIComponent(p.id)):api(p.scope==='coordinator'?`/api/voice/turns/${p.id}`:`/api/replies/${p.id}`,undefined,{scope:p.scope});}
-async function performPending(){const p=pending;if(!p||p.deviceId!==deviceId)throw Error('Saved delivery belongs to another paired device.');if(p.state!=='prepared')return checkOriginalPending(p);$('send').disabled=true;
+async function performPending(p){if(!p||p.deviceId!==deviceId||pendingSends.get(p.id,p.scope)?.deviceId!==p.deviceId)throw Error('Saved delivery belongs to another paired device.');if(p.state!=='prepared')return checkOriginalPending(p);if(scope===p.scope)$('send').disabled=true;
  persistPending({...p,state:'dispatched'});
  try{
   if(p.room)await rooms.call(p.route,'rooms/'+p.room+'/messages',p.body);
@@ -425,13 +470,13 @@ async function performPending(){const p=pending;if(!p||p.deviceId!==deviceId)thr
   else await api(`/api/threads/${p.scope}/reply`,{id:p.id,text:p.text,mode:p.mode});
   // Every path reads its original durable receipt, even after a successful POST.
   await checkOriginalPending(p);
- }catch(e){if(pending?.id===p.id)persistPending({...pending,state:'unknown',error:e.message});throw e;}
+ }catch(e){const saved=pendingSends.get(p.id,p.scope);if(saved)persistPending({...saved,state:'unknown',error:e.message});throw e;}
  finally{renderHeader();}
 }
 async function checkOriginalPending(p){
  const receipt=await readOriginal(p);
  if(!deliveryAccepted(p,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
- if(pending?.id===p.id&&p.scope===scope)ux.mark(uxSend,'send_admitted_callback');
+ if(pendingSends.get(p.id,p.scope)&&p.scope===scope)ux.mark(uxSend,'send_admitted_callback');
  saveDelivered(p,receipt);localSends.remember(p,receipt.state);renderOutbox();
  if(!p.room&&p.scope!=='coordinator'){
   clearDelivered(p,receipt);
@@ -451,9 +496,12 @@ async function checkOriginalPending(p){
  if(p.room||p.scope==='coordinator')await refreshConversation();
  await refreshList({invalidate:true});
 }
-async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pending)return;const p=pending;if(p.deviceId!==deviceId)throw Error('This saved send belongs to another browser pairing.');
- const inspect=async()=>{try{await checkOriginalPending(p);}catch(e){if(pending?.id===p.id)persistPending({...pending,state:'unknown',error:e.status===404?'Original receipt missing; delivery remains uncertain. No resubmission.':e.message});throw e;}};
- deliveryFlight=inspect();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}
+async function reconcilePending(saved=null){
+ if(!saved){const results=await Promise.allSettled(pendingSends.forDevice(deviceId).map(row=>reconcilePending(row))),failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;return;}
+ const p=typeof saved==='string'?pendingSends.get(saved):saved;if(!p)return;if(p.deviceId!==deviceId)throw Error('This saved send belongs to another browser pairing.');
+ const running=deliveryFlights.get(p.scope);if(running)return running;
+ const inspect=async()=>{try{await checkOriginalPending(p);}catch(e){const retained=pendingSends.get(p.id,p.scope);if(retained)persistPending({...retained,state:'unknown',error:e.status===404?'Original receipt missing; delivery remains uncertain. No resubmission.':e.message});throw e;}};
+ const flight=inspect();deliveryFlights.set(p.scope,flight);try{return await flight;}finally{if(deliveryFlights.get(p.scope)===flight)deliveryFlights.delete(p.scope);renderHeader();}
 }
 let runtimeConnected=null;const unavailableEnvironments=new Set();
 function handleEvent(m){
@@ -462,6 +510,7 @@ function handleEvent(m){
  nativeSettingsPanel.event(m);
  if(m.type==='nativeAuthBoundary'||m.type==='status'&&m.connected===false)providerPanel.close();
  conversationToolsPane.event(m);
+ if(m.type==='conversationUsage'&&m.threadId===scope&&m.usage){if(current)current.usage=m.usage;const cached=cache.get(scope);if(cached?.snapshot)cached.snapshot.usage=m.usage;renderUsage();return;}
  if(m.type==='hollywoodInbox'||m.type==='roomEvent'||m.type==='roomNativeState'){scheduleRefresh({head:isRoom(scope),catalog:true});return;}
  if(m.type==='environmentStatus'){
   const available=m.available??m.connected;
@@ -472,6 +521,7 @@ function handleEvent(m){
  }
  if(immersion.handle(m))return;
  if(m.type==='rateLimits'){const environment=m.environmentId||'current';if(environment==='current')status={...status,usage:m.usage};accountUsage.limits(environment,m.usage);renderUsage();return;}
+ if(m.type==='providerUsage'){const environment=m.environmentId||'current';accountUsage.provider(environment,m.usage);renderUsage();return;}
  if(m.type==='status'){
   const recovered=runtimeConnected===false&&m.connected===true;runtimeConnected=m.connected;
   setLabel($('connection'),m.connected===false?'Codex reconnecting…':'Connected');
@@ -506,8 +556,8 @@ function handleEvent(m){
   scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;
  }
  if(['attention','attentionResolved','request'].includes(m.type)){scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;}
- if(m.type==='conversationContinued'){scheduleRefresh({catalog:true});if(m.sourceThreadId===scope&&!pending)void run(()=>followContinuation(m.sourceThreadId,m.threadId))();return;}
- if(m.type==='reply'&&m.outbox){if(m.state==='accepted')acceptPresentedDelivery(threadId,m.id);localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();if(m.state==='accepted'&&m.continuationThreadId&&threadId===scope&&pending?.id!==m.id)void run(()=>followContinuation(threadId,m.continuationThreadId))();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
+ if(m.type==='conversationContinued'){scheduleRefresh({catalog:true});if(m.sourceThreadId===scope&&!pendingForScope(scope))void run(()=>followContinuation(m.sourceThreadId,m.threadId))();return;}
+ if(m.type==='reply'&&m.outbox){if(m.state==='accepted')acceptPresentedDelivery(threadId,m.id);localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();if(m.state==='accepted'&&m.continuationThreadId&&threadId===scope&&pendingSends.get(m.id,threadId)?.id!==m.id)void run(()=>followContinuation(threadId,m.continuationThreadId))();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
  if(['reply','turnRecovery','message'].includes(m.type)){scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='codex'){
   if(['turn/started','turn/completed','thread/status/changed','serverRequest/resolved'].includes(m.event?.method))scheduleRefresh({head:threadId===scope,catalog:true});
@@ -520,7 +570,7 @@ function handleEvent(m){
 function connectEvents(){
  clearTimeout(reconnectTimer);if(!authenticated)return;ws?.close();unavailableEnvironments.clear();
  ws=new WebSocket(clientURL(base,'events').replace(/^http/,'ws'));const own=ws;
- ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await Promise.all([refreshList(),refreshConversation(),refreshAttention()]);await reconcilePending();})()};
+ ws.onopen=()=>{$('connection').textContent='Connected';void run(async()=>{await Promise.all([refreshList(),refreshConversation(),refreshAttention()]);await reconcilePending();})();void checkWebBuild(true);};
  ws.onmessage=e=>{if(ws!==own||!authenticated)return;let m;try{m=JSON.parse(e.data);}catch{return;}handleEvent(m);};
  ws.onclose=()=>{if(ws!==own||!authenticated)return;nativeSettingsPanel.closeForNavigation();$('connection').textContent='Reconnecting…';reconnectTimer=setTimeout(connectEvents,3000);};ws.onerror=()=>own.close();
 }
@@ -540,13 +590,43 @@ function scheduleRefresh({head=true,catalog=false,attention=false}={}){
 async function refreshAttention(){const data=status?.backend==='lax'?{notifications:[]}:await api('/api/attention');attentionItems=data.notifications;renderNotes();renderList();}
 
 function readThemePreference(){try{return JSON.parse(localStorage.getItem('nextcomp.web.theme'));}catch{return null;}}
-async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}const retirement=await api('/web/environments').catch(()=>null);if(retirement?.retiredEnvironmentIds?.length){const ids=new Set(retirement.retiredEnvironmentIds);purgeRetiredStorage(localStorage,retirement.retiredEnvironmentIds);for(const record of await voiceJournal('list'))if(retiredValue(record,ids))await voiceJournal('delete',record.id);scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);}if(pending?.deviceId===deviceId)localSends.remember(pending);authenticated=true;ux.foreground(document.visibilityState==='visible');$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
+async function boot(){
+ try{
+  try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}
+  deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;
+  if(await importPreviousProfile(base,deviceId)){
+   scope=read('scope','coordinator');newPending=read('newPending',null);
+   if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}
+   pendingSends.reload();retireRoomPendings();
+   const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);
+  }
+  const retirement=await api('/web/environments').catch(()=>null);
+  if(retirement?.retiredEnvironmentIds?.length){
+   const ids=new Set(retirement.retiredEnvironmentIds);purgeRetiredStorage(localStorage,retirement.retiredEnvironmentIds);
+   for(const record of await voiceJournal('list'))if(retiredValue(record,ids))await voiceJournal('delete',record.id);
+   scope=read('scope','coordinator');newPending=read('newPending',null);pendingSends.reload();retireRoomPendings();
+  }
+  for(const saved of pendingSends.forDevice(deviceId))localSends.remember(saved);
+  authenticated=true;ux.foreground(document.visibilityState==='visible');$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;
+  if(read('deviceId')&&read('deviceId')!==deviceId){
+   const original=read('deviceId');
+   for(const saved of pendingSends.all()){write('detachedPending.'+original+'.'+saved.id,saved);write('detachedPending.'+original,saved);pendingSends.remove(saved);}
+   if(newPending)write('detachedStart.'+original,newPending);
+   newPending=null;write('newPending',null);scope='coordinator';
+  }
+  write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();
+  const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);
+  if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);
+  await voice.restore();void voice.loadCapabilities();
+  if(pendingSends.forDevice(deviceId).length)await reconcilePending();
+  if(newPending)await reconcileStart();
+ }catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}
+}
 $('pair-form').onsubmit=async e=>{e.preventDefault();const b=$('pair-form').querySelector('button');b.disabled=true;try{await api('/web/pair',Object.fromEntries(new FormData(e.target)));await boot();}catch(err){$('pair-error').textContent=err.message;}finally{b.disabled=false;}};
 $('composer').onsubmit=run(async e=>{e.preventDefault();await send();});$('draft').oninput=()=>saveDraft(true);$('draft').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();void run(send)();}};
-$('send').onpointerdown=e=>{if(document.activeElement===$('draft'))e.preventDefault();};
 $('coordinator').onclick=run(()=>open('coordinator'));$('refresh').onclick=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});let catalogSearchTimer;$('search').oninput=()=>{renderList();clearTimeout(catalogSearchTimer);catalogSearchTimer=setTimeout(()=>void run(()=>refreshList({invalidate:true}))(),250);};$('filter').onchange=run(async()=>{needsPreviousView=null;seatOrder=[];await refreshList({invalidate:true});});$('back').onclick=()=>{saveDraft();saveView();document.body.classList.remove('chat-open');seatOrder=[];renderList();};$('earlier').onclick=run(async()=>{demandOlder();await loadEarlier();});$('latest').onclick=()=>{follow=true;cache.followLatest(scope);renderTranscript();$('transcript').scrollTop=$('transcript').scrollHeight;};$('transcript').onscroll=()=>{follow=$('transcript').scrollHeight-$('transcript').scrollTop-$('transcript').clientHeight<90;void ackVisible();scheduleEdge();};
 $('settings').onclick=run(async()=>{$('settings-dialog').showModal();renderUsage();const prefs=await api('/api/coordinator/reporting');$('report-enabled').checked=prefs.enabled;$('report-interval').value=prefs.intervalMinutes;$('report-stale').value=prefs.staleAfterMinutes;});$('save-reporting').onclick=run(async()=>{await api('/api/coordinator/reporting',{enabled:$('report-enabled').checked,intervalMinutes:Number($('report-interval').value),staleAfterMinutes:Number($('report-stale').value)});$('settings-dialog').hidePopover?.();$('settings-dialog').close();});$('notifications').onclick=run(async()=>{if(!('Notification' in window))throw Error('Browser notifications are unavailable.');const permission=await Notification.requestPermission();$('notifications').textContent=permission==='granted'?'Notifications enabled while connected':`Notifications ${permission}`;});
-$('logout').onclick=run(async()=>{saveDraft();await voice.close();await api('/web/logout',{});authenticated=false;queueAuthority++;queueVerifiedNavigation=-1;ux.foreground(false);ws?.close();clear();location.reload();});$('mic').onclick=run(()=>voice.capture(scope,voice.recording?{}:roomVoiceOptions()));$('voice-send').onclick=run(async()=>{await voice.send(scope);await refreshConversation();});$('voice-clear').onclick=run(()=>voice.discard());
+$('reload-app').onclick=()=>location.reload();$('logout').onclick=run(async()=>{saveDraft();await voice.close();await api('/web/logout',{});authenticated=false;queueAuthority++;queueVerifiedNavigation=-1;ux.foreground(false);ws?.close();clear();location.reload();});$('mic').onclick=run(()=>voice.capture(scope,voice.recording?{}:roomVoiceOptions()));$('voice-send').onclick=run(async()=>{await voice.send(scope);await refreshConversation();});$('voice-clear').onclick=run(()=>voice.discard());
 $('new-task').onclick=run(async()=>{if(newPending){await reconcileStart();return;}$('new-prompt').value=read('newDraft','');$('new-dialog').showModal();void newTaskProvider.load();const data=await api('/api/projects');$('projects').replaceChildren(...data.projects.map(p=>{const n=el('option');n.value=p.cwd;return n;}));});$('new-prompt').oninput=()=>write('newDraft',$('new-prompt').value);$('cancel-new').onclick=()=>$('new-dialog').close();
 async function reconcileStart(){if(startFlight)return startFlight;startFlight=performStart();try{return await startFlight;}finally{startFlight=null;}}
 async function performStart(){if(!newPending)return;const p=newPending;let result;try{result=await api(`/api/session-starts/${p.id}`);}catch(e){if(e.status!==404)throw e;try{result=await api('/api/threads',p);}catch(e){if(e.status&&e.status<500){newPending=null;write('newPending',null);}throw e;}}newPending={...p,state:result.state};write('newPending',newPending);renderOutbox();if(result.state==='started'){newPending=null;write('newPending',null);write('newDraft','');$('new-dialog').close();await refreshList({invalidate:true});await open(result.thread_id);}else if(['failed','unknown'].includes(result.state)){if(result.state==='failed'){newPending=null;write('newPending',null);}throw Error(result.error||'Task creation uncertain. Check recent work before starting again.');}else $('new-error').textContent='Task accepted. Waiting for the backend to create it…';}
@@ -556,7 +636,7 @@ for(const [id,action,body] of [['watch','watch',()=>({enabled:!current?.watched}
 $('archive').onclick=run(async()=>{const thread=threads.find(t=>t.id===scope)||{...current?.thread,id:scope};closeControls();await setSessionArchived(thread,thread.archived!==true);});
 $('rename').onclick=run(async()=>{const name=prompt('Session name',current?.thread?.name||'');if(name){await api(`/api/threads/${scope}/rename`,{name});await refreshConversation();await refreshList({invalidate:true});}});$('save-turn').onclick=run(async()=>{await api(`/api/threads/${scope}/settings`,{model:$('model').value,effort:$('effort').value,mode:$('turn-mode').value==='plan'?'plan':'default',serviceTier:serviceTierControl.value()});$('controls-dialog').hidePopover?.();$('controls-dialog').close();await refreshConversation();});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;$('install').hidden=false;});$('install').onclick=run(async()=>{await installEvent?.prompt();installEvent=null;$('install').hidden=true;});
-window.addEventListener('online',()=>{if(authenticated){connectEvents();scheduleRefresh();}});window.addEventListener('offline',()=>{$('connection').textContent='Offline · drafts saved';});document.addEventListener('visibilitychange',()=>{ux.foreground(document.visibilityState==='visible'&&authenticated);if(document.visibilityState==='visible'&&authenticated){scheduleRefresh();if(ws?.readyState!==WebSocket.OPEN)connectEvents();}});window.addEventListener('pagehide',()=>{ux.foreground(false);saveDraft();void voice.close();});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();$('search-panel').hidden=false;$('search').focus();}if(e.key==='Escape'&&!document.querySelector('dialog[open],:popover-open')&&innerWidth<=760)document.body.classList.remove('chat-open');});
+window.addEventListener('online',()=>{if(authenticated){connectEvents();scheduleRefresh();}});window.addEventListener('offline',()=>{$('connection').textContent='Offline · drafts saved';});document.addEventListener('visibilitychange',()=>{ux.foreground(document.visibilityState==='visible'&&authenticated);if(document.visibilityState==='visible'&&authenticated){scheduleRefresh();void checkWebBuild();if(ws?.readyState!==WebSocket.OPEN)connectEvents();}});window.addEventListener('pagehide',()=>{ux.foreground(false);saveDraft();void voice.close();});window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();$('search-panel').hidden=false;$('search').focus();}if(e.key==='Escape'&&!document.querySelector('dialog[open],:popover-open')&&innerWidth<=760)document.body.classList.remove('chat-open');});
 setInterval(()=>{if(!authenticated||polling||document.visibilityState!=='visible')return;renderUsage();polling=true;void run(async()=>{await Promise.all([refreshConversation(),refreshAttention()]);if(newPending)await reconcileStart();})().finally(()=>polling=false);void run(()=>refreshList())();},10000);
 if('serviceWorker' in navigator)navigator.serviceWorker.register(clientURL(base,'sw.js'),{scope:base.pathname}).catch(()=>{});
 const immersion=new ImmersionLayer(api,base,text=>{$('immersion-state').textContent=text;$('immersion-enabled').checked=immersion.enabled;});
@@ -577,9 +657,13 @@ const accountResetControl=createAccountResetControl({api,onUsage:(environment,us
 function renderUsage(){
  accountUsage.profile(deviceId);if(status?.deviceId===deviceId&&!accountUsage.observations.has('current'))accountUsage.status('current',status,status.host);
  const source=accountSource(),usage=accountUsage.view(source.environment,source.name);
- setLabel($('usage'),usage.label);$('usage').title=usage.provenance+' · '+usage.reset+' · '+usage.freshness;
- const toolbarUsage=$('conversation-usage');if(toolbarUsage){setLabel(toolbarUsage.querySelector('.account-allowance'),usage.label);setLabel(toolbarUsage.querySelector('.account-source'),' · '+usage.source);toolbarUsage.dataset.usageState=usage.state;toolbarUsage.dataset.usageEnvironment=usage.environment||'';toolbarUsage.title=usage.reset+' · '+usage.freshness;toolbarUsage.setAttribute('aria-label',usage.provenance+'; '+usage.label+'; '+usage.reset+'; '+usage.freshness);}
- const box=$('account-usage');box.replaceChildren(el('strong','',usage.label),el('p','',usage.provenance),el('p','',usage.reset),el('p','',usage.resetCredits),el('p','',usage.credits),el('p','muted',usage.creditStale?'Last known or unavailable credit observation':'Current credit observation'),el('p','muted',usage.continuation),el('p','muted',usage.freshness));
+ const provider=usage.provider,session=tokenUsageSummary(current?.usage);
+ const primary=provider?.label||usage.label,sourceLabel=provider?provider.name+(session?' · '+session.label:''):usage.source;
+ setLabel($('usage'),primary);$('usage').title=provider?provider.provenance+' · '+provider.freshness:usage.provenance+' · '+usage.reset+' · '+usage.freshness;
+ const toolbarUsage=$('conversation-usage');if(toolbarUsage){setLabel(toolbarUsage.querySelector('.account-allowance'),primary);setLabel(toolbarUsage.querySelector('.account-source'),' · '+sourceLabel);toolbarUsage.dataset.usageState=provider?provider.state:usage.state;toolbarUsage.dataset.usageEnvironment=usage.environment||'';toolbarUsage.dataset.providerUsage=provider?.providerId||'';toolbarUsage.title=provider?provider.provenance+' · '+provider.freshness:usage.reset+' · '+usage.freshness;toolbarUsage.setAttribute('aria-label',provider?provider.provenance+'; '+provider.label+'; '+provider.freshness:usage.provenance+'; '+usage.label+'; '+usage.reset+'; '+usage.freshness);}
+ const box=$('account-usage');
+ if(provider)box.replaceChildren(el('strong','',`${provider.label} · ${provider.name} API balance`),el('p','',provider.detail),...(session?[el('p','',session.detail)]:[]),el('p','muted',provider.provenance),el('p','muted',provider.freshness));
+ else box.replaceChildren(el('strong','',usage.label),el('p','',usage.provenance),el('p','',usage.reset),el('p','',usage.resetCredits),el('p','',usage.credits),el('p','muted',usage.creditStale?'Last known or unavailable credit observation':'Current credit observation'),el('p','muted',usage.continuation),...(session?[el('p','muted',session.detail)]:[]),el('p','muted',usage.freshness));
  if(source.environment&&deviceId)box.append(accountResetControl({owner:deviceId,environment:source.environment,path:sourcePath(source.environment,'/api/account/reset')}));
 }
 $('usage').onclick=()=>{$('settings-dialog').showModal();renderUsage();};
@@ -707,8 +791,9 @@ function renderRoomHeader(){
  const enabled=(!lead||!['coordination','archive'].includes(roomView))&&(!lead||!target.recipientId||target.recipientId===lead.agent)&&route.available&&!detail?.detailError&&detail?.permissions?.can_post===true&&
   (target.recipientId===null||(detail.actors||[]).some(a=>a.id===target.recipientId&&a.kind==='agent'))&&(target.audience!=='direct'||!!target.recipientId);
  $('draft').disabled=false; // An outage must not prevent saving a local draft.
- $('send').disabled=!enabled||!!deliveryFlight||!!pending;
- $('mic').disabled=!voice.recording&&(!enabled||!voice.supported());
+ const savedSend=!!pendingForScope(scope),flighting=deliveryFlights.has(scope);$('send').disabled=!enabled||flighting||savedSend;$('send').setAttribute('aria-disabled',String(!enabled||flighting||savedSend));$('send').title=savedSend?'Check the saved send above before sending another message.':!enabled?'This room cannot accept input.':'Send message';
+ if(savedSend)setComposerStatus('Check the saved send above before sending another message.');else if(flighting)setComposerStatus('Sending the previous message…');else if(!enabled)setComposerStatus('This room cannot accept input. Your draft is saved.');
+ const voiceInput=voiceInputCapability();$('mic').disabled=!voice.recording&&(!enabled||!voiceInputReady());$('mic').title=voiceInput.available===false?voiceInput.reason:'';
  $('draft').placeholder=lead?'Message the lead…':target.audience==='direct'?'Message the selected agent privately…':'Message this room…';
  setLabel($('draft-note'),lead?'Only the lead receives your input. Team contains internal coordination.':target.audience==='room'?'Typed and spoken room input reaches the current room agents.':'Private input to the selected recipient.');
 }

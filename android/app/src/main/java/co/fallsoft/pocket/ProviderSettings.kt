@@ -69,7 +69,7 @@ import org.json.JSONObject
     var menu by remember{mutableStateOf(false)}
     LaunchedEffect(destination,revision){try{
         val result=Pocket.apiEnvironment(requireNotNull(destination),providerPath)
-        if(Pocket.captureEnvironment()?.matches(destination)==true){view=result;if(value==null&&result.s("state")=="available")onChange(JSONObject().put("providerId",result.s("defaultProviderId")))}
+        if(Pocket.captureEnvironment()?.matches(destination)==true){view=result;if(value==null)providerDefaultChoice(result)?.let{onChange(it)}}
     }catch(e:CancellationException){throw e}catch(e:Exception){problem=e.message?:"Provider list unavailable"}}
     val providers=view?.optJSONArray("providers")?.objects().orEmpty()
     val provider=value?.s("providerId").orEmpty()
@@ -77,7 +77,7 @@ import org.json.JSONObject
         OutlinedButton({menu=true},enabled=enabled&&providers.isNotEmpty(),modifier=Modifier.fillMaxWidth()){
             Text("Provider: "+(providers.firstOrNull{it.s("id")==provider}?.s("name")?:"Codex default"))
         }
-        DropdownMenu(menu,{menu=false}){providers.forEach{p->DropdownMenuItem(text={Text(p.s("name"))},onClick={menu=false;onChange(JSONObject().put("providerId",p.s("id")).apply{if(p.s("baseUrl").startsWith("https://api.deepseek.com")){put("model","deepseek-flash");put("effort","high")}})})}}
+        DropdownMenu(menu,{menu=false}){providers.forEach{p->DropdownMenuItem(text={Text(p.s("name"))},onClick={menu=false;onChange(providerChoice(p))})}}
     }
     if(provider.isNotBlank()&&(explicitModel||provider!="openai")){
         OutlinedTextField(value?.s("model").orEmpty(),{onChange(JSONObject(value.toString()).put("model",it))},label={BilingualLabel("Provider model ID")},enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth())
@@ -85,6 +85,12 @@ import org.json.JSONObject
     }
     if(problem.isNotBlank())WorkflowText(problem,fontSize=12.sp,color=Coral)
     TextButton(onManage,enabled=enabled){BilingualLabel("Manage providers")}
+}
+
+internal fun providerDefaultChoice(view:JSONObject)=if(view.s("state")=="available")view.optJSONArray("providers")?.objects()?.firstOrNull{it.s("id")==view.s("defaultProviderId")}?.let(::providerChoice)else null
+
+internal fun providerChoice(provider:JSONObject)=JSONObject().put("providerId",provider.s("id")).apply{
+    if(provider.s("baseUrl").startsWith("https://api.deepseek.com")){put("model","deepseek-flash");put("effort","high")}
 }
 
 /** Uses native provider credentials; the display cache and conversations remain intact. */

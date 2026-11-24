@@ -37,7 +37,7 @@ import java.util.Date
                 var displayedText by remember(report.id,report.response){mutableStateOf(report.response)}
                 Column{
                 Row(verticalAlignment=Alignment.CenterVertically){WorkflowText(DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT).format(Date(report.createdAt)),modifier=Modifier.weight(1f),color=Muted,fontSize=14.sp)
-                    TextButton({PocketSpeech.speakDisplayed(speechOwner,displayedText,"Work updates")}){BilingualLabel("Listen")}}
+                    if(Pocket.voiceAvailable)TextButton({PocketSpeech.speakDisplayed(speechOwner,displayedText,"Work updates")}){BilingualLabel("Listen")}}
                 BilingualMessage(speechOwner,report.response,onDisplayedText={displayedText=it})
                 routeReceipts(report.actions,report.id).forEach{route->CoordinatorRouteReceipt(route,{PocketWorkUpdates.close();if(PocketVoice.active)PocketVoice.stop();Pocket.open(route.threadId)},{})}
             }}

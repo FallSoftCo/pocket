@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-21",
+  "updated": "2026-11-22",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,46 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "deepseek-voice-gating-20261122",
+      "request": "DeepSeek does not accept voice, so disable voice controls when the selected environment is using DeepSeek while keeping typed coordinator and session control usable.",
+      "cause": "Android199 rendered voice capture/playback controls for DeepSeek even though the backend has no Realtime audio path; using them returned 409 VOICE_UNAVAILABLE.",
+      "implementation": [
+        "Project provider-scoped voice availability with input and output disabled for DeepSeek and an explicit text-only reason",
+        "Hide microphone, Listen, speech-volume and coordinator playback controls when either voice direction is unavailable",
+        "Make volume-key capture ineligible on text-only environments while retaining stop/cancel for an existing capture",
+        "Keep coordinator text on the environment-configured DeepSeek provider/model and preserve the DeepSeek balance/token footer"
+      ],
+      "verification": "Android v200/alpha182 passed 835 Node tests, 494 debug and 494 release unit tests, 22 required native journeys and exact optimized catalog/history review. Authenticated metadata for both exact APK hashes is live on all four feeds. Notification3172 was accepted by FCM. The phone-compatible APK is staged at /storage/emulated/0/Download/nextcomp-200-deepseek-text-only.apk with matching SHA-256; installation is not verified. The stock OpenAI Realtime live-audio case is explicitly excluded because the account quota blocked it before model/audio work, so v200 does not certify that path.",
+      "status": "Delivered: Android200 published on workstation and Mac stock/DeepSeek feeds; DeepSeek text-only capability verified live on both backends; phone installation pending",
+      "evidence": "docs/qualification/deepseek-voice-gating-200.json"
+    },
+    {
+      "id": "deepseek-coordinator-provider-20261122",
+      "request": "Make the NextComp coordinator work on DeepSeek environments instead of remaining stuck on Codex/OpenAI routing.",
+      "implementation": [
+        "Resolve each hidden coordinator's provider and model from the environment's native Codex configuration",
+        "Start the coordinator with the resolved modelProvider, model and allowProviderModelFallback=false",
+        "Persist the coordinator provider/model and rotate an idle legacy coordinator when the environment provider changes",
+        "Never interrupt an active coordinator or cross-provider active turn during rotation"
+      ],
+      "verification": "Focused coordinator/provider/routing suites passed 100/100 and permissions/native execution/voice queue/recordings passed 18/18. Immutable release 793c2ccb was deployed only to the Linux and Mac DeepSeek gateways; stock gateways were not restarted and retained their original PIDs. A production Mac coordinator turn completed on deepseek/deepseek-flash in 2.0 seconds. Linux provider selection and an isolated live DeepSeek coordinator turn passed; the production Linux request made while this agent held the shared app-server was serialized at thread/start and is recorded as a harness limitation rather than a provider failure.",
+      "status": "Deployed to Linux and Mac DeepSeek; Mac production coordinator turn verified end-to-end; Linux live verification completed against an isolated app-server",
+      "evidence": "docs/qualification/deepseek-coordinator-20261122.json"
+    },
+    {
+      "id": "deepseek-footer-usage-20261122",
+      "request": "Show DeepSeek API credit remaining and token usage in the NextComp footer.",
+      "implementation": [
+        "Read the account-wide DeepSeek balance server-side from /user/balance with a bounded timeout, single-flight cache and credential-free projection",
+        "Keep provider balance separate from the stock ChatGPT weekly allowance, credits and reset controls",
+        "Show DeepSeek balance plus last-context and cumulative thread tokens in the conversation footer when the active provider matches",
+        "Expose fuller balance and token details in the existing drawer, including context-window percentage and observation freshness"
+      ],
+      "verification": "Focused server tests passed 17/17 and the Android debug unit suite passed. Immutable backend release deployed only to Linux and Mac DeepSeek gateways; stock gateways were not restarted and stock provider usage remains null. Live balance and per-thread token reads verified. Optimized phone-signed Android199 published to all four update feeds; notification3171 accepted by FCM; APK staged on the phone at /sdcard/Download/nextcomp-199-deepseek-usage.apk with matching SHA-256. On-device installation remains unverified.",
+      "status": "Deployed to Linux and Mac DeepSeek; Android199 update published and notification accepted by FCM; phone installation pending",
+      "evidence": "docs/qualification/deepseek-footer-usage-199.json"
+    },
     {
       "id": "immersion-runtime-residency-20261121",
       "request": "Diagnose intermittent slow acknowledgements and whether workstation thermal throttling causes them.",
@@ -4184,7 +4224,7 @@
   "immersion_provider_complete_20261121": {
     "request": "Repair immersion fully, including native cleanup on Mac, and support configured model providers including existing DeepSeek. Preserve disabled setting until user enables.",
     "implementation": "Provider/model choice per device and environment, native credential ownership, explicit provider verification without fallback, one stateless scratch thread per batch, archive+delete with durable cleanup ownership, cached validated plans preserved.",
-    "qualification": "45 focused tests; actual DeepSeek 3277ms and OpenAI5037ms complete grammatical plans with zero owned threads after cleanup. Mac0.163 archive/delete unloaded in isolated two-cycle check. Android/web UI qualification pending.",
-    "status": "candidate"
+    "qualification": "45 focused checks; actual short DeepSeek/OpenAI plans validated; longer DeepSeek plans showed latency and one validation failure, so complete provider quality is not claimed. Native archive/delete verified on Linux0.171 and Mac0.163. Android preflight settings/reading passed; full signed qualification not finished after user deferral.",
+    "status": "Deferred by explicit user request on 2026-11-21. Immersion disabled on workstation and Mac; no active owned translation threads. Android199 build and owned QA emulator stopped; no199 publication. Existing provider/cleanup source retained."
   }
 }

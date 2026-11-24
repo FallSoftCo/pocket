@@ -13,9 +13,9 @@ import {fixture} from '../web-browser-fixture.mjs';
 
 export const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
 export async function waitFor(read,label){const end=Date.now()+5000;while(Date.now()<end){const value=read();if(value)return value;await new Promise(r=>setTimeout(r,10));}throw Error('Timed out: '+label);}
-export async function webAppFixture(t){
+export async function webAppFixture(t,options={}){
  const webRoot=resolve(process.env.NEXTCOMP_TEST_WEB_SOURCE_ROOT||fileURLToPath(new URL('../../web/',import.meta.url)));
- const f=await fixture({port:0,origin:'http://browser.test'}),errors=[],models=[],reads=[],modules=new Map(),digests={};let socket;
+ const f=await fixture({port:0,origin:'http://browser.test',...options}),errors=[],models=[],reads=[],modules=new Map(),digests={};let socket;
  const virtualConsole=new VirtualConsole();virtualConsole.on('jsdomError',error=>errors.push(error.message));
  const dom=new JSDOM(await readFile(resolve(webRoot,'index.html'),'utf8'),{url:f.url,runScripts:'outside-only',pretendToBeVisual:true,virtualConsole});
  const w=dom.window,d=w.document,$=id=>d.getElementById(id);
@@ -66,6 +66,7 @@ export async function webAppFixture(t){
   })());
   return modules.get(url);
  }
+ for(const [key,value] of Object.entries(options.storage||{}))w.localStorage.setItem(key,JSON.stringify(value));
  const app=await load(f.url+'/app.mjs');await app.link((specifier,ref)=>{assert.ok(specifier.startsWith('./'),'Only actual local web modules allowed');return load(new URL(specifier,ref.identifier).href);});await app.evaluate();
  await waitFor(()=>!$('app').hidden&&d.querySelector('[data-id="parent-123"]'),'authenticated actual app startup');
  await waitFor(()=>reads.some(read=>read.path==='/api/voice/native/capabilities'),'completed empty voice-store restoration');

@@ -59,7 +59,7 @@ class EnvironmentProfiles(private val prefs:SharedPreferences) {
         check(edit.commit()){"Could not remove retired environment"}
         true
     }
-    private fun legacyEnvironmentKey(key:String)=key in setOf("server","token","deviceId","seenIds","lastNotification","weeklyUsage","weeklyUsageOwner","usageSamples","firebase","pushReady","needsHistorySync","newTaskRequest","newTaskPrompt","newTaskCwd","lastProject","outgoing") ||
+    private fun legacyEnvironmentKey(key:String)=key in setOf("server","token","deviceId","seenIds","lastNotification","weeklyUsage","weeklyUsageOwner","providerUsage","providerUsageOwner","usageSamples","firebase","pushReady","needsHistorySync","newTaskRequest","newTaskPrompt","newTaskCwd","lastProject","outgoing") ||
         listOf("draft:","voiceDraft:","outbox:","attention:","runExpansion:","hollywood:").any{key.startsWith(it)}
     fun lastRemote():EnvironmentIdentity=all().firstOrNull{it.id==prefs.getString("lastRemoteEnvironment",null)&&!it.local&&capture(it.id)!=null}
         ?:all().firstOrNull{!it.local&&capture(it.id)!=null}?:EnvironmentIdentity("workstation","Workstation")

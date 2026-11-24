@@ -14,7 +14,8 @@ async function fixture(t){
  const host=http.createServer(),wss=new WebSocketServer({server:host});await new Promise(r=>host.listen(socket,r));
  const state={active:true,turnId:'turn-current',calls:[],peer:null,busy:false,drop:false};
  const thread=()=>({id:'task-live',name:'Controls',status:{type:state.active?'active':'idle'},turns:[{id:state.turnId,status:state.active?'inProgress':'completed',items:[]}]});
- wss.on('connection',ws=>{state.peer=ws;ws.on('message',raw=>{
+ // Deliver native events on the original control lane; history uses a second socket.
+ wss.on('connection',ws=>{if(!state.peer||state.peer.readyState!==1)state.peer=ws;ws.on('message',raw=>{
   const m=JSON.parse(raw);if(!m.id)return;state.calls.push(m);let result={};
   if(m.method==='thread/read'||m.method==='thread/resume')result={thread:thread()};
   // Recent attachment reads the current turn through the native paginated contract.

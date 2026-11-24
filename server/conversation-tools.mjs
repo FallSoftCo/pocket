@@ -27,6 +27,7 @@ export class ConversationTools {
   if(m.method==='thread/tokenUsage/updated'&&p.tokenUsage){this.usage.delete(id);this.usage.set(id,{...p.tokenUsage,turnId:p.turnId,observedAt:this.clock()});while(this.usage.size>256)this.usage.delete(this.usage.keys().next().value);this.publish('conversationUsage',{threadId:id,usage:this.usage.get(id)});}
   if(m.method==='thread/reverted'){const head=this.onChanged(id,'revert');if(this.busy.has(id))this.revertEvents.set(id,head);}
  }
+ usageFor(threadId){return this.usage.get(threadId)||null;}
  allowed(kind){return kind==='continue'?this.handoff?.available()===true:this.supports(methods[kind]);}
  assertInputAllowed(threadId,{ownOperation=false,ownOperationId=''}={}){if(!ownOperation&&this.busy.has(threadId))throw fail('A conversation control is running. Wait for its receipt before sending more work.');if(this.db.prepare("SELECT 1 FROM conversation_operations WHERE thread=? AND id<>? AND state IN ('dispatching','unknown') AND kind IN ('revert','changeDirectory','compact','review','continue') LIMIT 1").get(threadId,ownOperationId))throw fail('A conversation operation is pending or uncertain. Inspect its receipt before sending more work.');}
  pairedDevice(device){return typeof device==='string'&&device!=='owner'&&!!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='devices'").get()&&!!this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(device);}

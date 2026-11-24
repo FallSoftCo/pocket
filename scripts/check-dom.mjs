@@ -88,7 +88,7 @@ try{
  await run('app-controls-dom',['--experimental-vm-modules','--test','--test-reporter=tap','tests/web-app-controls.dom.mjs'],{...env,NEXTCOMP_TEST_WEB_SOURCE_ROOT:''},(output,check)=>{
   const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));
   check.summary=summary;
-  assert.deepEqual(summary,{tests:2,pass:2,fail:0,cancelled:0,skipped:0,todo:0},'Actual app Controls journeys must execute against this checkout without skips.');
+  assert.deepEqual(summary,{tests:5,pass:5,fail:0,cancelled:0,skipped:0,todo:0},'Actual app Controls, Send, cross-session recovery and provider-usage journeys must execute against this checkout without skips.');
  });
  await run('payload-continuation-dom',['--experimental-vm-modules','--test','--test-reporter=tap','tests/payload-continuation-web.dom.mjs'],{...env,NEXTCOMP_TEST_WEB_SOURCE_ROOT:''},(output,check)=>{
   const summary=Object.fromEntries([...output.matchAll(/^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/gm)].map(m=>[m[1],Number(m[2])]));

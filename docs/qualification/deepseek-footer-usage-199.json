@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "requirement": "Show DeepSeek API balance and observed conversation token usage in the NextComp footer without replacing the stock ChatGPT allowance meter.",
+  "date": "2026-11-22",
+  "source": {
+    "baseCommit": "bc7f3ad6c7952d548b2106b6b40ec16db3e42740",
+    "deploymentSnapshotCommit": "93f4c923bda285e32e6178a7733a80f0a49a60bc",
+    "runtimeChanges": [
+      "server/provider-usage.mjs",
+      "server/index.mjs",
+      "server/conversation-tools.mjs"
+    ]
+  },
+  "backend": {
+    "releaseDigest": "6dc3d63285c1b303b0367120e55f9e2d262c261c72b32904fe2101bd37396501",
+    "artifactSha256": "821007158ca4867974272c10913f76576c32846db7f9b7366962bc886207efd4",
+    "system76": {
+      "service": "nextcomp-deepseek.service",
+      "releasePath": "/home/ai/.local/share/nextcomp-federation-release-20261030-r01/releases/6dc3d63285c1b303b0367120e55f9e2d262c261c72b32904fe2101bd37396501",
+      "health": "ok",
+      "providerUsageAvailable": true,
+      "providerUsageCurrency": "USD",
+      "providerUsageStale": false,
+      "stockMainPidBefore": 798947,
+      "stockMainPidAfter": 798947
+    },
+    "macbook": {
+      "launchdLabel": "co.fallsoft.nextcomp.deepseek-gateway",
+      "releasePath": "/Users/Apple/.local/share/nextcomp-deepseek/releases/6dc3d63285c1b303b0367120e55f9e2d262c261c72b32904fe2101bd37396501",
+      "health": "ok",
+      "providerUsageAvailable": true,
+      "providerUsageCurrency": "USD",
+      "providerUsageStale": false,
+      "stockGatewayRestarted": false
+    },
+    "conversationUsage": {
+      "state": "observed-on-live-deepseek-threads",
+      "fields": [
+        "last.totalTokens",
+        "total.totalTokens",
+        "modelContextWindow",
+        "observedAt"
+      ]
+    }
+  },
+  "android": {
+    "versionCode": 199,
+    "versionName": "0.5.0-alpha.181",
+    "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "apkSha256": "665198aba5e10606fa1a871f565754a4e2723aa9c8b3997fd9cbd5dc5768e587",
+    "size": 52980623,
+    "build": "optimized release signed for the existing phone-compatible identity",
+    "publishedFeeds": [
+      "/home/ai/Development/codex-pocket/data/app-updates",
+      "/home/ai/.local/share/nextcomp-deepseek/data/app-updates",
+      "/Users/Apple/.local/share/nextcomp-stock/data/app-updates",
+      "/Users/Apple/.local/share/nextcomp-deepseek/data/app-updates"
+    ],
+    "authenticatedMetadataReadback": "199 available with exact SHA-256 on all four feeds",
+    "announcement": {
+      "notificationId": 3171,
+      "channel": "stock notifier with the registered phone push token",
+      "announced": 1,
+      "fcmDelivery": "accepted_by_fcm"
+    },
+    "phoneStaging": {
+      "path": "/sdcard/Download/nextcomp-199-deepseek-usage.apk",
+      "sha256": "665198aba5e10606fa1a871f565754a4e2723aa9c8b3997fd9cbd5dc5768e587",
+      "installationVerified": false
+    }
+  },
+  "verification": [
+    "Focused Node tests passed 17/17",
+    "Android debug unit suite passed",
+    "Optimized release build completed",
+    "Live DeepSeek balance succeeded on Linux and Mac without exposing credentials",
+    "Live DeepSeek conversation reads included observed token totals",
+    "Stock /api/status retained providerUsage null"
+  ],
+  "limits": [
+    "The dollar figure is the account-wide DeepSeek API balance, not ChatGPT credits or per-session spend.",
+    "Token totals are Codex observations for the selected conversation, not account-wide usage.",
+    "Only the phone-compatible signing identity was rebuilt for Android199; the secondary release-signing variant was not rebuilt.",
+    "FCM acceptance is not proof of physical banner display or installation; installation remains separately unverified."
+  ]
+}

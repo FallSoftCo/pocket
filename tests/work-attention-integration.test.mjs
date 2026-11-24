@@ -15,7 +15,8 @@ test('catalog Needs you follows original request and delivery identities without
  const native=http.createServer(),wss=new WebSocketServer({server:native});await new Promise(r=>native.listen(socket,r));
  const calls=[];let peer,holdList=false;const held=[];
  const threads=[{id:'first',status:{type:'idle'}},{id:'child',parentThreadId:'first',source:{subAgent:{thread_spawn:{parent_thread_id:'first'}}},status:{type:'idle'}},{id:'runtime',status:{type:'systemError'}},{id:'stopped',status:{type:'idle'}},{id:'unknown',status:{type:'unknown'}},{id:'future',status:{type:'futureNativeStatus'}}].map(t=>({...t,name:t.id,createdAt:1,recencyAt:1,cwd:dir}));
- wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{
+ // Keep events on the control lane even when completion observation opens a reader.
+ wss.on('connection',ws=>{if(!peer||peer.readyState!==1)peer=ws;ws.on('message',raw=>{
   const m=JSON.parse(raw);if(m.id===undefined||!m.method)return;calls.push(m);let result={};
   if(m.method==='initialize')result={userAgent:'codex/0.167.0'};
   if(m.method==='thread/list')result={data:threads,nextCursor:null};

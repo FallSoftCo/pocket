@@ -503,7 +503,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             DrawerAction("Keep latest reply in notes",{rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"})
             DrawerAction("Queue message",{actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending)
         }
-        UsageDetails(onNavigate={actionsOpen=false})
+        UsageDetails(onNavigate={actionsOpen=false},providerId=t?.s("modelProvider"),conversationUsage=d?.optJSONObject("usage"))
     }
     val visibleSpeechKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
     val hasVisibleSpeech=shownRows.any{it.s("id") in visibleSpeechKeys&&it.s("kind")=="message"&&it.s("text").isNotBlank()}
@@ -680,7 +680,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         ConversationFooter{
             InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
             ConversationNotesControls(reviewCount,reviewResults.size,{reviewMode=ConversationReviewMode.MANUAL},hasVisibleSpeech,visibleSpeech)
-            ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning){
+            ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning,providerId=t?.s("modelProvider"),conversationUsage=d?.optJSONObject("usage")){
                 DrawerAction("Back",{actionsOpen=false;keyboard?.hide();Pocket.closeTask()})
                 if(PocketSpeech.count>0)DrawerAction("Clear speech from active session",{PocketSpeech.clear();actionsOpen=false})
                 ConversationActivityControls()

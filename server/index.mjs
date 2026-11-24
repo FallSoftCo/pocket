@@ -9,6 +9,8 @@ import {inactiveArchiveReason} from './session-archive.mjs';
 import {mountOperatorNotifications} from './notification-requests.mjs';
 import {CoordinatorHeadReader} from './coordinator-head.mjs';
 import {CoordinatorCollector} from './coordinator-collector.mjs';
+import {coordinatorProvider} from './coordinator-provider.mjs';
+import {voiceAvailability,voiceInputAvailability} from './voice-availability.mjs';
 import {NativeLiveInput} from './native-live-input.mjs';
 import {createCoordinatorHub} from './coordinator-hub.mjs';
 import {NativeSubscriptions} from './native-subscriptions.mjs';
@@ -83,6 +85,7 @@ import {sshTerminalFork} from './terminal-fork-transport.mjs';
 import { WorkRecord } from './work-record.mjs';
 import { ambiguousDelivery } from './connection-errors.mjs';
 import { AccountRateLimits } from './rate-limits.mjs';
+import { ProviderUsage } from './provider-usage.mjs';
 import { modelCatalogue,validateTurnSettings,turnOverrides } from './turn-settings.mjs';
 import {registerModelProviderRoutes} from './model-providers.mjs';
 import { VoiceSpeech } from './voice-speech.mjs';
@@ -141,7 +144,7 @@ const internalSessions=new InternalSessions(db,[{cwd:immersionCwd,kind:'immersio
 // Separate threads retain their own instructions, model choices and routing.
 const voiceCodex=codex;
 const humanIngress=new HumanIngress(db,{deviceActive:device=>!fleet||fleet.deviceActive(device)});
-const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,
+const voiceController=new VoiceController({db,codex:voiceCodex,cwd:defaultCwd,host:hostName,provider:options=>coordinatorProvider(voiceCodex,options),
   api:async(path,body,actor,options={})=>{const delegation=humanIngress.delegate(actor,body===undefined?'GET':'POST',path,body);try{const r=await fetch(`http://127.0.0.1:${server.address().port}${path}`,{headers:{Authorization:`Bearer ${secrets.adminToken}`,'Content-Type':'application/json',...(actor?.hollywoodBinding?{'X-Hollywood-Binding':actor.hollywoodBinding}:{}),...delegation.headers},...(body===undefined?{}:{method:'POST',body:JSON.stringify(body)}),signal:options.signal?AbortSignal.any([AbortSignal.timeout(35000),options.signal]):AbortSignal.timeout(35000)});const data=await r.json();if(!r.ok)throw Object.assign(Error(data.error||'Pocket control failed.'),{status:r.status,code:data.code});return data;}finally{delegation.release();}},
   transcribe:async audio=>{
     if(!voiceSpeech.apiKey)throw Object.assign(Error('Voice is not configured on this server.'),{status:503});
@@ -297,6 +300,11 @@ const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...outgoingProjection.event(type,payload)}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
 const rateLimits=new AccountRateLimits(codex,usage=>emit('rateLimits',{usage}),{observations:new CreditObservations(db,secrets.adminToken),creditAuthorization:creditContinuation});
 setInterval(()=>{if(sockets.clients.size)void rateLimits.refresh();},60000).unref();
+const providerUsage=new ProviderUsage({onUpdate:usage=>emit('providerUsage',{usage})});
+setInterval(()=>{if(sockets.clients.size)void providerUsage.refresh();},60000).unref();
+void providerUsage.refresh();
+const voiceCapability=()=>voiceAvailability(providerUsage.snapshot());
+const voiceInput=()=>voiceInputAvailability(providerUsage.snapshot());
 const safeEqual=(a,b)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const getToken=req=>(req.headers.authorization||'').replace(/^Bearer /,'');
 const identity=async req=>{const t=getToken(req);if(!t)return null;if(t&&safeEqual(t,secrets.adminToken))return {id:'owner',name:'Local owner'};
@@ -607,7 +615,7 @@ codex.on('event',m=>{
   // Only forward subscribed task events, never unrelated global messages or credentials.
   if(threadId && attached.has(threadId))emit('codex',{event:{method:m.method,...(m.id!==undefined?{id:m.id}:{}),params:{threadId,turnId:p.turnId,...(m.method==='thread/status/changed'?{status:p.status}:{})}}});
 });
-codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});});
+codex.on('connected',()=>{emit('status',codex.status());void rateLimits.refresh({force:true});void providerUsage.refresh({force:true});});
 codex.on('status',status=>emit('status',status));
 codex.on('rpcTimeout',value=>console.error('Codex RPC deadline',JSON.stringify(value)));
 codex.on('disconnected',error=>{activityBoard.disconnected();liveDelivery.activity(()=>activityBoard.snapshot());rateLimits.disconnected();console.error('Codex connection',error.code,error.cause?.message||'Socket closed');attached.clear();watchHistoryRecovered.clear();sessionDiscovery.clearLiveStatus();timeline.clear();pending.clear();resolveAttention('request_id IS NOT NULL');emit('status',codex.status());});
@@ -682,10 +690,11 @@ app.post('/api/voice/start',route(async(req,res)=>{
   await voiceController.ensure(req.device.id);
   const s=voiceController.setFocus(req.device.id,threadId,{mode:threadId?'direct':'coordinator'});
   if(typeof req.body.fullPermissions==='boolean')db.prepare('UPDATE voice_sessions SET full=? WHERE device=?').run(req.body.fullPermissions?1:0,req.device.id);
-  res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),native:true});
+  res.json({threadId:s.thread_id,selected:s.selected,focus:s.focus,host:hostName,speech:voiceSpeech.status(),voice:voiceCapability(),voiceInput:voiceInput(),native:true});
 }));
-app.get('/api/voice/native/capabilities',(_req,res)=>res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake,cancellationTombstones:true,liveTranscriptionVersion:1,renderedSpeechVersion:nativeSpeechEnabled?1:0,speechPolicy:SPEECH_POLICY}));
+app.get('/api/voice/native/capabilities',(_req,res)=>{const voice=voiceCapability();res.json({turnJournalVersion:1,maxRecordingSeconds:MAX_RECORDING_SECONDS,maxRecordingBytes:MAX_RECORDING_WAV_BYTES,immutableDestination:true,recordingDigest:true,durableAudioAdmission:nativeAudioIntake&&voice.input,cancellationTombstones:true,liveTranscriptionVersion:voice.input?1:0,renderedSpeechVersion:voice.output&&nativeSpeechEnabled?1:0,voice,voiceInput:voiceInput(),speechPolicy:SPEECH_POLICY});});
 app.post('/api/voice/renderings/:id',route(async(req,res)=>{
+ if(!voiceCapability().output)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
  if(!nativeSpeechEnabled)throw Object.assign(Error('Native rendered speech is not installed on this environment. Text remains available.'),{status:503});
  res.status(202).json(await voiceRenderings.create(req.device.id,req.params.id,req.body));
 }));
@@ -693,14 +702,17 @@ app.get('/api/voice/renderings/:id',route(async(req,res)=>{
  const row=voiceRenderings.get(req.device.id,req.params.id);if(!row)return res.status(404).json({error:'Speech request not found.'});res.json(row);
 }));
 app.get('/api/voice/renderings/:id/audio',route(async(req,res)=>{
+ if(!voiceCapability().output)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
  const result=await voiceRenderings.audio(req.device.id,req.params.id);res.set('Cache-Control','private, no-store').set('X-NextComp-Audio-SHA256',result.sha256).type('audio/wav').send(result.audio);
 }));
 app.post('/api/voice/renderings/:id/cancel',route(async(req,res)=>res.json(voiceRenderings.cancel(req.device.id,req.params.id,req.body.attemptId))));
 app.post('/api/voice/recordings',route(async(req,res)=>{
+ if(!voiceCapability().input)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
  if(!nativeAudioIntake)throw Object.assign(Error('Durable native audio intake is not installed on this environment. Recording remains on the device.'),{status:503});
  res.status(202).json(await voiceRecordings.create(req.device.id,req.body,req.humanPrincipal));
 }));
 app.put('/api/voice/recordings/:id/audio',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),route(async(req,res)=>{
+ if(!voiceCapability().input)throw Object.assign(Error(voiceCapability().reason),{status:409,code:'VOICE_UNAVAILABLE'});
  if(!Buffer.isBuffer(req.body))throw Object.assign(Error('Expected recorded WAV audio.'),{status:415});
  res.status(202).json(await voiceRecordings.upload(req.device.id,req.params.id,req.body));
 }));
@@ -716,7 +728,7 @@ app.post('/api/voice/recordings/:id/retry-audio',route(async(req,res)=>{
  res.status(202).json(receipt);
 }));
 app.post('/api/voice/recordings/:id/cancel',route(async(req,res)=>res.json(await voiceRecordings.cancel(req.device.id,req.params.id,req.body,req.humanPrincipal))));
-app.post('/api/voice/native/start',route(async(req,res)=>{if(req.body.purpose!==undefined&&!['voice','speech','transcription'].includes(req.body.purpose))throw Object.assign(Error('Invalid audio purpose.'),{status:400});res.json(await nativeVoice.start(req.device.id,req.body.sdp,req.body.purpose,req.body.text??null));}));
+app.post('/api/voice/native/start',route(async(req,res)=>{const voice=voiceCapability();const purpose=req.body.purpose??'voice';if(!voice.available||(purpose==='speech'?!voice.output:!voice.input))return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});if(!['voice','speech','transcription'].includes(purpose))throw Object.assign(Error('Invalid audio purpose.'),{status:400});res.json(await nativeVoice.start(req.device.id,req.body.sdp,purpose,req.body.text??null));}));
 app.post('/api/voice/native/input/begin',route(async(req,res)=>res.json(nativeLiveInput.begin(req.device.id,req.body.id,req.body.connectionId))));
 app.post('/api/voice/native/input/finalize',route(async(req,res)=>res.json(await nativeLiveInput.finalize(req.device.id,req.body))));
 app.post('/api/voice/native/input/cancel',route(async(req,res)=>{nativeLiveInput.cancel(req.device.id,req.body.id);res.json({ok:true});}));
@@ -726,14 +738,15 @@ app.post('/api/voice/native/input',route(async(req,res)=>{
  res.json(nativeVoice.begin(req.device.id,req.body.connectionId,req.body.turnId,destination));
 }));
 app.post('/api/voice/native/commit',route(async(req,res)=>res.json(await nativeVoice.commit(req.device.id,req.body.connectionId,req.body.turnId,req.body.audioSha256??null))));
-app.post('/api/voice/native/speak',route(async(req,res)=>res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId))));
+app.post('/api/voice/native/speak',route(async(req,res)=>{const voice=voiceCapability();if(!voice.output)return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});res.json(await nativeVoice.speak(req.device.id,req.body.connectionId,req.body.text,req.body.voiceTurnId));}));
 app.post('/api/voice/native/heartbeat',route(async(req,res)=>{nativeVoice.session(req.device.id,req.body.connectionId);res.json({ok:true});}));
-app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),(req,res,next)=>{try{if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
+app.post('/api/voice/turns/:id',express.raw({type:'audio/wav',limit:MAX_RECORDING_WAV_BYTES}),(req,res,next)=>{try{const voice=voiceCapability();if(!voice.input)return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});if(!voiceSpeech.status().configured)return res.status(503).json({error:'Voice is not configured.'});res.status(202).json(voiceController.submit(req.device.id,req.params.id,req.body));}catch(e){next(e);}});
 app.post('/api/voice/text',route(async(req,res)=>{res.status(202).json(voiceController.submitText(req.device.id,req.body.turnId,req.body.text,req.body.correctionOf));}));
 app.get('/api/voice/turns/:id',route(async(req,res)=>{const row=voiceController.get(req.device.id,req.params.id);if(!row){const admission=nativeVoice.receipt(req.device.id,req.params.id);if(admission)return res.json(admission);return res.status(404).json({error:'Voice turn not found.'});}if(row.state==='completed')voiceController.mark(req.device.id,req.params.id,'response_first_fetched');const admission=nativeVoice.admission(req.device.id,req.params.id);res.json(admission?{...row,audioSha256:admission.audio_sha256||null}:row);}));
 app.post('/api/voice/turns/:id/presented',route(async(req,res)=>res.json(await voiceController.presented(req.device.id,req.params.id))));
-app.get('/api/voice/speech',(_req,res)=>res.json(voiceSpeech.status()));
+app.get('/api/voice/speech',(_req,res)=>res.json({...voiceSpeech.status(),voice:voiceCapability()}));
 app.post('/api/voice/speech',route(async(req,res)=>{
+  const voice=voiceCapability();if(!voice.output)return res.status(409).json({error:voice.reason,code:'VOICE_UNAVAILABLE'});
   if(speechRequests>=2)return res.status(429).json({error:'Speech is busy. Retry shortly.'});
   const controller=new AbortController();
   const cancel=()=>{if(!res.writableEnded)controller.abort();};
@@ -747,7 +760,7 @@ app.post('/api/pairing',owner,(_req,res)=>{
   const code=randomBytes(5).toString('hex').toUpperCase();
   db.prepare('INSERT INTO pairing VALUES(?,?)').run(hash(code),now()+15*60000);res.json({code,expires:now()+15*60000});
 });
-app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),capabilities:{readOnlyTimeline:true,canonicalTimeline:1},usage:rateLimits.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
+app.get('/api/status',(req,res)=>{const threadId=req.query.threadId;if(threadId!==undefined&&(typeof threadId!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(threadId)))return res.status(400).json({error:'Invalid thread identifier'});void rateLimits.refresh();void providerUsage.refresh();res.json({...codex.status(),...(threadId?{historyHead:historyHeads.snapshot(threadId)}:{}),capabilities:{readOnlyTimeline:true,canonicalTimeline:1,voice:voiceCapability(),voiceInput:voiceInput()},usage:rateLimits.snapshot(),providerUsage:providerUsage.snapshot(),host:hostName,local:localMode,defaultCwd,version:appVersion,device:req.device.name,deviceId:req.device.id,firebase:push.config,push:{enabled:push.enabled,registered:!!db.prepare('SELECT 1 FROM push_tokens WHERE device_id=?').get(req.device.id)}});});
 app.post('/api/device/push',(req,res)=>{
   if(req.device.id==='owner')return res.status(403).json({error:'Pair a phone before registering push.'});
   if(!push.enabled)return res.status(503).json({error:'Configure Firebase on this server first.'});
@@ -861,6 +874,7 @@ app.get('/api/threads/:id/native-timeline',route(async(req,res)=>{
   thread:{...thread,...catalogFields(thread),turns:[]},
   timeline:head.observation||projectNativeTimeline(head.page,{identity:sendIdentity,threadId:id,revision}),
   revision,historyHead,pending:requests,
+  usage:conversationTools.usageFor(id),
   notes:conversationNotes.list(id),recovery:turnRecovery.get(id)||null,turnSettings:savedTurnSettings(id),
   notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(id).map(notificationRow),req.device.id),
   ...outgoingProjection.fields(id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(id)
@@ -878,7 +892,7 @@ app.get(['/api/threads/:id','/api/threads/:id/head'],route(async(req,res)=>{
   // Paging is bounded on the wire; retain the original thread on the Codex host.
   const turns=(t.turns||[]).slice(-25).map(turn=>({...turn,items:(turn.items||[]).filter(x=>['userMessage','agentMessage','imageGeneration','fileChange','commandExecution'].includes(x.type)).map(x=>x.type==='commandExecution'?{...x,aggregatedOutput:x.aggregatedOutput?.slice(-12000)}:x)}));
   conversationNotes.remember(t);recordWork(()=>workRecord.remember(t));
-  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),thread:{...t,...catalogFields(t),turns:timelineView?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),...outgoingProjection.fields(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
+  const response={recovery:turnRecovery.get(t.id)||null,notes:conversationNotes.list(t.id),turnSettings:savedTurnSettings(t.id),usage:conversationTools.usageFor(t.id),thread:{...t,...catalogFields(t),turns:timelineView?[]:turns},timeline:page,revision:raw._pocketSnapshotRevision??timeline.version,historyHead:raw._pocketSnapshotHistoryHead,pending:requests,notifications:notificationReads.decorate(db.prepare('SELECT * FROM notifications WHERE thread_id=? ORDER BY id DESC LIMIT 30').all(t.id).map(notificationRow),req.device.id),...outgoingProjection.fields(t.id),watched:!!db.prepare('SELECT * FROM watches WHERE thread_id=? AND enabled=1').get(t.id)};
   if(!req.query.before&&!catchupHidden(t.id))response.catchup=sessionCatchup.capture(req.device.id,t.id,response);
   res.json(response);
 }));
@@ -1055,7 +1069,7 @@ app.get('/api/devices',owner,(_req,res)=>res.json({devices:db.prepare('SELECT id
 app.delete('/api/devices/:id',owner,(req,res)=>{if(fleet)fleet.revokeLocal(req.params.id);db.prepare('DELETE FROM devices WHERE id=?').run(req.params.id);for(const s of sockets.clients)if(s.deviceId===req.params.id)s.close();res.json({ok:true});});
 server.on('upgrade',async(req,socket,head)=>{
   const device=await identity(req);if(!device||req.url!=='/events'){socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');socket.destroy();return;}
-  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));for(const snapshot of outgoingProjection.bootstrap()){if(ws.readyState!==WebSocket.OPEN)break;ws.send(JSON.stringify({type:'reply',id:'',state:'snapshot',...snapshot}));}void rateLimits.refresh();sockets.emit('connection',ws,req);});
+  sockets.handleUpgrade(req,socket,head,ws=>{ws.deviceId=device.id;ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.on('error',()=>{});db.prepare('UPDATE devices SET last_seen=? WHERE id=?').run(now(),device.id);ws.send(JSON.stringify({type:'status',...codex.status()}));ws.send(JSON.stringify({type:'rateLimits',usage:rateLimits.snapshot()}));ws.send(JSON.stringify({type:'providerUsage',usage:providerUsage.snapshot()}));for(const snapshot of outgoingProjection.bootstrap()){if(ws.readyState!==WebSocket.OPEN)break;ws.send(JSON.stringify({type:'reply',id:'',state:'snapshot',...snapshot}));}void rateLimits.refresh();void providerUsage.refresh();sockets.emit('connection',ws,req);});
   if(fleet&&device.id!=='owner'){const timer=setInterval(async()=>{if(!await identity(req))socket.destroy();},15000);timer.unref();socket.once('close',()=>clearInterval(timer));}
 });
 setInterval(()=>{for(const ws of sockets.clients){if(!ws.alive){ws.terminate();continue;}ws.alive=false;ws.ping();}},25000).unref();

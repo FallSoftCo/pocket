@@ -130,7 +130,8 @@ test('actual isolated HTTP endpoints capture without reading, validate targets a
  const source=String.raw`import {createInterface} from 'node:readline';import {readFileSync,appendFileSync} from 'node:fs';const args=process.argv.slice(2),phase=args[0],log=args[1];
  const thread=id=>({id,name:id==='dns_work'?'Android network work':'Career work',cwd:'/synthetic',source:'cli',updatedAt:100,createdAt:90,status:{type:readFileSync(phase,'utf8')==='working'?'active':'idle'},turns:[{id:'run',status:readFileSync(phase,'utf8')==='working'?'inProgress':'completed',items:readFileSync(phase,'utf8')==='working'?[]:[{id:'final',type:'agentMessage',phase:'final_answer',text:'The network repair is complete.'}]}]});
  createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.id===undefined)return;appendFileSync(log,JSON.stringify({method:m.method,params:m.params})+'\n');let result={};
- if(m.method==='thread/list')result={data:[thread(m.params.cursor?'career_work':'dns_work')].map(({turns,...t})=>t),nextCursor:m.params.cursor?null:'page-two'};
+ if(m.method==='config/read')result={config:{model_provider:'openai'}};
+ else if(m.method==='thread/list')result={data:[thread(m.params.cursor?'career_work':'dns_work')].map(({turns,...t})=>t),nextCursor:m.params.cursor?null:'page-two'};
  else if(m.method==='thread/read'||m.method==='thread/resume')result={thread:thread(m.params.threadId==='wrong_work'?'dns_work':m.params.threadId)};
  else if(m.method==='thread/start')result={thread:thread('voice_controller_fixture')};
  else if(m.method==='thread/turns/list'){process.stdout.write(JSON.stringify({id:m.id,error:{code:-32601,message:'thread/turns/list not supported yet'}})+'\n');return;}
