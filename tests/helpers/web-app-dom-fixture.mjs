@@ -72,5 +72,5 @@ export async function webAppFixture(t){
  const click=element=>{assert.ok(element,'Missing click target');assert.notEqual(element.disabled,true,'Disabled click target');element.click();};
  const select=async id=>{click(d.querySelector(`[data-id="${id}"]`));await waitFor(()=>$('title').textContent===(id==='parent-123'?'Prepare the field guide':'Compare lighting studies')&&!$('draft').disabled,'selected '+id);};
  await select('parent-123');
- return {d,w,$,models,reads,errors,digests,click,select,isOpen:()=>$('controls-dialog').matches(':popover-open'),assertClean(){assert.deepEqual(errors,[]);assert.equal($('error').hidden,true,$('error').textContent);assert.equal(reads.filter(r=>r.method==='POST'&&/\/(?:reply|turn-settings|conversation-operations|terminate)$/.test(r.path)).length,0,'Menu inspection submitted work or changed settings');}};
+ return {d,w,$,models,reads,errors,digests,click,select,broadcast:f.broadcast,isOpen:()=>$('controls-dialog').matches(':popover-open'),assertClean(){assert.deepEqual(errors,[]);assert.equal($('error').hidden,true,$('error').textContent);assert.equal(reads.filter(r=>r.method==='POST'&&/\/(?:reply|turn-settings|conversation-operations|terminate)$/.test(r.path)).length,0,'Menu inspection submitted work or changed settings');}};
 }
