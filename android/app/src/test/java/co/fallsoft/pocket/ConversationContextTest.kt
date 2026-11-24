@@ -68,6 +68,7 @@ class ConversationContextTest {
         assertTrue(importantConversationKind("message","","",false,"",true))
         assertFalse(importantConversationKind("message","","",false,"",false))
         assertTrue(importantConversationKind("request","","",false))
+        assertTrue(importantConversationKind("compaction","contextCompaction","completed",false))
         assertFalse(importantConversationKind("activity","reasoning","inProgress",false))
     }
 }

@@ -762,6 +762,7 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         }
         "request"->row.optJSONObject("request")?.let{RequestCard(it)}
         "attachments"->Column(verticalArrangement=Arrangement.spacedBy(8.dp)){Label("SHARED FILES · ${row.s("title")}",Mint);row.optJSONArray("attachments")?.objects()?.forEach{Attachment(it)}}
+        "compaction"->CompactionRow(row)
         "user","message"->{val you=row.s("kind")=="user";ConversationMessageSurface(you){
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
                 if(showSpeaker){
@@ -778,6 +779,21 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
             if(row.optBoolean("truncated"))WorkflowText("Excerpt · full content remains on the workstation",fontSize=10.sp,color=Muted)
         }}
         else->ActivityRow(row)
+    }
+}
+@Composable fun CompactionRow(row:JSONObject){
+    val running=row.s("status")=="inProgress"
+    val title=row.s("title").ifBlank{if(running)"Compacting conversation…" else "Context compacted"}
+    val text=row.s("text").ifBlank{if(running)"Earlier context is being condensed so this work can continue." else "Earlier context was condensed. The conversation continues here."}
+    Row(Modifier.fillMaxWidth().padding(vertical=6.dp).clip(RoundedCornerShape(10.dp)).background(Panel.copy(alpha=.6f)).border(1.dp,Mint.copy(alpha=.34f),RoundedCornerShape(10.dp)).padding(horizontal=13.dp,vertical=11.dp),horizontalArrangement=Arrangement.spacedBy(11.dp),verticalAlignment=Alignment.Top){
+        Box(Modifier.size(24.dp),contentAlignment=Alignment.Center){
+            if(running)CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp,color=Mint)
+            else SymbolIcon(Icons.Rounded.Check,"Compaction complete",Modifier.size(18.dp),tint=Mint)
+        }
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)){
+            WorkflowText(title,color=if(running)Mint else Paper,fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            WorkflowText(text,color=Muted,fontSize=12.sp,lineHeight=18.sp)
+        }
     }
 }
 @Composable fun ActivityRow(row:JSONObject,fullyExpanded:Boolean=false){

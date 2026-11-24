@@ -10,3 +10,12 @@ input[type="checkbox"]{width:auto;accent-color:var(--accent)}
 @media(prefers-color-scheme:dark){:root:not([data-theme]){color-scheme:dark;--ink:#e4ece8;--muted:#a4b6ae;--paper:#11191b;--line:#34433e;--accent:#90d4bb;--wash:#202e29;--surface:#1a2527;--sidebar:#151f21;--field:#182326;--search:#1a272a;--user:#223931;--code:#101a1c;--on-action:#10201a;--action:#9fd9be;--focus:#efbf73;--attention:#352d1f;--attention-line:#7b6337;--error-ink:#ffb9ad;--error-bg:#362322;--recording:#b44347;--shadow:0 14px 50px #0007}}
 
 ::placeholder{color:var(--muted);opacity:1}::selection{background:var(--accent);color:var(--paper)}.access-link{position:fixed;right:18px;bottom:12px;font-size:11px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 10px;box-shadow:var(--shadow)}.access-link a{color:var(--accent)}
+
+.compaction { display:flex; align-items:flex-start; gap:11px; margin:14px 0; padding:12px 14px; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:8px; background:var(--wash); color:var(--ink); }
+.compaction-mark { display:grid; place-items:center; flex:0 0 26px; width:26px; height:26px; border-radius:50%; background:var(--surface); color:var(--accent); font-size:17px; font-weight:700; }
+.compaction.running .compaction-mark { animation:compaction-turn 1.1s linear infinite; }
+.compaction-copy { display:grid; gap:3px; min-width:0; }
+.compaction-copy strong { font-size:12px; }
+.compaction-copy span { font-size:12px; line-height:1.5; color:var(--muted); overflow-wrap:anywhere; }
+@keyframes compaction-turn { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce){ .compaction.running .compaction-mark { animation:none; } }

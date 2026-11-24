@@ -122,7 +122,7 @@ internal fun uniqueConversationContexts(entries:List<ConversationContextEntry>):
     if(caption.isNotBlank())Text(caption,modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=2.dp),color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
 }
 
-internal fun importantConversationKind(kind:String,type:String,status:String,retained:Boolean,phase:String="",latest:Boolean=false)=retained||kind=="request"||kind=="message"&&(phase=="final_answer"||phase.isBlank()&&latest)||kind=="turnEnd"&&status=="failed"||kind=="activity"&&type!="reasoning"&&status in listOf("failed","declined")
+internal fun importantConversationKind(kind:String,type:String,status:String,retained:Boolean,phase:String="",latest:Boolean=false)=retained||kind=="request"||kind=="compaction"||kind=="message"&&(phase=="final_answer"||phase.isBlank()&&latest)||kind=="turnEnd"&&status=="failed"||kind=="activity"&&type!="reasoning"&&status in listOf("failed","declined")
 
 internal fun sameConversationContext(note:String,speech:String):Boolean{
     fun normalize(text:String)=text.replace(Regex("[*_`#]"),"").replace(Regex("\\s+")," ").trim().lowercase(java.util.Locale.ROOT)

@@ -42,7 +42,9 @@ export function itemRow(item,turnId,version=0){
     case 'subAgentActivity':return {...r,title:'Agent activity',text:item.agentPath||item.kind||''};
     case 'imageGeneration':return {...r,title:'Generate image',text:item.savedPath||item.failure||item.revisedPrompt||''};
     case 'imageView':return {...r,title:'View image',text:item.path||''};
-    case 'contextCompaction':return {...r,title:'Context compacted',text:'Earlier context was condensed. The conversation continues here.'};
+    case 'contextCompaction':return item.status==='inProgress'
+      ?{...r,kind:'compaction',title:'Compacting conversation…',text:'Earlier context is being condensed so this work can continue.'}
+      :{...r,kind:'compaction',title:'Context compacted',text:'Earlier context was condensed. The conversation continues here.'};
     case 'enteredReviewMode':case 'exitedReviewMode':return {...r,title:'Code review',text:item.review||''};
     case 'sleep':return {...r,title:'Waiting',text:`${Math.round((item.durationMs||0)/1000)} seconds`};
     case 'hookPrompt':return {...r,title:'Hook context',text:'Context supplied by a configured hook.'};
