@@ -55,7 +55,7 @@ let scope=read('scope','coordinator'),deviceId='',threads=[],current=null,status
 if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}
 let openedScope=null,openedDraftKey=null,catalogSettled=false,catalogFailure=false,catalogChecksIncomplete=false;const readerViews=new Map();
 const readerKey=(id=scope)=>id+(isRoom(id)?'/'+roomView:'');
-let seatOrder=[],deliveryFlight=null,startFlight=null,review=null;let attentionItems=[];
+let seatOrder=[],deliveryFlight=null,startFlight=null,review=null,continuationFlight=null;let attentionItems=[];
 const lanes=new ReadLanes();
 const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
 readFeedback.select(scope);
@@ -418,6 +418,13 @@ function clearDelivered(message,receipt){
  persistPending(null);
 }
 async function deliverPending(){if(deliveryFlight)return deliveryFlight;deliveryFlight=performPending();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}}
+function followContinuation(sourceId,successorId){
+ if(!successorId||successorId===sourceId)return Promise.resolve();
+ const key=sourceId+'>'+successorId;
+ if(continuationFlight?.key===key)return continuationFlight.promise;
+ const promise=(async()=>{await refreshList({invalidate:true});if(scope!==successorId)await open(successorId);})().finally(()=>{if(continuationFlight?.key===key)continuationFlight=null;});
+ continuationFlight={key,promise};return promise;
+}
 async function readOriginal(p){return p.room?rooms.call(p.route,'commands/'+encodeURIComponent(p.id)):api(p.scope==='coordinator'?`/api/voice/turns/${p.id}`:`/api/replies/${p.id}`,undefined,{scope:p.scope});}
 async function performPending(){const p=pending;if(!p||p.deviceId!==deviceId)throw Error('Saved delivery belongs to another paired device.');if(p.state!=='prepared')return checkOriginalPending(p);$('send').disabled=true;
  persistPending({...p,state:'dispatched'});
@@ -437,6 +444,7 @@ async function checkOriginalPending(p){
  saveDelivered(p,receipt);localSends.remember(p,receipt.state);renderOutbox();
  if(!p.room&&p.scope!=='coordinator'){
   clearDelivered(p,receipt);
+  if(receipt.continuationThreadId)return followContinuation(p.scope,receipt.continuationThreadId);
   // Delivery is complete. These original read-only follow-ups do not own the
   // send flight, next draft, or original delivery state.
   const originalDevice=p.deviceId;
@@ -479,7 +487,7 @@ function handleEvent(m){
   if(m.connected===false){catalogChecksIncomplete=true;renderList();scheduleRefresh({head:false,catalog:true});}else if(recovered)scheduleRefresh({head:true,catalog:true,attention:true});return;
  }
  const threadId=m.threadId||m.notification?.thread_id||m.event?.params?.threadId;
- if(threadId&&['timeline','sessionInteraction','sessionStarted','conversationChanged','notification','reply'].includes(m.type))historyReader.invalidate(threadId);
+ if(threadId&&['timeline','sessionInteraction','sessionStarted','conversationContinued','conversationChanged','notification','reply'].includes(m.type))historyReader.invalidate(threadId);
  if(threadId&&m.type==='codex'&&['turn/started','item/started','item/completed'].includes(m.event?.method))historyReader.invalidate(threadId);
  if(m.type==='conversationChanged'){if(m.kind==='revert'){cache.replaceHistory(threadId,m.historyHead);loadSerial++;}scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='timeline'){
@@ -507,7 +515,8 @@ function handleEvent(m){
   scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;
  }
  if(['attention','attentionResolved','request'].includes(m.type)){scheduleRefresh({head:threadId===scope,attention:true,catalog:true});return;}
- if(m.type==='reply'&&m.outbox){if(m.state==='accepted')acceptPresentedDelivery(threadId,m.id);localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
+ if(m.type==='conversationContinued'){scheduleRefresh({catalog:true});if(m.sourceThreadId===scope&&!pending)void run(()=>followContinuation(m.sourceThreadId,m.threadId))();return;}
+ if(m.type==='reply'&&m.outbox){if(m.state==='accepted')acceptPresentedDelivery(threadId,m.id);localSends.outcome(deviceId,threadId,m.id,m.state);observeOutbox(threadId,m.outbox);if(threadId===scope)renderOutbox();if(m.state==='accepted'&&m.continuationThreadId&&threadId===scope&&pending?.id!==m.id)void run(()=>followContinuation(threadId,m.continuationThreadId))();scheduleRefresh({head:m.state==='accepted'&&threadId===scope,catalog:true});return;}
  if(['reply','turnRecovery','message'].includes(m.type)){scheduleRefresh({head:threadId===scope,catalog:true});return;}
  if(m.type==='codex'){
   if(['turn/started','turn/completed','thread/status/changed','serverRequest/resolved'].includes(m.event?.method))scheduleRefresh({head:threadId===scope,catalog:true});

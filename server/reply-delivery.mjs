@@ -34,4 +34,12 @@ export class ReplyDelivery {
   return !!this.db.prepare("UPDATE outgoing SET state='queued',result=?,updated_at=? WHERE id=? AND state IN ('queued','sending')")
    .run('Waiting for Codex before sending. Your message is saved and has not been dispatched.',this.clock(),id).changes;
  }
+ retryLater(id,error,result='Saved. Waiting to create a fresh text-only continuation; this message has not been dispatched.'){
+  const r=this.db.prepare('SELECT attempts FROM reply_dispatch WHERE id=?').get(id),attempts=(r?.attempts||0)+1;
+  const next=this.clock()+Math.min(120000,2000*2**Math.min(attempts,6));
+  this.db.prepare('UPDATE reply_dispatch SET attempts=?,next_at=?,error=?,updated_at=? WHERE id=?').run(attempts,next,error.message,this.clock(),id);
+  const changed=this.db.prepare("UPDATE outgoing SET state='queued',result=?,updated_at=? WHERE id=? AND state='queued'")
+   .run(result,this.clock(),id).changes;
+  return changed?next:0;
+ }
 }

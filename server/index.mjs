@@ -39,6 +39,8 @@ import {SessionCatchup} from './session-catchup.mjs';
 import {CoordinatorReports} from './coordinator-reports.mjs';
 import {recoverReply} from './reply-recovery.mjs';
 import {ReplyDelivery} from './reply-delivery.mjs';
+import {PayloadBudget} from './payload-budget.mjs';
+import {ContinuationRouter,continuationInput,continuedName} from './continuation-router.mjs';
 import {OutgoingProjection} from './outgoing-projection.mjs';
 import {queuedDestination,replyDestination} from './queued-destination.mjs';
 import {confirmedFailedTurn} from './manual-turn-admission.mjs';
@@ -298,6 +300,9 @@ setInterval(async()=>{
 const activityBoard=new ActivityBoard();
 const liveDelivery=new LiveActivityDelivery((type,payload)=>emit(type,payload));
 const threadPreviews=new ThreadPreviews(history,(threadId,preview)=>liveDelivery.preview(threadId,preview));
+const payloadBudget=new PayloadBudget({codex});
+const continuationRouter=new ContinuationRouter({db,codex,permissionFor:id=>db.prepare('SELECT permissions FROM thread_permissions WHERE thread_id=?').get(id)?.permissions||db.prepare('SELECT permissions FROM session_starts WHERE thread_id=?').get(id)?.permissions||null,
+ onCreated:(thread,source,{reason})=>{const known={...thread,activityAt:Date.now(),name:thread.name||continuedName(source.name||source.preview),status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(known);completions.follow(thread.id,known);emit('sessionStarted',{threadId:thread.id,thread:known});emit('conversationContinued',{threadId:thread.id,sourceThreadId:source.id,reason});}});
 const sessionStarts=new SessionStarts(db,codex,(thread,row)=>{const known={...thread,activityAt:Date.now(),name:thread.name||row.text?.slice(0,90)||'New task',status:thread.status?.type==='active'?thread.status:{type:'pending'},discoveryPending:true};sessionDiscovery.remember(known);recordWork(()=>workRecord.enroll(known));attached.add(thread.id);timeline.seed(thread);completions.follow(thread.id,thread);emit('sessionStarted',{threadId:thread.id,thread:known});void sendOutgoing(row,thread);},humanIngress);
 const now=()=>Date.now();
 const emit=(type,payload)=>{const m=JSON.stringify({type,...outgoingProjection.event(type,payload)}); for(const s of sockets.clients)if(s.readyState===WebSocket.OPEN)s.send(m);};
@@ -475,21 +480,23 @@ const savedTurnSettings=id=>{const row=db.prepare('SELECT settings FROM turn_set
 const promotedOutgoing=new Map();
 async function sendOutgoing(row,initialThread=null){
   try{conversationTools.assertInputAllowed(row.thread_id);}catch{return;}
-  const threadId=row.thread_id,id=row.id;
-  if(syncing.has(threadId)){
-    if(row.promoted&&(promotedOutgoing.has(threadId)||promotedOutgoing.size<64)){let ids=promotedOutgoing.get(threadId);if(!ids)promotedOutgoing.set(threadId,ids=new Set());if(ids.size<64)ids.add(id);}
+  const sourceThreadId=row.thread_id,id=row.id;
+  if(syncing.has(sourceThreadId)){
+    if(row.promoted&&(promotedOutgoing.has(sourceThreadId)||promotedOutgoing.size<64)){let ids=promotedOutgoing.get(sourceThreadId);if(!ids)promotedOutgoing.set(sourceThreadId,ids=new Set());if(ids.size<64)ids.add(id);}
     // Overflow remains durable queued work for the existing flush, never a new timer.
     return;
   }
-  syncing.add(threadId);
+  syncing.add(sourceThreadId);
   try{
-    row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+    row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,sourceThreadId);
     if(!row||row.state!=='queued'||!replyDelivery.ready(id))return;
     replyDelivery.prepare(id);
-    let sourceRole;try{terminalForkImports?.inputAllowed(threadId);sourceRole=terminalForks?.inputRole(threadId);}catch{return;}
-    if(row.mode==='queue'&&db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(threadId,id))return;
+    let sourceRole;try{terminalForkImports?.inputAllowed(sourceThreadId);sourceRole=terminalForks?.inputRole(sourceThreadId);}catch{return;}
+    const route=continuationRouter.resolve(sourceThreadId);
+    let threadId=route.threadId,continued=route.continued,continuationReason=route.mapping?.reason||null;
+    if(row.mode==='queue'&&db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(sourceThreadId,id))return;
     const attachedMode=row.mode;
-    let t=initialThread||(attachedMode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput));requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+    let t=(initialThread&&threadId===sourceThreadId?initialThread:null)||(attachedMode==='queue'?await queuedDestination(codex,attached,threadId,requireDirectSessionInput):await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput));requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
     sessionDiscovery.remember(t);recordWork(()=>workRecord.enroll(t));
     // Re-read after attachment: the user may have edited or removed the waiting message.
     row=db.prepare('SELECT * FROM outgoing WHERE id=?').get(row.id);
@@ -498,7 +505,7 @@ async function sendOutgoing(row,initialThread=null){
     // await requires a bounded current-turn read, then another edit/remove check.
     if(attachedMode==='queue'&&row.mode==='steer'){
       t=await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput);requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
-      row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,threadId);
+      row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,sourceThreadId);
       if(!row||row.state!=='queued')return;
     }
     if(row.mode==='queue'){
@@ -506,18 +513,37 @@ async function sendOutgoing(row,initialThread=null){
       const earlier=db.prepare("SELECT 1 FROM outgoing WHERE thread_id=? AND mode='queue' AND state IN ('queued','held','sending') AND rowid<(SELECT rowid FROM outgoing WHERE id=?)").get(row.thread_id,row.id);
       if(earlier)return;
     }
+    // Enforce the provider request budget before either steer or start. A new
+    // text-only successor is used rather than replaying the oversized history.
+    if(payloadBudget.applies(t)){
+      let usage;
+      try{usage=await payloadBudget.scan(t.id);}
+      catch(error){
+        error.continuationCreation=true;
+        error.retryResult='Saved. Waiting to verify the active payload safely; this message has not been dispatched.';
+        throw error;
+      }
+      if(usage.exceeded){
+        const made=await continuationRouter.ensureSuccessor(t,{usage,messageId:id});
+        threadId=made.destinationThreadId;continued=true;continuationReason=usage.reason;
+        t=await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput);requireDirectSessionInput(t);if(t.id!==threadId)throw new Error('Reply destination belongs to another session.');
+        sessionDiscovery.remember(t);recordWork(()=>workRecord.enroll(t));
+        row=db.prepare('SELECT * FROM outgoing WHERE id=? AND thread_id=?').get(id,sourceThreadId);
+        if(!row||row.state!=='queued')return;
+      }
+    }
     if(!db.prepare("UPDATE outgoing SET state='sending',updated_at=? WHERE id=? AND state='queued'").run(now(),row.id).changes)return;
-    emit('reply',{id,threadId,state:'sending'});
+    emit('reply',{id,threadId:sourceThreadId,state:'sending',...continuationRouter.receiptFields(sourceThreadId)});
     const continuation=db.prepare("SELECT result FROM conversation_operations WHERE kind='continue' AND state='accepted' AND json_extract(result,'$.outgoingId')=? LIMIT 1").get(row.id);
     const continuationOptions=continuation?JSON.parse(continuation.result).turnOptions||{}:{};
-    const input=[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides={...continuationOptions,...turnOverrides(savedTurnSettings(t.id))};
-    const accepted=result=>{if(!replyDelivery.accept(row,result))return;
+    const input=continued?continuationInput(row):[{type:'text',text:(sourceRole?sourceRole+'\n\nUser input:\n':'')+row.text}],overrides={...continuationOptions,...turnOverrides(savedTurnSettings(t.id))};
+    const accepted=result=>{const stored=continued?{...result,continuation:{sourceThreadId,successorThreadId:threadId,reason:continuationReason}}:result;if(!replyDelivery.accept(row,stored))return;
       resolveAttention('request_id IS NULL AND notification_id IN (SELECT id FROM notifications WHERE thread_id=? AND created_at<=?)',row.thread_id,row.created_at||now());
-      emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted'});
+      emit('reply',{id:row.id,threadId:row.thread_id,state:'accepted',...(continued?{continuationThreadId:threadId,continuationSourceThreadId:sourceThreadId,continuationReason}:{})});
     };
     const submit=(method,params)=>{replyDelivery.dispatched(id);return codex.callTurn(method,params,outcome=>{
       if(outcome.result)accepted(outcome.result);
-      else if(outcome.terminal&&outcome.error){const state=replyDelivery.rejectLate(row,outcome.error);if(state)emit('reply',{id,threadId,state,error:outcome.error.message});}
+      else if(outcome.terminal&&outcome.error){const state=replyDelivery.rejectLate(row,outcome.error);if(state)emit('reply',{id,threadId:row.thread_id,state,error:outcome.error.message});}
     });};
     let result;
     const active=t.turns?.findLast(x=>x.status==='inProgress');
@@ -539,23 +565,29 @@ async function sendOutgoing(row,initialThread=null){
     else throw new Error('The conversation is not confirmed idle. Refresh before sending this message.');
     accepted(result);
   }catch(e){
+    if(e.continuationCreation){
+      const next=replyDelivery.retryLater(id,e,e.retryResult);
+      emit('reply',{id,threadId:sourceThreadId,state:'queued'});
+      if(next)setTimeout(()=>void flush(),Math.max(1000,next-Date.now()+50)).unref();
+      return;
+    }
     console.error('Reply delivery failure',JSON.stringify({method:e.rpcMethod||null,code:e.code||'RPC_REJECTED',phase:db.prepare('SELECT phase FROM reply_dispatch WHERE id=?').get(id)?.phase||'beforePreflight'}));
-    if(replyDelivery.preflightFailed(id,e)){emit('reply',{id,threadId,state:'queued'});return;}
+    if(replyDelivery.preflightFailed(id,e)){emit('reply',{id,threadId:sourceThreadId,state:'queued'});return;}
     // A definite busy rejection is safe to retry as a queued next turn; lost acknowledgements aren't.
     const state=row?.mode==='queue'&&e.rpc&&/already active|turn.*in progress|active turn/i.test(e.message)?'queued':ambiguousDelivery(e)?'unknown':'failed';
     // Attachment may fail after a waiting reply was removed. Never resurrect
     // that cancelled row, or overwrite a later accepted outcome.
     const changed=db.prepare("UPDATE outgoing SET state=?,result=?,updated_at=? WHERE id=? AND state IN ('queued','sending')").run(state,e.message,now(),id);
-    if(changed.changes)emit('reply',{id,threadId,state,error:e.message});
+    if(changed.changes)emit('reply',{id,threadId:sourceThreadId,state,error:e.message});
   }finally{
-    syncing.delete(threadId);
-    const ids=promotedOutgoing.get(threadId),next=ids?.values().next().value;
-    if(next){ids.delete(next);if(!ids.size)promotedOutgoing.delete(threadId);void sendOutgoing({id:next,thread_id:threadId,promoted:true});}
+    syncing.delete(sourceThreadId);
+    const ids=promotedOutgoing.get(sourceThreadId),next=ids?.values().next().value;
+    if(next){ids.delete(next);if(!ids.size)promotedOutgoing.delete(sourceThreadId);void sendOutgoing({id:next,thread_id:sourceThreadId,promoted:true});}
     else {
       // A direct human send can arrive while a queue-status read owns this
       // thread. Drain that original saved intent as soon as the owner exits;
       // do not leave it waiting for the periodic inventory loop.
-      const waiting=db.prepare("SELECT * FROM outgoing WHERE thread_id=? AND id<>? AND state='queued' AND mode='steer' ORDER BY rowid LIMIT 64").all(threadId,id).find(r=>replyDelivery.ready(r.id));
+      const waiting=db.prepare("SELECT * FROM outgoing WHERE thread_id=? AND id<>? AND state='queued' AND mode='steer' ORDER BY rowid LIMIT 64").all(sourceThreadId,id).find(r=>replyDelivery.ready(r.id));
       if(waiting)void sendOutgoing(waiting);
     }
   }
@@ -1016,7 +1048,7 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   if(!text||text.length>32000||id.length>100)return res.status(400).json({error:'Reply must be 1–32000 characters.'});
   if(!['auto','steer','queue'].includes(mode))return res.status(400).json({error:'Choose steer or queue.'});
   const existing=db.prepare('SELECT * FROM outgoing WHERE id=?').get(id);
-  if(existing){if(existing.thread_id!==threadId||existing.text!==text||existing.mode!==mode)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state,...outgoingProjection.fields(threadId)});}
+  if(existing){if(existing.thread_id!==threadId||existing.text!==text||existing.mode!==mode)return res.status(409).json({error:'Reply id already belongs to a different message.'});return res.json({id,state:existing.state,...continuationRouter.receiptFields(threadId,existing.result),...outgoingProjection.fields(threadId)});}
   // Resolve writer ownership before durable admission so an externally owned
   // session cannot report a queued reply that Codex is guaranteed to reject.
   await replyDestination(codex,timelineCodex,attached,threadId,requireDirectSessionInput);
@@ -1031,8 +1063,8 @@ app.post('/api/threads/:id/reply',route(async(req,res)=>{
   const admitted=sessionDiscovery.recordIntent(threadId);emit('sessionActivity',admitted);
   // Record accepted user guidance without claiming older results were read.
   sessionCatchup.interact(req.device.id,threadId);
-  emit('reply',{threadId,id,state:'queued'});
-  res.status(202).json({id,state:'queued',...outgoingProjection.fields(threadId)}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,mode,created_at:now()});
+  emit('reply',{threadId,id,state:'queued',...continuationRouter.receiptFields(threadId)});
+  res.status(202).json({id,state:'queued',...continuationRouter.receiptFields(threadId),...outgoingProjection.fields(threadId)}); if(codex.ready)void sendOutgoing({id,thread_id:threadId,text,mode,created_at:now()});
 }));
 app.post('/api/threads/:id/queue/resume',route(async(req,res)=>{
   const threadId=requireId(req.params.id);
@@ -1044,12 +1076,12 @@ app.post('/api/threads/:id/replies/:replyId',route(async(req,res)=>{
   const threadId=requireId(req.params.id),id=req.params.replyId;
   const outcome=admissionTransaction(db,()=>{const value=recoverReply(db,threadId,id,req.body,now());if(!value.error)humanIngress.action('reply',id,req.body.action,req.humanPrincipal);return value;});
   if(outcome.error)return res.status(outcome.status).json({error:outcome.error});
-  emit('reply',{threadId,id,state:outcome.state});res.json({id,state:outcome.state,mode:outcome.mode,...outgoingProjection.fields(threadId)});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId,promoted:req.body.action==='send'});
+  emit('reply',{threadId,id,state:outcome.state,...continuationRouter.receiptFields(threadId)});res.json({id,state:outcome.state,mode:outcome.mode,...continuationRouter.receiptFields(threadId),...outgoingProjection.fields(threadId)});if(outcome.dispatch)void sendOutgoing({id,thread_id:threadId,promoted:req.body.action==='send'});
 }));
 app.get('/api/replies/:id',(req,res)=>{
   const row=db.prepare('SELECT id,thread_id,mode,state,result FROM outgoing WHERE id=?').get(req.params.id);
   if(!row)return res.status(404).json({error:'Reply not found.'});
-  res.json({...row,...outgoingProjection.fields(row.thread_id)});
+  res.json({...row,...continuationRouter.receiptFields(row.thread_id,row.result),...outgoingProjection.fields(row.thread_id)});
 });
 mountNativeExecution(app,{codex,route,requireId});
 app.post('/api/requests/:id/answer',route(async(req,res)=>res.json(questionActions.answer(req.params.id,req.body))));
