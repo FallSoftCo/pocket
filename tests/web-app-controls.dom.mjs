@@ -64,6 +64,26 @@ test('actual Send control submits one message without cancelling its pointer ges
  assert.equal(f.$('error').hidden,true,f.$('error').textContent);
 });
 
+test('an uncertain saved send in one session does not block another session',{timeout:15000},async t=>{
+ const parentPending={id:'pending-parent-001',scope:'parent-123',text:'Parent send with an unknown receipt',mode:'auto',createdAt:Date.now()-1000,deviceId:'browser-fixture',state:'unknown',error:'Synthetic uncertain receipt'};
+ const f=await webAppFixture(t,{storage:{'nextcomp.web.v1.pendingSends':[parentPending]}});
+ const stored=()=>JSON.parse(f.d.defaultView.localStorage.getItem('nextcomp.web.v1.pendingSends')||'[]');
+ await waitFor(()=>f.reads.some(read=>read.path==='/api/replies/pending-parent-001')&&f.$('send').disabled,'parent saved send recovered');
+ assert.equal(JSON.parse(f.d.defaultView.localStorage.getItem('nextcomp.web.v1.pending'))?.id,parentPending.id,'legacy receipt key remains recoverable');
+ assert.equal(f.$('send').disabled,true,'the uncertain session must retain its duplicate-send guard');
+
+ await f.select('other-123');
+ assert.equal(f.$('send').disabled,false,'another session must remain sendable while the parent receipt is uncertain');
+ f.$('draft').value='Other session still sends';f.click(f.$('send'));
+ await waitFor(()=>f.reads.filter(read=>read.method==='POST'&&read.path==='/api/threads/other-123/reply').length===1,'other session reply request');
+ await waitFor(()=>f.$('transcript').textContent.includes('Other session still sends'),'other session accepted message renders');
+ assert.deepEqual(stored().map(row=>[row.id,row.scope,row.state]),[[parentPending.id,'parent-123','unknown']],'the second send must not overwrite the uncertain parent receipt');
+ assert.match(f.$('outbox').textContent,/Another conversation · Saved send/,'the parent receipt remains visible from another session');
+ assert.ok([...f.$('outbox').querySelectorAll('button')].some(button=>button.textContent==='Check delivery'),'the parent receipt remains recoverable');
+ await new Promise(resolve=>setTimeout(resolve,250));
+ assert.deepEqual(f.errors,[]);
+});
+
 test('DeepSeek balance and session tokens replace generic unavailable usage in the footer and Settings',{timeout:15000},async t=>{
  const now=Date.now();
  const providerUsage={providerId:'deepseek',configured:true,available:true,currency:'USD',totalBalance:'17.11',updatedAt:now,stale:false,state:'available'};

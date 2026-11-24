@@ -4,6 +4,7 @@ const prefix='nextcomp.web.v1.';
  * Text is never inspected for identifiers and no original command is retried. */
 export function retiredValue(value, ids) {
  if(!value||typeof value!=='object')return false;
+ if(Array.isArray(value))return value.some(item=>retiredValue(item,ids));
  if(ids.has(value.environment)||ids.has(value.environmentId)||ids.has(environmentOf(value.scope)))return true;
  return ['intent','route','transport'].some(key=>retiredValue(value[key],ids));
 }
@@ -14,6 +15,11 @@ export function purgeRetiredStorage(storage, retiredIds) {
   if(!key.startsWith(prefix))continue;
   const name=key.slice(prefix.length);
   let value;try{value=JSON.parse(storage.getItem(key));}catch{continue;}
+  if(Array.isArray(value)){
+   const kept=value.filter(item=>!retiredValue(item,ids));
+   if(kept.length!==value.length){storage.setItem(key,JSON.stringify(kept));removed.push(name);}
+   continue;
+  }
   const scopedKey=[...ids].some(id=>name.includes('.env_'+id+'__')||name.includes('"'+id+'"'));
   if(scopedKey||retiredValue(value,ids)||name==='scope'&&ids.has(environmentOf(value))){storage.removeItem(key);removed.push(name);}
  }

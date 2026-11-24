@@ -66,6 +66,7 @@ export async function webAppFixture(t,options={}){
   })());
   return modules.get(url);
  }
+ for(const [key,value] of Object.entries(options.storage||{}))w.localStorage.setItem(key,JSON.stringify(value));
  const app=await load(f.url+'/app.mjs');await app.link((specifier,ref)=>{assert.ok(specifier.startsWith('./'),'Only actual local web modules allowed');return load(new URL(specifier,ref.identifier).href);});await app.evaluate();
  await waitFor(()=>!$('app').hidden&&d.querySelector('[data-id="parent-123"]'),'authenticated actual app startup');
  await waitFor(()=>reads.some(read=>read.path==='/api/voice/native/capabilities'),'completed empty voice-store restoration');

@@ -30,9 +30,11 @@ import {roomState,RoomHistory} from './room-model.mjs';
 import {deliveryAccepted,bindingMatches,jsonEqual} from './receipt-policy.mjs';
 import {AccountUsageCache} from './account-usage.mjs';
 import {panelFrame,anchoredPanelPlacement} from './anchored-panel.mjs';
+import {PendingSends} from './pending-sends.mjs';
 const base=clientBase(import.meta.url);
 const currentBuild=new URL(import.meta.url).searchParams.get('v')||'';
 const localSends=new LocalSendPresentation({read,write});
+const pendingSends=new PendingSends({read,write});
 const ux=new UxMeasurements();
 let uxOpen=0,uxFresh=0,uxSend=0,uxFrame=0;
 let queueNavigation=0,queueAuthority=0,queueVerifiedNavigation=-1;const queueActions=new Map();
@@ -57,7 +59,7 @@ let scope=read('scope','coordinator'),deviceId='',threads=[],current=null,status
 if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}
 let openedScope=null,openedDraftKey=null,catalogSettled=false,catalogFailure=false,catalogChecksIncomplete=false;const readerViews=new Map();
 const readerKey=(id=scope)=>id+(isRoom(id)?'/'+roomView:'');
-let seatOrder=[],deliveryFlight=null,startFlight=null,review=null;let attentionItems=[];
+let seatOrder=[],deliveryFlights=new Map(),startFlight=null,review=null;let attentionItems=[];
 const lanes=new ReadLanes();
 const readFeedback=new ReadFeedback(state=>{const node=$('message-loading');node.hidden=!state.visible;if(state.visible)setLabel(node,state.initial?'Loading latest messages…':'Updating messages…');$('transcript').setAttribute('aria-busy',String(state.visible));});
 readFeedback.select(scope);
@@ -72,8 +74,8 @@ const accountUsage=new AccountUsageCache(),accountFlights=new Map();
 let roomEntries=[],roomView='all';const roomTargets=new Map();
 const targetFor=id=>{if(!roomTargets.has(id))roomTargets.set(id,read('roomTarget.'+deviceId+'.'+id,{recipientId:null,audience:'room',sourceEventId:null}));return roomTargets.get(id);};
 const cache=new SessionStore(),receipts=new Set(),notifySeen=new Set();cache.protect(scope);
-cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let pending=read('pending',null),newPending=read('newPending',null);
-if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}
+cache.subscribeMetadata(id=>{if(id===scope)renderHeader();});let newPending=read('newPending',null);
+retireRoomPendings();
 async function api(path,body,options={}){
  const outgoingThread=/^\/api\/threads\/([^/?]+)\/(?:reply|replies\/[^/?]+|queue\/resume)$/.exec(path)?.[1]||(path.startsWith('/api/replies/')?options.scope:null);
  path=environmentPath(path,options.scope);
@@ -127,11 +129,13 @@ const browserSpeak=voice.speak.bind(voice);
 voice.speak=(...args)=>{const voiceOutput=voiceOutputCapability();if(voiceOutput.available===false)throw Error(voiceOutput.reason);return browserSpeak(...args);};
 function draftKey(s=scope){if(isRoom(s)){if(!rooms.entries.has(s)&&s===openedScope&&openedDraftKey)return openedDraftKey;const r=rooms.route(s,{requireAvailable:false});return 'draft.'+JSON.stringify([deviceId,r.environment,r.binding.bindingId,r.binding.installationId,r.binding.authorityId,r.binding.principalId,rooms.entry(s).roomId,targetFor(s)]);}return `draft.${deviceId}.${s}`;}
 function saveDraft(edited=false){if(deviceId&&openedScope===scope){const key=openedDraftKey||draftKey(),text=$('draft').value;if(edited||read(key,'')!==text)write('revision.'+key,read('revision.'+key,0)+1);write(key,text);}}
-function persistPending(value){write('pending',value);pending=value;if(value)localSends.remember(value);renderOutbox();}
-function discardPendingSend(){
- const saved=pending;if(!saved)return;
+function pendingForScope(s=scope){return pendingSends.forScope(s,deviceId)[0]??null;}
+function retireRoomPendings(){for(const saved of pendingSends.all())if(saved.room){write('retiredRoomPending.'+saved.deviceId+'.'+saved.id,saved);pendingSends.remove(saved);}}
+function persistPending(value){pendingSends.save(value);localSends.remember(value);renderOutbox();}
+function discardPendingSend(saved=pendingForScope()){
+ if(!saved)return;
  if(!confirm(`Only discard this saved send after checking the original conversation. Discarding cannot undo a message that was delivered.\n\n${String(saved.text||'').slice(0,240)}`))return;
- localSends.remove(deviceId,saved.scope,new Set([saved.id]));persistPending(null);renderHeader();
+ localSends.remove(saved.deviceId||deviceId,saved.scope,new Set([saved.id]));pendingSends.remove(saved);renderHeader();renderOutbox();
 }
 function button(label,action){const b=el('button','',label);b.type='button';b.onclick=run(action);return b;}
 function stamp(ms){if(!ms)return 'Recency unknown';const d=Math.max(0,Date.now()-ms);return d<60000?'Just now':d<3600000?`${Math.floor(d/60000)}m ago`:d<86400000?`${Math.floor(d/3600000)}h ago`:new Date(ms).toLocaleDateString();}
@@ -260,7 +264,7 @@ function renderHeader(){
  if($('conversation-tools-toggle'))$('conversation-tools-toggle').hidden=scope==='coordinator';
  if(isRoom(scope)){if(rooms.entries.has(scope))renderRoomHeader();else{setLabel($('session-state'),'Original room access is unavailable. Saved draft retained.');$('send').disabled=true;$('send').setAttribute('aria-disabled','true');setComposerStatus('This room is unavailable. Your draft is saved.');$('mic').disabled=!voice.recording;$('room-controls').hidden=true;}return;}
  $('room-controls').hidden=true;delete $('main').dataset.roomId;setLabel($('draft-note'),'Enter to send · Shift+Enter for a new line');
- const t=scope==='coordinator'?null:current?.thread||threads.find(t=>t.id===scope),identity=sessionIdentity(t),voiceInput=voiceInputCapability();setLabel($('title'),t?catalogTitle(t):'Coordinator');$('context-label').textContent=t?identity.isChild?'DELEGATED WORK':'DIRECT SESSION':'DIRECT YOUR COMPUTING';setLabel($('session-state'),t?`${sessionState(t).label} · ${t.cwd||'Work environment'}${identity.isChild&&!identity.canAcceptDirectInput?' · Guide through the parent task':''}`:status?.backend==='lax'?'Choose a Hollywood room. Stock coordinator is unavailable on this gateway.':voiceInput.available===false?voiceInput.reason:'Ask here, or open work to guide it directly.');$('coordinator').classList.toggle('active',scope==='coordinator');$('session-menu').hidden=!t||(identity.isChild&&!identity.canAcceptDirectInput);$('parent').hidden=!identity.parentThreadId;$('parent').onclick=run(()=>open(identity.parentThreadId));const enabled=scope==='coordinator'?status?.backend!=='lax':!!current&&identity.canAcceptDirectInput;const savedSend=!!pending,flighting=!!deliveryFlight;$('draft').disabled=!enabled;$('send').disabled=!enabled||flighting;$('send').setAttribute('aria-disabled',String(!enabled||flighting||savedSend));$('send').title=savedSend?'Check the saved send above before sending another message.':!enabled?'This conversation cannot accept direct input.':'Send message';if(savedSend)setComposerStatus('Check the saved send above before sending another message.');else if(flighting)setComposerStatus('Sending the previous message…');else if(!enabled)setComposerStatus('This conversation cannot accept direct input. Your draft is saved.');$('mic').disabled=!enabled||!voiceInputReady();$('mic').title=voiceInput.available===false?voiceInput.reason:'';$('mic').setAttribute('aria-label',voiceInput.available===false?voiceInput.reason:'Record a voice message');$('draft').placeholder=!enabled?'Choose an available work conversation…':t?'Guide this session…':'Tell the coordinator what you need…';$('send-mode').hidden=!t;
+ const t=scope==='coordinator'?null:current?.thread||threads.find(t=>t.id===scope),identity=sessionIdentity(t),voiceInput=voiceInputCapability();setLabel($('title'),t?catalogTitle(t):'Coordinator');$('context-label').textContent=t?identity.isChild?'DELEGATED WORK':'DIRECT SESSION':'DIRECT YOUR COMPUTING';setLabel($('session-state'),t?`${sessionState(t).label} · ${t.cwd||'Work environment'}${identity.isChild&&!identity.canAcceptDirectInput?' · Guide through the parent task':''}`:status?.backend==='lax'?'Choose a Hollywood room. Stock coordinator is unavailable on this gateway.':voiceInput.available===false?voiceInput.reason:'Ask here, or open work to guide it directly.');$('coordinator').classList.toggle('active',scope==='coordinator');$('session-menu').hidden=!t||(identity.isChild&&!identity.canAcceptDirectInput);$('parent').hidden=!identity.parentThreadId;$('parent').onclick=run(()=>open(identity.parentThreadId));const enabled=scope==='coordinator'?status?.backend!=='lax':!!current&&identity.canAcceptDirectInput;const savedSend=!!pendingForScope(scope),flighting=deliveryFlights.has(scope);$('draft').disabled=!enabled;$('send').disabled=!enabled||flighting||savedSend;$('send').setAttribute('aria-disabled',String(!enabled||flighting||savedSend));$('send').title=savedSend?'Check the saved send above before sending another message.':!enabled?'This conversation cannot accept direct input.':'Send message';if(savedSend)setComposerStatus('Check the saved send above before sending another message.');else if(flighting)setComposerStatus('Sending the previous message…');else if(!enabled)setComposerStatus('This conversation cannot accept direct input. Your draft is saved.');$('mic').disabled=!enabled||!voiceInputReady();$('mic').title=voiceInput.available===false?voiceInput.reason:'';$('mic').setAttribute('aria-label',voiceInput.available===false?voiceInput.reason:'Record a voice message');$('draft').placeholder=!enabled?'Choose an available work conversation…':t?'Guide this session…':'Tell the coordinator what you need…';$('send-mode').hidden=!t;
 }
 function rowNode(row){let n;if(['turn','turnEnd'].includes(row.kind))return el('div','turn-label',row.kind==='turn'?`${row.status||'Turn'}${row.startedAt?' · '+new Date(row.startedAt*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}`:`${row.status||'Finished'}${row.text?' · '+row.text:''}`);
  if(row.kind==='request')return el('div','turn-label','Decision needed — open Needs you');
@@ -294,7 +298,7 @@ function renderOutbox(){const holder=$('outbox');holder.replaceChildren();const 
   const row=el('div','outbox-row local-send');row.dataset.localSendId=saved.id;row.dataset.deliveryState=saved.state;
   row.append(el('strong','',label));const body=el('div','local-send-body',saved.text);body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';row.append(body);if(saved.state==='accepted'){const originalDevice=deviceId,originalScope=scope;row.append(button('Hide local copy',()=>{localSends.remove(originalDevice,originalScope,new Set([saved.id]));if(deviceId===originalDevice&&scope===originalScope)renderOutbox();}));}holder.append(row);
  }
- if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}if(pending&&!(pending.scope===scope&&outgoing.some(o=>o.id===pending.id))){const row=el('div','outbox-row',`${pending.scope===scope?'':'Another conversation · '}Saved send — ${canonical.has(pending.id)?'message visible; original receipt still needs checking':'check original delivery'}`);if(pending.scope!==scope)row.append(button('Open conversation',()=>open(pending.scope)));row.append(button('Check delivery',reconcilePending),button('Discard saved send…',discardPendingSend));holder.append(row);}for(const o of outgoing){
+ if(newPending){const row=el('div','outbox-row',`Task creation ${newPending.state||'pending'} · ${newPending.prompt.slice(0,80)}`);row.append(button('Check creation',reconcileStart));if(newPending.state==='unknown')row.append(button('Clear after reviewing work',()=>{if(confirm('Check recent work first. Clearing this receipt does not undo a created task; starting again could duplicate work. Clear it?')){newPending=null;write('newPending',null);renderOutbox();}}));holder.append(row);}for(const savedPending of pendingSends.forDevice(deviceId)){if(savedPending.scope===scope&&outgoing.some(o=>o.id===savedPending.id))continue;const row=el('div','outbox-row',`${savedPending.scope===scope?'':'Another conversation · '}Saved send — ${canonical.has(savedPending.id)?'message visible; original receipt still needs checking':'check original delivery'}`);if(savedPending.scope!==scope)row.append(button('Open conversation',()=>open(savedPending.scope)));row.append(button('Check delivery',()=>reconcilePending(savedPending)),button('Discard saved send…',()=>discardPendingSend(savedPending)));holder.append(row);}for(const o of outgoing){
  if(accepted.has(o.id)||['accepted','cancelled'].includes(o.state))continue;
  const origin={thread:scope,device:deviceId,navigation:queueNavigation,authority:queueAuthority};
  const sourceCurrent=()=>authenticated&&deviceId===origin.device&&queueAuthority===origin.authority;
@@ -421,13 +425,13 @@ async function refreshList({invalidate=false}={}){
   for(const id of cache.catalogChanges){historyReader.invalidate(id);if(id===scope)scheduleRefresh({head:true});else queueBackgroundHead(id);}
  },{invalidate});
 }
-async function send(){const text=$('draft').value.trim();if(!text){$('draft').focus();throw Error('Write a message before sending.');}if(deliveryFlight)await deliveryFlight;if(pending){$('outbox').scrollIntoView?.({block:'nearest'});throw Error('Check the saved message delivery above before sending another.');}if($('send').disabled)throw Error('This conversation is currently unavailable for input. Your draft remains saved.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId,draftKey:draftKey(),draftRevision:read('revision.'+draftKey(),0),state:'prepared'};
+async function send(){const text=$('draft').value.trim();if(!text){$('draft').focus();throw Error('Write a message before sending.');}const currentFlight=deliveryFlights.get(scope);if(currentFlight)await currentFlight;if(pendingForScope(scope)){$('outbox').scrollIntoView?.({block:'nearest'});throw Error('Check the saved message delivery above before sending another.');}if($('send').disabled)throw Error('This conversation is currently unavailable for input. Your draft remains saved.');saveDraft();const message={...pendingFor(scope,text,$('send-mode').value),deviceId,draftKey:draftKey(),draftRevision:read('revision.'+draftKey(),0),state:'prepared'};
  if(isRoom(scope)){if(new TextEncoder().encode(text).length>6000)throw Error('Room messages are limited to 6000 UTF-8 bytes. Draft retained.');const entry=rooms.entry(scope),route=structuredClone(rooms.route(scope)),target={...targetFor(scope)};assertLeadTarget(entry.room,target);if(roomLead(entry.room)&&['coordination','archive'].includes(roomView))throw Error('Open the lead conversation to send new input. Your draft is retained.');message.room=entry.roomId;message.route=route;message.body={operationId:message.id,kind:'request',body:text,audience:target.audience,...(target.recipientId?{recipientId:target.recipientId}:{}),...(target.sourceEventId?{sourceEventId:target.sourceEventId}:{})};}
  else if(scope==='coordinator'&&status?.backend==='lax')throw Error('Choose an exact Hollywood room on this gateway.');
  ux.end(uxSend,'superseded');uxSend=!isRoom(scope)&&scope!=='coordinator'?ux.begin('send'):0;
  const measurement=uxSend;
  try{persistPending(message);}catch(error){ux.end(measurement,'failed');throw error;}
- ux.mark(measurement,'send_feedback_committed');try{await deliverPending();}catch(error){ux.end(measurement,'unknown');throw error;}}
+ ux.mark(measurement,'send_feedback_committed');try{await deliverPending(message);}catch(error){ux.end(measurement,'unknown');throw error;}}
 function saveDelivered(message,receipt){
  const key='delivered.'+message.deviceId+'.'+message.id,previous=read(key);
  const presentationAccepted=receipt.state==='accepted'||previous?.intent?.scope===message.scope&&previous.intent.deviceId===message.deviceId&&previous.presentationAccepted===true||localSends.list(message.deviceId,message.scope).some(r=>r.id===message.id&&r.state==='accepted');
@@ -438,16 +442,20 @@ function acceptPresentedDelivery(thread,id){
  if(saved?.intent?.id===id&&saved.intent.deviceId===deviceId&&saved.intent.scope===thread&&deliveryAccepted(saved.intent,saved.receipt)&&!saved.presentationAccepted)write(key,{...saved,presentationAccepted:true});
 }
 function clearDelivered(message,receipt){
- if(pending?.id!==message.id||!deliveryAccepted(message,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
+ if(pendingSends.get(message.id,message.scope)?.deviceId!==message.deviceId||!deliveryAccepted(message,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
  saveDelivered(message,receipt);
  const key=message.draftKey||(!isRoom(message.scope)?draftKey(message.scope):null);
  // Legacy journals have no generation: keep their text conservatively.
  if(key&&message.draftRevision!==undefined&&read('revision.'+key,0)===message.draftRevision&&read(key,'').trim()===message.text){write(key,'');if(message.scope===scope&&key===draftKey()&&$('draft').value.trim()===message.text)$('draft').value='';}
- persistPending(null);
+ pendingSends.remove(message);renderOutbox();
 }
-async function deliverPending(){if(deliveryFlight)return deliveryFlight;deliveryFlight=performPending();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}}
+async function deliverPending(message){
+ const running=deliveryFlights.get(message.scope);if(running)return running;
+ const flight=performPending(message);deliveryFlights.set(message.scope,flight);
+ try{return await flight;}finally{if(deliveryFlights.get(message.scope)===flight)deliveryFlights.delete(message.scope);renderHeader();}
+}
 async function readOriginal(p){return p.room?rooms.call(p.route,'commands/'+encodeURIComponent(p.id)):api(p.scope==='coordinator'?`/api/voice/turns/${p.id}`:`/api/replies/${p.id}`,undefined,{scope:p.scope});}
-async function performPending(){const p=pending;if(!p||p.deviceId!==deviceId)throw Error('Saved delivery belongs to another paired device.');if(p.state!=='prepared')return checkOriginalPending(p);$('send').disabled=true;
+async function performPending(p){if(!p||p.deviceId!==deviceId||pendingSends.get(p.id,p.scope)?.deviceId!==p.deviceId)throw Error('Saved delivery belongs to another paired device.');if(p.state!=='prepared')return checkOriginalPending(p);if(scope===p.scope)$('send').disabled=true;
  persistPending({...p,state:'dispatched'});
  try{
   if(p.room)await rooms.call(p.route,'rooms/'+p.room+'/messages',p.body);
@@ -455,13 +463,13 @@ async function performPending(){const p=pending;if(!p||p.deviceId!==deviceId)thr
   else await api(`/api/threads/${p.scope}/reply`,{id:p.id,text:p.text,mode:p.mode});
   // Every path reads its original durable receipt, even after a successful POST.
   await checkOriginalPending(p);
- }catch(e){if(pending?.id===p.id)persistPending({...pending,state:'unknown',error:e.message});throw e;}
+ }catch(e){const saved=pendingSends.get(p.id,p.scope);if(saved)persistPending({...saved,state:'unknown',error:e.message});throw e;}
  finally{renderHeader();}
 }
 async function checkOriginalPending(p){
  const receipt=await readOriginal(p);
  if(!deliveryAccepted(p,receipt))throw Error('Original delivery is unconfirmed. Draft and receipt retained.');
- if(pending?.id===p.id&&p.scope===scope)ux.mark(uxSend,'send_admitted_callback');
+ if(pendingSends.get(p.id,p.scope)&&p.scope===scope)ux.mark(uxSend,'send_admitted_callback');
  saveDelivered(p,receipt);localSends.remember(p,receipt.state);renderOutbox();
  if(!p.room&&p.scope!=='coordinator'){
   clearDelivered(p,receipt);
@@ -480,9 +488,12 @@ async function checkOriginalPending(p){
  if(p.room||p.scope==='coordinator')await refreshConversation();
  await refreshList({invalidate:true});
 }
-async function reconcilePending(){if(deliveryFlight)return deliveryFlight;if(!pending)return;const p=pending;if(p.deviceId!==deviceId)throw Error('This saved send belongs to another browser pairing.');
- const inspect=async()=>{try{await checkOriginalPending(p);}catch(e){if(pending?.id===p.id)persistPending({...pending,state:'unknown',error:e.status===404?'Original receipt missing; delivery remains uncertain. No resubmission.':e.message});throw e;}};
- deliveryFlight=inspect();try{return await deliveryFlight;}finally{deliveryFlight=null;renderHeader();}
+async function reconcilePending(saved=null){
+ if(!saved){const results=await Promise.allSettled(pendingSends.forDevice(deviceId).map(row=>reconcilePending(row))),failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;return;}
+ const p=typeof saved==='string'?pendingSends.get(saved):saved;if(!p)return;if(p.deviceId!==deviceId)throw Error('This saved send belongs to another browser pairing.');
+ const running=deliveryFlights.get(p.scope);if(running)return running;
+ const inspect=async()=>{try{await checkOriginalPending(p);}catch(e){const retained=pendingSends.get(p.id,p.scope);if(retained)persistPending({...retained,state:'unknown',error:e.status===404?'Original receipt missing; delivery remains uncertain. No resubmission.':e.message});throw e;}};
+ const flight=inspect();deliveryFlights.set(p.scope,flight);try{return await flight;}finally{if(deliveryFlights.get(p.scope)===flight)deliveryFlights.delete(p.scope);renderHeader();}
 }
 let runtimeConnected=null;const unavailableEnvironments=new Set();
 function handleEvent(m){
@@ -570,7 +581,38 @@ function scheduleRefresh({head=true,catalog=false,attention=false}={}){
 async function refreshAttention(){const data=status?.backend==='lax'?{notifications:[]}:await api('/api/attention');attentionItems=data.notifications;renderNotes();renderList();}
 
 function readThemePreference(){try{return JSON.parse(localStorage.getItem('nextcomp.web.theme'));}catch{return null;}}
-async function boot(){try{try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;if(await importPreviousProfile(base,deviceId)){scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}if(pending?.room){write('retiredRoomPending.'+pending.deviceId+'.'+pending.id,pending);pending=null;write('pending',null);}const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);}const retirement=await api('/web/environments').catch(()=>null);if(retirement?.retiredEnvironmentIds?.length){const ids=new Set(retirement.retiredEnvironmentIds);purgeRetiredStorage(localStorage,retirement.retiredEnvironmentIds);for(const record of await voiceJournal('list'))if(retiredValue(record,ids))await voiceJournal('delete',record.id);scope=read('scope','coordinator');pending=read('pending',null);newPending=read('newPending',null);}if(pending?.deviceId===deviceId)localSends.remember(pending);authenticated=true;ux.foreground(document.visibilityState==='visible');$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;if(read('deviceId')&&read('deviceId')!==deviceId){const original=read('deviceId');if(pending)write('detachedPending.'+original,pending);if(newPending)write('detachedStart.'+original,newPending);pending=null;newPending=null;write('pending',null);write('newPending',null);scope='coordinator';}write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);await voice.restore();void voice.loadCapabilities();if(pending)await reconcilePending();if(newPending)await reconcileStart();}catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}}
+async function boot(){
+ try{
+  try{status=await api('/api/status');}catch(e){if(e.status!==401)throw e;try{await api('/web/tailnet-login',{});}catch(loginError){if([403,404].includes(loginError.status))throw e;throw loginError;}status=await api('/api/status');}
+  deviceId=status.deviceId;voice.profile=deviceId;voice.legacyProfile=read('deviceId')||deviceId;
+  if(await importPreviousProfile(base,deviceId)){
+   scope=read('scope','coordinator');newPending=read('newPending',null);
+   if(isRoom(scope)){write('retiredRoomScope',scope);scope='coordinator';write('scope',scope);}
+   pendingSends.reload();retireRoomPendings();
+   const preference=readThemePreference();if(preference)window.NextCompTheme?.select(preference);
+  }
+  const retirement=await api('/web/environments').catch(()=>null);
+  if(retirement?.retiredEnvironmentIds?.length){
+   const ids=new Set(retirement.retiredEnvironmentIds);purgeRetiredStorage(localStorage,retirement.retiredEnvironmentIds);
+   for(const record of await voiceJournal('list'))if(retiredValue(record,ids))await voiceJournal('delete',record.id);
+   scope=read('scope','coordinator');newPending=read('newPending',null);pendingSends.reload();retireRoomPendings();
+  }
+  for(const saved of pendingSends.forDevice(deviceId))localSends.remember(saved);
+  authenticated=true;ux.foreground(document.visibilityState==='visible');$('startup').hidden=true;$('pairing').hidden=true;$('app').hidden=false;$('host-info').textContent=`${status.host} · ${status.version} · ${status.device}`;
+  if(read('deviceId')&&read('deviceId')!==deviceId){
+   const original=read('deviceId');
+   for(const saved of pendingSends.all()){write('detachedPending.'+original+'.'+saved.id,saved);write('detachedPending.'+original,saved);pendingSends.remove(saved);}
+   if(newPending)write('detachedStart.'+original,newPending);
+   newPending=null;write('newPending',null);scope='coordinator';
+  }
+  write('deviceId',deviceId);$('cwd').value=status.defaultCwd||'';renderUsage();connectEvents();
+  const initial=await Promise.allSettled([refreshList(),open(scope),refreshAttention()]);
+  if(initial[0].status==='rejected')error(initial[0].reason);else if(initial[1].status==='rejected')error(initial[1].reason);
+  await voice.restore();void voice.loadCapabilities();
+  if(pendingSends.forDevice(deviceId).length)await reconcilePending();
+  if(newPending)await reconcileStart();
+ }catch(e){if(e.status===401){$('startup').hidden=true;$('pairing').hidden=false;$('app').hidden=true;}else error(e);}
+}
 $('pair-form').onsubmit=async e=>{e.preventDefault();const b=$('pair-form').querySelector('button');b.disabled=true;try{await api('/web/pair',Object.fromEntries(new FormData(e.target)));await boot();}catch(err){$('pair-error').textContent=err.message;}finally{b.disabled=false;}};
 $('composer').onsubmit=run(async e=>{e.preventDefault();await send();});$('draft').oninput=()=>saveDraft(true);$('draft').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();void run(send)();}};
 $('coordinator').onclick=run(()=>open('coordinator'));$('refresh').onclick=run(async()=>{seatOrder=[];await refreshList({invalidate:true});});let catalogSearchTimer;$('search').oninput=()=>{renderList();clearTimeout(catalogSearchTimer);catalogSearchTimer=setTimeout(()=>void run(()=>refreshList({invalidate:true}))(),250);};$('filter').onchange=run(async()=>{needsPreviousView=null;seatOrder=[];await refreshList({invalidate:true});});$('back').onclick=()=>{saveDraft();saveView();document.body.classList.remove('chat-open');seatOrder=[];renderList();};$('earlier').onclick=run(async()=>{demandOlder();await loadEarlier();});$('latest').onclick=()=>{follow=true;cache.followLatest(scope);renderTranscript();$('transcript').scrollTop=$('transcript').scrollHeight;};$('transcript').onscroll=()=>{follow=$('transcript').scrollHeight-$('transcript').scrollTop-$('transcript').clientHeight<90;void ackVisible();scheduleEdge();};
@@ -740,7 +782,7 @@ function renderRoomHeader(){
  const enabled=(!lead||!['coordination','archive'].includes(roomView))&&(!lead||!target.recipientId||target.recipientId===lead.agent)&&route.available&&!detail?.detailError&&detail?.permissions?.can_post===true&&
   (target.recipientId===null||(detail.actors||[]).some(a=>a.id===target.recipientId&&a.kind==='agent'))&&(target.audience!=='direct'||!!target.recipientId);
  $('draft').disabled=false; // An outage must not prevent saving a local draft.
- const savedSend=!!pending,flighting=!!deliveryFlight;$('send').disabled=!enabled||flighting;$('send').setAttribute('aria-disabled',String(!enabled||flighting||savedSend));$('send').title=savedSend?'Check the saved send above before sending another message.':!enabled?'This room cannot accept input.':'Send message';
+ const savedSend=!!pendingForScope(scope),flighting=deliveryFlights.has(scope);$('send').disabled=!enabled||flighting||savedSend;$('send').setAttribute('aria-disabled',String(!enabled||flighting||savedSend));$('send').title=savedSend?'Check the saved send above before sending another message.':!enabled?'This room cannot accept input.':'Send message';
  if(savedSend)setComposerStatus('Check the saved send above before sending another message.');else if(flighting)setComposerStatus('Sending the previous message…');else if(!enabled)setComposerStatus('This room cannot accept input. Your draft is saved.');
  const voiceInput=voiceInputCapability();$('mic').disabled=!voice.recording&&(!enabled||!voiceInputReady());$('mic').title=voiceInput.available===false?voiceInput.reason:'';
  $('draft').placeholder=lead?'Message the lead…':target.audience==='direct'?'Message the selected agent privately…':'Message this room…';
