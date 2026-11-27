@@ -25,6 +25,7 @@ import org.junit.runner.RunWith
 import java.util.concurrent.atomic.AtomicReference
 
 /** Real text layout, both language forms, constrained catalog viewport and adjacent action. */
+@OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class SessionPreviewBoundsNativeTest {
  @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
