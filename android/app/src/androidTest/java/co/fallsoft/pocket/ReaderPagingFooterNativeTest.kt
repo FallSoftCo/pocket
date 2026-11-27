@@ -19,7 +19,6 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -38,10 +37,9 @@ import org.junit.runner.RunWith
  * The real stock footer controls and editor are mounted, not substitute fixed boxes.
  * Full room accepted-send/next-draft proof remains HollywoodMixedCatalogNativeTest.
  */
-@OptIn(androidx.compose.ui.test.ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class ReaderPagingFooterNativeTest {
-    @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
+    @get:Rule val compose=createEmptyComposeRule()
 
     @Test fun bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme(){
         val i=InstrumentationRegistry.getInstrumentation()
