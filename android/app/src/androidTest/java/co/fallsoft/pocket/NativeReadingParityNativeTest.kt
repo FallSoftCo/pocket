@@ -47,7 +47,18 @@ class NativeReadingParityNativeTest {
    compose.onNodeWithContentDescription(label,useUnmergedTree=true).performTouchInput{click()}
   }
 
-  fun await(message:String,condition:()->Boolean){val end=android.os.SystemClock.elapsedRealtime()+30000;while(android.os.SystemClock.elapsedRealtime()<end){if(condition()){compose.waitForIdle();return};Thread.sleep(50)};assertTrue(message+" [selected="+Pocket.selected+", native="+PocketTranscript.canonicalMode+", verified="+PocketTranscript.currentHistoryVerified+", updating="+PocketTranscript.updating+", loading="+PocketTranscript.loading+", readError="+PocketTranscript.readError+", error="+Pocket.error+"]",condition())}
+  // Native accessibility waits must also advance Compose's effect scheduler.
+  // Blocking UiAutomator waits alone leave drawer effects queued in tests.
+  fun has(selector:BySelector,timeout:Long):Boolean{
+   var found=false
+   try{compose.waitUntil(timeout){device.hasObject(selector).also{found=it}}}catch(_:ComposeTimeoutException){}
+   return found
+  }
+  fun find(selector:BySelector,timeout:Long):UiObject2?=if(has(selector,timeout))device.findObject(selector)else null
+  fun await(message:String,condition:()->Boolean){
+   try{compose.waitUntil(30000,condition)}catch(error:ComposeTimeoutException){throw AssertionError(message,error)}
+   compose.waitForIdle()
+  }
   fun click(selector:BySelector){
    val end=android.os.SystemClock.elapsedRealtime()+10000;var bounds:android.graphics.Rect?=null;var stableAt=0L
    while(android.os.SystemClock.elapsedRealtime()<end){
@@ -56,7 +67,7 @@ class NativeReadingParityNativeTest {
      if(next==bounds&&now-stableAt>=350){node.click();compose.waitForIdle();return}
      if(next!=bounds){bounds=android.graphics.Rect(next);stableAt=now}
     }else{bounds=null;stableAt=now}
-    Thread.sleep(75)
+    compose.mainClock.advanceTimeByFrame();Thread.sleep(75)
    }
    fail("Control did not settle after presentation transition: $selector")
   }
@@ -71,25 +82,25 @@ class NativeReadingParityNativeTest {
    await("Canonical conversation did not open"){PocketTranscript.currentHistoryVerified&&!PocketTranscript.updating}
    qa("question")
    await("Question did not enter canonical metadata"){Pocket.detail?.optJSONArray("pending")?.length()==1}
-   if(!device.wait(Until.hasObject(By.text("Native pending question")),5000)){
-    val control=device.wait(Until.findObject(By.desc("Questions and results")),5000)
+   if(!has(By.text("Native pending question"),5000)){
+    val control=find(By.desc("Questions and results"),5000)
     if(control!=null){control.click();compose.waitForIdle()} else assertTrue("Question entry is not reachable",device.hasObject(By.text("Native pending question")))
    }
-   assertTrue("One tap did not reveal the pending question",device.wait(Until.hasObject(By.text("Native pending question")),5000))
+   assertTrue("One tap did not reveal the pending question",has(By.text("Native pending question"),5000))
    assertTrue("Drawer stole the activity window used for volume-key capture",AppWindowVisibility.focused)
-   val option=device.wait(Until.findObject(By.text("Proceed")),2000);assertNotNull(option);option!!.click();compose.waitForIdle()
-   assertTrue(device.wait(Until.hasObject(By.text("Proceed").clazz("android.widget.EditText")),3000))
+   val option=find(By.text("Proceed"),2000);assertNotNull(option);option!!.click();compose.waitForIdle()
+   assertTrue(has(By.text("Proceed").clazz("android.widget.EditText"),3000))
    click(By.desc("Close questions"))
-   assertTrue("Questions control must stay reachable",device.wait(Until.hasObject(By.desc("Questions and results")),3000))
+   assertTrue("Questions control must stay reachable",has(By.desc("Questions and results"),3000))
    click(By.desc("Questions and results"))
-   assertTrue("Answer draft was lost when closing the drawer",device.wait(Until.hasObject(By.text("Proceed").clazz("android.widget.EditText")),3000))
+   assertTrue("Answer draft was lost when closing the drawer",has(By.text("Proceed").clazz("android.widget.EditText"),3000))
    device.takeScreenshot(java.io.File(c.cacheDir,"native-reading-questions.png"))
-   val send=device.wait(Until.findObject(By.text("Send answers")),3000);assertNotNull(send);send!!.click();compose.waitForIdle()
+   val send=find(By.text("Send answers"),3000);assertNotNull(send);send!!.click();compose.waitForIdle()
    await("Decision not submitted exactly once"){qa("state").optInt("answers")==1}
    assertEquals("Native unsent draft",c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread",null))
    qa("result");main{Pocket.refreshDetail()}
    await("Saved result did not enter canonical metadata"){Pocket.detail?.optJSONArray("notes")?.let{notes->(0 until notes.length()).any{notes.optJSONObject(it)?.optString("id")=="answer-one"}}==true}
-   assertTrue("Saved result actions not visible",device.wait(Until.hasObject(By.text("Saved results")),10000))
+   assertTrue("Saved result actions not visible",has(By.text("Saved results"),10000))
    assertEquals("User input must not be a saved result",1,device.findObjects(By.text("Reply")).size)
    click(By.text("Reply"))
    await("Reply did not preserve the existing draft"){c.getSharedPreferences("pocket",Context.MODE_PRIVATE).getString("draft:same-thread","").orEmpty().let{it.contains("About this result:")&&it.contains("Native unsent draft")}}
@@ -153,7 +164,7 @@ class NativeReadingParityNativeTest {
    tapPhrase("La correzione")
    assertTrue("Second tap must hold English",waitPhrase("The correction"))
    assertEquals(before,boxes.get())
-   assertTrue("Gallery poster not rendered inline",device.wait(Until.hasObject(By.desc("Native material study")),10000))
+   assertTrue("Gallery poster not rendered inline",has(By.desc("Native material study"),10000))
    device.takeScreenshot(java.io.File(c.cacheDir,"native-reading-gallery-slots.png"))
    // Exercise a real linked phrase: its action must not become a language toggle.
    compose.onNodeWithText("in this conversation",useUnmergedTree=true).performTouchInput{click()};compose.waitForIdle()
@@ -246,9 +257,9 @@ class NativeReadingParityNativeTest {
    assertFalse("Standalone image failed",device.hasObject(By.text("Image unavailable")))
    capture("native-gallery-page.png")
    click(By.desc("Standalone review"))
-   assertTrue("Inline page image did not open native viewer",device.wait(Until.hasObject(By.text("Close image")),10000))
+   assertTrue("Inline page image did not open native viewer",has(By.text("Close image"),10000))
    click(By.text("Close image"))
-   assertTrue(device.wait(Until.hasObject(By.text("The original conversation continues below.")),10000))
+   assertTrue(has(By.text("The original conversation continues below."),10000))
    val state=qa("state");assertEquals(1,state.optInt("galleryMetadataReads"));assertEquals(1,state.optInt("galleryPageReads"));assertTrue(state.optInt("galleryImageReads")>=1);assertEquals(0,state.optInt("galleryCredentialLeaks"));assertEquals(0,state.optInt("workSubmissions"))
   }catch(error:Throwable){
    java.io.File(c.cacheDir,"native-reading-focus-observation.json").writeText(focusEvidence.put("failure",error.message).toString())
