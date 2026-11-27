@@ -1,0 +1,50 @@
+{
+  "date": "2026-11-27",
+  "androidVersionCode": 201,
+  "androidVersionName": "0.5.0-alpha.188",
+  "state": "published-both-android-channels-web-and-workstation-live",
+  "featureSource": "c7ba2e49d302b26c9b01fe22b8fd3a705fa8faf9",
+  "qualifiedSource": "d90954ef",
+  "productionSourceSha": "49919ebbfab92ca7c95c000fb959ff9f8f0f66a9d05be0b0189d947aa272510c",
+  "qualificationInputSha": "64cfd00d2374d27917421b9ced671cf5ef79af89d8a6651ca74fd5e5f10f2bbb",
+  "changes": [
+    "Selected configured provider advertises its supported models in Android and web session/continuation pickers.",
+    "Authenticated provider metadata lookup, short cache and single-flight deduplication; no inference for discovery.",
+    "Manual model entry remains available if the provider does not expose a compatible catalog; late responses preserve the selected provider and typed value."
+  ],
+  "verification": {
+    "focusedBackendAndWebChecks": 10,
+    "debugUnitCases": 494,
+    "releaseUnitCases": 494,
+    "skippedPerUnitVariant": 2,
+    "nativeJourneysPassed": 22,
+    "optimizedApkReviewed": true,
+    "realProviderModelsListed": 4,
+    "liveMetadataReadMs": [
+      638,
+      18
+    ],
+    "liveWebModelSelectionVerified": true,
+    "originalNativeProcessesAndPairingPreserved": true,
+    "unknownWorkReplayed": false,
+    "push": "one announcement; FCM accepted on first attempt",
+    "installedPhoneVersionAtReadback": 200
+  },
+  "deployment": {
+    "backendReleaseDigest": "05c362db1395360451a2e7cecb287eb65ede1faee3068f1f794c33e3a38278bc",
+    "webReleaseDigest": "da58489798f2446016a9f6a196a5b33a9f2860681d3151dd1b47448dab4e94ee"
+  },
+  "retainedQualificationFailures": [
+    "Original runner used an incompatible Node version; subsequent runner uses the existing Node22 explicitly.",
+    "Unconfined test frame callback failed a layout-thread check; controlled scheduler is scoped to the provider/context test class.",
+    "Missing experimental test API opt-in caused one test compile failure.",
+    "Original continuation test changed its synthetic receipt before the first read completed; added a read-completion barrier without repeating the operation.",
+    "Applying the scheduler change to unrelated reading tests affected native waits/focus; those changes were reverted. Final original reading assertions passed."
+  ],
+  "limits": [
+    "Android publication and FCM acceptance do not establish installation or notification display on the handset.",
+    "Provider metadata advertises names; no inference was started to certify every model.",
+    "Local catalog timings are individual observations, not a handset latency guarantee.",
+    "Physical voice and provider audio were not exercised. Separate DeepSeek-only backend does not configure this local provider and was not restarted."
+  ]
+}

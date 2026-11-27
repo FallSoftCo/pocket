@@ -157,3 +157,5 @@ The picker shows provider-advertised IDs and keeps manual entry available. Late
 responses cannot cross the selected provider/environment or replace manual input.
 An unavailable catalog leaves manual entry usable. Existing sessions and saved
 creation/continuation receipts retain their original explicit model selection.
+
+Version 201 delivery and bounded qualification are recorded in [provider model picker evidence](qualification/provider-model-picker-201.json).

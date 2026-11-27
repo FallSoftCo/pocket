@@ -1,5 +1,7 @@
 # NextComp documentation
 
+[201 provider model picker](qualification/provider-model-picker-201.json) is published on both Android update channels and live on web. Select a configured provider to choose from its advertised model names; manual entry remains available. Emulator and optimized APK checks passed; handset installation is separate.
+
 [198 history retention update](qualification/ack-history-reliability-20261121.json) is published on both Android update channels. Returning to the same conversation retains its visible messages during refresh. All23 required native journeys and exact optimized APK review passed; phone installation remains unverified. Intermittent acknowledgement latency is still unresolved and is not claimed fixed by this release.
 
 [197 session preview repair](qualification/session-preview-overflow197.json) is published on both Android update channels and live on web: long errors and bilingual previews stay inside their cards, including enlarged text. Reload web or install the Android update; handset installation remains unverified.
