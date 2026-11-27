@@ -227,3 +227,5 @@ exact phrase's focus, click action and label in one tree, rather than accepting
 focus on its paragraph ancestor. Keep real touch/key input and pixel-level focus
 feedback checks. Wait for asynchronously mounted controls before one action;
 never retry an action merely because its result has not appeared yet.
+
+Native Compose release journeys use `StandardTestDispatcher` for effects, matching the existing drawer/queue tests. The legacy unconfined dispatcher can resume a frame callback from an IO decoder thread and invoke layout off the UI thread. Keep explicit idle/visibility synchronization and real UI actions; do not disable animations or weaken assertions to bypass that harness failure.

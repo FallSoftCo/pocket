@@ -6,6 +6,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -28,7 +29,7 @@ import java.util.UUID
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class NativeParityControlsNativeTest {
-    @get:Rule val compose=createEmptyComposeRule()
+    @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
     private val instrumentation=InstrumentationRegistry.getInstrumentation()
     private val context get()=instrumentation.targetContext
     private val device get()=UiDevice.getInstance(instrumentation)

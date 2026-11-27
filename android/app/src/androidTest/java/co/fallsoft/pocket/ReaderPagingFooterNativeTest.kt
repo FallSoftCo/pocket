@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -39,7 +40,7 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class ReaderPagingFooterNativeTest {
-    @get:Rule val compose=createEmptyComposeRule()
+    @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
 
     @Test fun bothPagesStayTogetherAndUsableWithNarrowLargeFontAndIme(){
         val i=InstrumentationRegistry.getInstrumentation()

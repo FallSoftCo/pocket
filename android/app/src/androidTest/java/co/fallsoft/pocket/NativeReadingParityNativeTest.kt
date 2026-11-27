@@ -19,6 +19,7 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.junit.Rule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -32,7 +33,7 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class NativeReadingParityNativeTest {
- @get:Rule val compose=createEmptyComposeRule()
+ @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
  @Test(timeout=150000) fun slotsGalleryAndDecisionDrawerPreserveInputAndSource(){
   val i=InstrumentationRegistry.getInstrumentation();val c=i.targetContext;val device=UiDevice.getInstance(i)
   requireOwnedNativeTarget(device)

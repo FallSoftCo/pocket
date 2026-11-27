@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import kotlinx.coroutines.test.StandardTestDispatcher
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
@@ -26,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
 /** Real text layout, both language forms, constrained catalog viewport and adjacent action. */
 @RunWith(AndroidJUnit4::class)
 class SessionPreviewBoundsNativeTest {
- @get:Rule val compose=createEmptyComposeRule()
+ @get:Rule val compose=createEmptyComposeRule(effectContext=StandardTestDispatcher())
  @Test(timeout=90000) fun longDiagnosticsRespectPreviewBoundsInBothLanguagesAndLargeText(){
   val instrumentation=InstrumentationRegistry.getInstrumentation()
   requireOwnedNativeTarget(UiDevice.getInstance(instrumentation))
