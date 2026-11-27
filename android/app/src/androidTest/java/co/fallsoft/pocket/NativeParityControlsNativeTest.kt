@@ -177,7 +177,15 @@ class NativeParityControlsNativeTest {
             assertEquals("deepseek-flash",original.getJSONObject("selection").s("model"))
             assertEquals("alpha-turn",original.s("expectedLastTurnId"))
             assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
+            val receiptPath="/api/threads/$thread/conversation-operations/${original.s("id")}"
+            val readsBefore=calls(receiptPath,"GET").size
             tap("Check saved operation")
+            // Observe the unknown receipt through the UI before resolving the
+            // fixture. A click only starts the asynchronous read; resolving here
+            // without this barrier can legitimately navigate on that first read.
+            await{calls(receiptPath,"GET").size==readsBefore+1&&
+                compose.onAllNodes(hasText("Check saved operation") and hasClickAction() and isEnabled()).fetchSemanticsNodes().isNotEmpty()}
+            assertEquals(thread,Pocket.selected)
             assertEquals("Lost acknowledgement must not re-create a session",1,calls("/api/threads/$thread/conversation-operations").size)
             qa("resolve-fork",JSONObject())
             tap("Check saved operation")
