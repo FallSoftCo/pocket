@@ -37,7 +37,7 @@ OpenAI default. A separate owner-authorized workstation check reused the existin
 In this runtime, `model/list` can retain the old provider registry after setup
 and custom gateways can receive the built-in OpenAI model catalog. Consequently
 NextComp does not advertise those models as belonging to an external provider.
-New tasks use an explicit external model ID. Existing external sessions do not
+New tasks use an explicit external model ID. Version 201 adds a picker populated by the selected provider’s authenticated GET /models metadata endpoint; it does not use the native OpenAI catalog for external providers. Existing external sessions do not
 offer an invented OpenAI model picker. Provider setup is unavailable on runtime
 versions outside the qualified profile; opening the controls never upgrades or
 restarts a daemon.
@@ -141,3 +141,19 @@ than silently omitting earlier context. Checkpoints use private file permissions
 and are not public gallery assets. No new model polling or memory service exists.
 
 [196 delivery and qualification](qualification/provider-continuation196.json) distinguishes live web/backend support from Android publication and physical installation.
+
+## Advertised model picker — 201
+
+Android and web request model names only for the selected configured external
+provider, through the existing authenticated `/api/model-providers?modelsFor=ID`
+route. The backend resolves the endpoint and credentials from the same native
+Codex configuration; credentials never reach the client. HTTPS or local-loopback
+HTTP, no redirects, a four-second deadline and a 256 KiB/256-model response bound
+apply. Concurrent reads share one request, successful results cache for one minute,
+and failures briefly cache without inventing supported models. No inference,
+provider reconfiguration, session creation or automatic fallback runs on discovery.
+
+The picker shows provider-advertised IDs and keeps manual entry available. Late
+responses cannot cross the selected provider/environment or replace manual input.
+An unavailable catalog leaves manual entry usable. Existing sessions and saved
+creation/continuation receipts retain their original explicit model selection.

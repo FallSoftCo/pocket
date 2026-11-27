@@ -1,3 +1,4 @@
+import {ProviderModels} from './provider-models.mjs';
 import {nativeVersion} from './native-capabilities.mjs';
 
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
@@ -8,14 +9,21 @@ const safeError=()=>fail('Codex could not save the provider. Reload Providers to
 // Provider configuration belongs to Codex, including credentials. NextComp never
 // keeps API keys in its database, preferences, operation receipts or responses.
 export class ModelProviders {
- constructor(codex){this.codex=codex;this.writing=false;}
+ constructor(codex,options){this.codex=codex;this.writing=false;this.models=new ProviderModels(options);}
  async list(){
   await this.codex.connect();
   try{
    const result=await this.codex.call('modelProvider/list',{});
-   return {state:'available',providers:result.data.map(p=>({id:p.id,name:p.name,baseUrl:p.baseUrl,canEdit:p.canEdit,kind:p.settings?.type,authMode:p.settings?.auth?.mode,envKey:p.settings?.auth?.envKey||null})),defaultProviderId:result.defaultProviderId,
+   return {state:'available',providers:result.data.map(p=>({id:p.id,name:p.name,baseUrl:p.baseUrl,canEdit:p.canEdit,canListModels:p.id!=='openai'&&!!p.baseUrl,kind:p.settings?.type,authMode:p.settings?.auth?.mode,envKey:p.settings?.auth?.envKey||null})),defaultProviderId:result.defaultProviderId,
     canConfigure:nativeVersion(this.codex)==='0.171.0',notice:'Provider selection applies to a new session. Existing sessions keep their provider. External providers use their own billing.'};
   }catch(error){if(error.rpc?.code===-32601||error.rpc?.code===-32600)return {state:'unavailable',providers:[],canConfigure:false,notice:'This Codex runtime does not expose provider management. Update Codex on this environment.'};throw error;}
+ }
+ async catalog(providerId){
+  if(typeof providerId!=='string'||!idPattern.test(providerId))throw fail('Choose a configured provider.');
+  const view=await this.list(),provider=view.providers.find(p=>p.id===providerId);
+  if(!provider?.canListModels)throw fail('This provider does not expose an external model catalog.',404);
+  try{const {config}=await this.codex.call('config/read',{includeLayers:false});return await this.models.read(provider,config);}
+  catch{return {providerId,state:'unavailable',models:[],notice:'Model list unavailable. Enter a model ID manually.'};}
  }
  async inspect(){
   const result=await this.list();if(!result.canConfigure)return result;
@@ -68,7 +76,7 @@ export class ModelProviders {
 
 export function registerModelProviderRoutes(app,{codex,route}){
  const providers=new ModelProviders(codex);
- app.get('/api/model-providers',route(async(_req,res)=>res.json(await providers.inspect())));
+ app.get('/api/model-providers',route(async(req,res)=>res.json(req.query.modelsFor!==undefined?await providers.catalog(req.query.modelsFor):await providers.inspect())));
  app.post('/api/model-providers',route(async(req,res)=>res.json(await providers.save(req.body))));
  return providers;
 }

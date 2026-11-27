@@ -47,3 +47,21 @@ test('immersion selector uses its settings endpoint and explicit model without s
   assert.deepEqual(calls,[{path:'/api/immersion/v2?settings=1',body:undefined}]);
  }finally{global.document=previous;dom.window.close();}
 });
+
+test('provider catalog renders selectable models, preserves manual input and ignores an old provider response',async()=>{
+ const dom=new JSDOM('<body/>'),previous=global.document;global.document=dom.window.document;
+ try{
+  let resolveModels;const calls=[],holder=document.createElement('div');document.body.append(holder);
+  const api=async path=>{calls.push(path);if(path==='/api/model-providers')return {state:'available',defaultProviderId:'openai',providers:[{id:'openai',name:'OpenAI'},{id:'local',name:'Local',canListModels:true},{id:'other',name:'Other'}]};return new Promise(r=>resolveModels=r);};
+  const picker=new NewTaskProvider({holder,api,manage:()=>{}});await picker.load();
+  picker.select.value='local';let pending=picker.changed();
+  resolveModels({providerId:'local',state:'available',defaultModel:'local-long:latest',models:[{id:'local-long:latest',name:'Local long'},{id:'small:20b',name:'Small'}]});await pending;
+  assert.equal(picker.value().model,'local-long:latest');assert.equal(picker.modelLabel.hidden,false);assert.equal(picker.model.wrapper.hidden,true);
+  picker.modelSelect.value='small:20b';picker.modelSelect.onchange();assert.equal(picker.value().model,'small:20b');
+  picker.modelSelect.value='';picker.modelSelect.onchange();picker.model.input.value='custom:latest';assert.equal(picker.value().model,'custom:latest');
+  pending=picker.changed();picker.model.input.value='typed-during-lookup';resolveModels({providerId:'local',state:'available',models:[{id:'small:20b'}]});await pending;assert.equal(picker.value().model,'typed-during-lookup');
+  pending=picker.changed();const stale=resolveModels;picker.select.value='other';await picker.changed();stale({providerId:'local',state:'available',models:[{id:'wrong'}]});await pending;
+  assert.equal(picker.value().providerId,'other');assert.equal(picker.value().model,'');assert.equal(picker.modelLabel.hidden,true);
+  assert(calls.every(p=>p.startsWith('/api/model-providers')));
+ }finally{global.document=previous;dom.window.close();}
+});

@@ -130,7 +130,8 @@ for(const origin of origins){
    origin.terminalMode=input.mode;body={ok:true};
   }
   else if(path==='/_qa/question'){origin.question=input.version;changed(origin);body={ok:true};}
-  else if(path==='/api/model-providers')body={state:'available',defaultProviderId:'openai',providers:[{id:'openai',name:'OpenAI'},{id:'deepseek',name:'DeepSeek',baseUrl:'https://api.deepseek.com'}]};
+  else if(path==='/api/model-providers'&&url.searchParams.get('modelsFor')==='local')body={providerId:'local',state:'available',defaultModel:'local-long:latest',models:[{id:'local-long:latest',name:'Local long'},{id:'small:20b',name:'Small 20B'}]};
+  else if(path==='/api/model-providers')body={state:'available',defaultProviderId:'openai',providers:[{id:'openai',name:'OpenAI'},{id:'deepseek',name:'DeepSeek',baseUrl:'https://api.deepseek.com'},{id:'local',name:'Local GPU',baseUrl:'http://127.0.0.1/v1',canListModels:true}]};
   else if(path==='/_qa/resolve-fork'){for(const op of origin.operations.values())if(['fork','continue'].includes(op.kind))op.state='accepted';body={ok:true};}
   else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
   else if(path==='/api/status')body={host:origin.name,connected:true,deviceId:`parity-device-${origin.index}`,capabilities:{readOnlyTimeline:true,canonicalTimeline:1},...(url.searchParams.has('threadId')?{historyHead:head(origin,url.searchParams.get('threadId'))}:{})};

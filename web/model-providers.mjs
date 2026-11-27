@@ -34,18 +34,41 @@ export class ProviderPanel{
 
 export class NewTaskProvider{
  constructor({holder,api,manage,explicitModel=false,prefix='new-provider',providerPath='/api/model-providers'}){
-  Object.assign(this,{api,explicitModel,providerPath});this.serial=0;
+  Object.assign(this,{api,explicitModel,providerPath});this.serial=0;this.modelSerial=0;
   const label=el('label','Provider');this.select=el('select');this.select.id=prefix;label.append(this.select);
-  this.model=field('Provider model ID');this.model.input.id=prefix+'-model';this.model.wrapper.hidden=true;
+  this.model=field('Provider model ID');this.model.input.id=prefix+'-model';this.model.input.oninput=()=>{this.modelEdited=true;};this.model.wrapper.hidden=true;
+  this.modelLabel=el('label','Model');this.modelSelect=el('select');this.modelSelect.id=prefix+'-models';this.modelLabel.append(this.modelSelect);this.modelLabel.hidden=true;
+  this.modelStatus=el('p');this.modelStatus.className='muted';this.modelStatus.setAttribute('role','status');
+  this.modelSelect.onchange=()=>{this.modelEdited=true;const custom=this.modelSelect.value==='';this.model.wrapper.hidden=!custom;this.model.input.value=this.modelSelect.value;if(custom)this.model.input.focus();};
   this.status=el('p');this.status.className='muted';const button=el('button','Manage providers');button.type='button';button.onclick=manage;
-  holder.append(label,this.model.wrapper,this.status,button);this.select.onchange=()=>this.changed();
+  holder.append(label,this.modelLabel,this.model.wrapper,this.modelStatus,this.status,button);this.select.onchange=()=>this.changed();
  }
  async load(){
-  const serial=++this.serial;this.select.disabled=true;this.view=null;this.select.replaceChildren(el('option','Codex default'));this.model.wrapper.hidden=true;
+  const serial=++this.serial;this.modelSerial++;this.modelLabel.hidden=true;this.modelStatus.textContent='';this.select.disabled=true;this.view=null;this.select.replaceChildren(el('option','Codex default'));this.model.wrapper.hidden=true;
   try{const view=await this.api(this.providerPath);if(serial!==this.serial)return;this.view=view;this.status.textContent=view.notice;
-   this.select.replaceChildren(...(view.providers||[]).map(p=>{const o=el('option',p.name);o.value=p.id;return o;}));this.select.value=view.defaultProviderId;this.select.disabled=view.state!=='available';this.changed();
+   this.select.replaceChildren(...(view.providers||[]).map(p=>{const o=el('option',p.name);o.value=p.id;return o;}));this.select.value=view.defaultProviderId;this.select.disabled=view.state!=='available';await this.changed();
   }catch(error){if(serial===this.serial)this.status.textContent=error.message;}
  }
- changed(){const provider=this.view?.providers?.find(p=>p.id===this.select.value);this.model.wrapper.hidden=!provider||!this.explicitModel&&provider.id==='openai';this.model.input.value=provider?.baseUrl?.startsWith('https://api.deepseek.com')?'deepseek-flash':'';}
+ async changed(){
+  const serial=++this.modelSerial,provider=this.view?.providers?.find(p=>p.id===this.select.value);
+  this.modelLabel.hidden=true;this.modelStatus.textContent='';this.modelEdited=false;
+  this.model.wrapper.hidden=!provider||!this.explicitModel&&provider.id==='openai';
+  this.model.input.value=provider?.baseUrl?.startsWith('https://api.deepseek.com')?'deepseek-flash':'';
+  if(!provider?.canListModels)return;
+  this.modelStatus.textContent='Loading models…';
+  const initial=this.model.input.value;
+  try{
+   const result=await this.api('/api/model-providers?modelsFor='+encodeURIComponent(provider.id));
+   if(serial!==this.modelSerial||this.select.value!==provider.id)return;
+   const models=Array.isArray(result.models)?result.models:[];
+   if(result.providerId!==provider.id||result.state!=='available'||!models.length){this.modelStatus.textContent='Model list unavailable. Enter a model ID manually.';return;}
+   const options=models.map(m=>{const o=el('option',m.name||m.id);o.value=m.id;return o;});
+   const custom=el('option','Enter model ID…');custom.value='';this.modelSelect.replaceChildren(...options,custom);
+   // Never replace a model the user typed while discovery was in flight.
+   if(!this.modelEdited&&this.model.input.value===initial&&!initial)this.model.input.value=result.defaultModel||models[0].id;
+   const known=models.some(m=>m.id===this.model.input.value);this.modelSelect.value=known?this.model.input.value:'';
+   this.model.wrapper.hidden=known;this.modelLabel.hidden=false;this.modelStatus.textContent='';
+  }catch{if(serial===this.modelSerial)this.modelStatus.textContent='Model list unavailable. Enter a model ID manually.';}
+ }
  value(){const provider=this.view?.providers?.find(p=>p.id===this.select.value);if(!provider)return null;return {providerId:provider.id,...(this.explicitModel||provider.id!=='openai'?{model:this.model.input.value.trim(),...(provider.baseUrl?.startsWith('https://api.deepseek.com')?{effort:'high'}:{})}:{})};}
 }

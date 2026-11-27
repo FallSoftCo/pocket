@@ -80,7 +80,44 @@ import org.json.JSONObject
         DropdownMenu(menu,{menu=false}){providers.forEach{p->DropdownMenuItem(text={Text(p.s("name"))},onClick={menu=false;onChange(providerChoice(p))})}}
     }
     if(provider.isNotBlank()&&(explicitModel||provider!="openai")){
-        OutlinedTextField(value?.s("model").orEmpty(),{onChange(JSONObject(value.toString()).put("model",it))},label={BilingualLabel("Provider model ID")},enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth())
+        val selected=providers.firstOrNull{it.s("id")==provider}
+        var models by remember(destination,provider,revision){mutableStateOf<List<JSONObject>>(emptyList())}
+        var modelProblem by remember(destination,provider,revision){mutableStateOf("")}
+        var loadingModels by remember(destination,provider,revision){mutableStateOf(false)}
+        var modelMenu by remember(destination,provider){mutableStateOf(false)}
+        var manualModel by remember(destination,provider){mutableStateOf(false)}
+        val latestValue by rememberUpdatedState(value)
+        LaunchedEffect(destination,provider,revision,selected?.optBoolean("canListModels")){
+            if(selected?.optBoolean("canListModels")==true){
+                loadingModels=true
+                try{
+                    val result=Pocket.apiEnvironment(requireNotNull(destination),"/api/model-providers?modelsFor="+java.net.URLEncoder.encode(provider,"UTF-8"))
+                    if(Pocket.captureEnvironment()?.matches(destination)==true&&latestValue?.s("providerId")==provider){
+                        if(result.s("providerId")==provider&&result.s("state")=="available")models=result.optJSONArray("models")?.objects().orEmpty()
+                        if(models.isEmpty())modelProblem="Model list unavailable. Enter a model ID manually."
+                        else if(latestValue?.s("model").isNullOrBlank()&&!manualModel){
+                            val default=result.s("defaultModel").takeIf{id->models.any{it.s("id")==id}}?:models.first().s("id")
+                            onChange(JSONObject(latestValue.toString()).put("model",default))
+                        }
+                    }
+                }catch(e:CancellationException){throw e}catch(_:Exception){modelProblem="Model list unavailable. Enter a model ID manually."}
+                finally{loadingModels=false}
+            }
+        }
+        if(models.isNotEmpty())Box{
+            OutlinedButton({modelMenu=true},enabled=enabled,modifier=Modifier.fillMaxWidth()){
+                Text("Model: "+(models.firstOrNull{it.s("id")==value?.s("model")}?.s("name")?:"Enter model ID…"))
+            }
+            DropdownMenu(modelMenu,{modelMenu=false}){
+                models.forEach{m->DropdownMenuItem(text={Text(m.s("name").ifBlank{m.s("id")})},onClick={modelMenu=false;manualModel=false;onChange(JSONObject(value.toString()).put("model",m.s("id")))})}
+                DropdownMenuItem(text={Text("Enter model ID…")},onClick={modelMenu=false;manualModel=true;onChange(JSONObject(value.toString()).put("model",""))})
+            }
+        }
+        if(manualModel||models.none{it.s("id")==value?.s("model")}){
+            OutlinedTextField(value?.s("model").orEmpty(),{manualModel=true;onChange(JSONObject(value.toString()).put("model",it))},label={BilingualLabel("Provider model ID")},enabled=enabled,singleLine=true,modifier=Modifier.fillMaxWidth())
+        }
+        if(loadingModels)WorkflowText("Loading models…",fontSize=12.sp,color=Muted)
+        if(modelProblem.isNotBlank())WorkflowText(modelProblem,fontSize=12.sp,color=Muted)
         WorkflowText(if(provider=="openai")"Uses this environment’s Codex authentication. Model availability is determined by the provider." else "Uses this provider’s API billing. Model availability is determined by the provider.",fontSize=12.sp,color=Muted)
     }
     if(problem.isNotBlank())WorkflowText(problem,fontSize=12.sp,color=Coral)
