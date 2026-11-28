@@ -62,3 +62,16 @@ test('oversized frames keep their real cause, reconnect cleanly, and never repla
 });
 
 test('missing lineage is a task-specific conflict, not a disconnected transport or automatic resend',()=>{const rpc={message:'invalid paginated history lineage: missing source rollout'};assert.equal(isHistoryLineageError(rpc),true);assert.equal(isHistoryLineageError({message:'Invalid thread id'}),false);const e=historyLineageError(rpc);assert.equal(e.status,409);assert.equal(e.code,'CODEX_HISTORY_LINEAGE_UNAVAILABLE');assert.equal(ambiguousDelivery(e),false);assert.match(e.message,/may still be running/);});
+
+test('an expired turn wait retains its original late rejection without blocking unrelated configuration',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'pocket-late-turn-')),socket=join(dir,'codex.sock');
+ const server=http.createServer(),wss=new WebSocketServer({server});await new Promise(r=>server.listen(socket,r));let original,writes=0;
+ wss.on('connection',ws=>ws.on('message',raw=>{const m=JSON.parse(raw);if(!m.id)return;if(m.method==='turn/steer'){original={ws,id:m.id};writes++;return;}ws.send(JSON.stringify({id:m.id,result:{}}));}));
+ const c=new Codex(socket,{requestTimeoutMs:80}),outcomes=[];
+ t.after(async()=>{c.ws?.terminate();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>server.close(r));await rm(dir,{recursive:true,force:true});});
+ await c.connect();await assert.rejects(c.callTurn('turn/steer',{threadId:'original'},v=>outcomes.push(v)),e=>e.code==='CODEX_TIMEOUT'&&e.rpcMethod==='turn/steer');
+ assert.equal(c.pending.size,1);assert.equal(c.operationCapacityAvailable(),true);assert.equal(outcomes.length,0);
+ original.ws.send(JSON.stringify({id:original.id,error:{code:-32600,message:'Native definite rejection'}}));
+ for(let i=0;i<100&&!outcomes.length;i++)await new Promise(r=>setTimeout(r,5));
+ assert.equal(outcomes.length,1);assert.equal(outcomes[0].terminal,true);assert.equal(outcomes[0].error.rpc.code,-32600);assert.equal(c.pending.size,0);assert.equal(writes,1);
+});

@@ -126,6 +126,7 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
                 Pocket.prefs.edit().putString(backendKey,"lax").apply();CodexConversations.suspendReading()
             }
             Pocket.acceptUsage(result.optJSONObject("usage"),value.destination)
+            Pocket.acceptProviderUsage(result.optJSONObject("providerUsage"),value.destination)
             if(Pocket.statusRevision==revision){Pocket.codexOnline=result.optBoolean("connected");Pocket.codexConnectionMessage=ConnectionMessages.server(result.optJSONObject("problem")?.s("message").orEmpty())}
             Pocket.host=result.s("host");Pocket.defaultCwd=result.s("defaultCwd")
             val changed=Pocket.prefs.getString(Pocket.key("deviceId"),"")!=result.s("deviceId")
@@ -166,10 +167,16 @@ internal class CodexCatalogStore(private val destination:EnvironmentRequest,priv
         }},complete=!partial,archived=archived)
         tasks=merged.map{CodexSessionRepository.nativeCatalogProjection(destination,it)}
         merged.forEach{next->
-            val old=if(CodexSessionRepository.nativeEnabled(destination,next.id))transcriptHints[next.id] else previous[next.id]
-            if(old==null||next.activityAt>=old.activityAt)transcriptHints[next.id]=next
-            if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,next.preview,next.previewKind,next.status)||
-                transcriptLiveActivityAdvanced(old.activityAt,next.activityAt)){
+            val native=CodexSessionRepository.nativeEnabled(destination,next.id)
+            // A native read may publish its preview while this catalog HTTP
+            // request is in flight. That local presentation wins on the card,
+            // but must not become server evidence invalidating the same read.
+            // Partial pages also supply no new hint for retained absent rows.
+            val hint=if(native)(received[next.id]?:return@forEach).copy(status=next.status,activityAt=next.activityAt)else next
+            val old=if(native)transcriptHints[next.id] else previous[next.id]
+            if(old==null||hint.activityAt>=old.activityAt)transcriptHints[next.id]=hint
+            if(old==null||transcriptPresentationChanged(old.preview,old.previewKind,old.status,hint.preview,hint.previewKind,hint.status)||
+                transcriptLiveActivityAdvanced(old.activityAt,hint.activityAt)){
                 if(!archived&&!next.archived)CodexSessionRepository.invalidate(next.id,destination,priorityAt=next.activityAt)
                 if(selected()&&Pocket.selected==next.id)CodexConversations.invalidate()
             }

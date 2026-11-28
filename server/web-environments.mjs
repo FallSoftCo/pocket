@@ -41,7 +41,7 @@ export function environmentRoute(path){
   const match=/^\/api\/(threads|requests|notifications|files)\/([^/]+)(.*)$/.exec(url.pathname);
   if(match){const scope=splitScopedId(decodeURIComponent(match[2]));if(scope){environmentId=scope.environmentId;url.pathname='/api/'+match[1]+'/'+encodeURIComponent(scope.id)+match[3];}}
  }
- if(environmentId&&url.pathname.startsWith('/api/native/')&&url.searchParams.has('threadId')){
+ if(environmentId&&(url.pathname.startsWith('/api/native/')||url.pathname==='/api/models')&&url.searchParams.has('threadId')){
   const scoped=splitScopedId(url.searchParams.get('threadId'));
   if(scoped){if(scoped.environmentId!==environmentId)throw fail('This action references a different environment.');url.searchParams.set('threadId',scoped.id);}
  }

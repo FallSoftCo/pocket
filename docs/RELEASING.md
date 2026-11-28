@@ -217,3 +217,13 @@ receipts to take advantage of a smaller later plan. Version161 was published
 with its original completed14-case record; this separation applies to subsequent
 candidates. Read-only plan calculation and gate checks do not run an emulator,
 contact a provider, submit work or create a periodic schedule.
+
+### Native observation synchronization
+
+Mixed Compose/UiAutomator journeys must synchronize with the Compose test clock
+before observing animated controls or phase-dependent text. Compose's semantics
+and Android's exported accessibility hierarchy are different trees: match the
+exact phrase's focus, click action and label in one tree, rather than accepting
+focus on its paragraph ancestor. Keep real touch/key input and pixel-level focus
+feedback checks. Wait for asynchronously mounted controls before one action;
+never retry an action merely because its result has not appeared yet.

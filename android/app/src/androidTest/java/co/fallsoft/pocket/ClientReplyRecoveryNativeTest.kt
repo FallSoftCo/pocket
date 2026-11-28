@@ -80,7 +80,11 @@ class ClientReplyRecoveryNativeTest {
   assertFalse("Unknown receipt cleared draft callback",completed);assertEquals("Unknown receipt test",Pocket.prefs.getString("draft:same-thread",null))
   Thread.sleep(1000);assertEquals("Unknown receipt started another send",1,posts().length());assertEquals(0,qa("state").getJSONArray("recoveries").length())
   device.findObject(By.text("Retry")).click();assertEquals(0,qa("state").getJSONArray("recoveries").length())
-  device.findObject(By.text("Check and retry")).click();await{PocketReplies.entries("same-thread").isEmpty()}
+  // Dialog composition is asynchronous. Observe its real enabled control
+  // before the one confirmation tap; never retry a potentially delivered tap.
+  val confirm=device.wait(Until.findObject(By.text("Check and retry").enabled(true)),5000)
+    ?:throw AssertionError("Explicit recovery confirmation did not appear")
+  confirm.click();await{PocketReplies.entries("same-thread").isEmpty()}
   assertEquals("Recovery posted original turn again",1,posts().length());val action=qa("state").getJSONArray("recoveries").getJSONObject(0)
   assertEquals(posts().getJSONObject(0).s("id"),action.s("id"));assertTrue(action.optBoolean("confirmUnknown"));assertFalse(Pocket.prefs.contains("draft:same-thread"))
   assertEquals("Later recovery repeated initial diagnostic callback",listOf(ReplyAdmissionObservation.UNKNOWN),outcomes.toList())

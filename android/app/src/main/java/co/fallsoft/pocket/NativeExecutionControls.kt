@@ -12,6 +12,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -36,7 +38,7 @@ private data class TerminalConfirmation(val destination:EnvironmentRequest,val t
         if(!executionCurrent(environment,thread)){problem=EXECUTION_SOURCE_CHANGED;return}
         val request=generation
         busy=true;problem=""
-        scope.launch{try{
+        scope.launch(Dispatchers.Main.immediate){try{
             if(!qualified){
                 val feature=Pocket.apiEnvironment(environment,"/api/native/capabilities?threadId=${executionQuery(thread)}").optJSONObject("features")?.optJSONObject("executionOutput")
                 if(!current(request))return@launch
@@ -49,9 +51,15 @@ private data class TerminalConfirmation(val destination:EnvironmentRequest,val t
             if(!current(request))return@launch
             page=result;position=index
             if(reset){offsets.clear();offsets.add(0L)}
-        }catch(e:Exception){if(current(request))problem=PocketNetwork.error(e)}finally{if(current(request))busy=false}}
+        }catch(e:CancellationException){throw e}
+        catch(e:Exception){if(current(request))problem=PocketNetwork.error(e)}
+        finally{
+            // Completion owns this generation's loading state even if its source
+            // retired. A newer request still owns its own loading reservation.
+            if(generation==request)busy=false
+        }}
     }
-    TextButton({opened=true;generation++;page=null;qualified=false;read(0,0,true)}){BilingualLabel("Read command output")}
+    TextButton({if(!busy){opened=true;generation++;page=null;qualified=false;read(0,0,true)}},enabled=!busy){BilingualLabel("Read command output")}
     if(opened)AlertDialog(onDismissRequest={dismiss()},title={BilingualLabel("Command output")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
         WorkflowText("Codex retained command output",fontSize=12.sp,color=Muted)
         if(busy)WorkflowText("Reading output…",fontSize=12.sp)

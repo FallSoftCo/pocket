@@ -88,7 +88,15 @@ class CommandHistoryNativeTest {
   await{Pocket.selected=="same-thread"&&!PocketTranscript.loading}
   assertTrue("Returning collapsed the command passage",reveal("First full command detail"))
   assertTrue(reveal("Wait detail preserved"))
-  requireNotNull(device.findObject(By.text("Collapse runs"))).click()
+  // A cached passage can appear before the returned conversation's controls
+  // finish recomposing. Observe the reachable action before issuing one tap.
+  val collapse=device.wait(Until.findObject(By.text("Collapse runs")),5000)
+  if(collapse==null){
+   device.dumpWindowHierarchy(java.io.File(c.filesDir,"command-history-collapse-failure.xml"))
+   device.takeScreenshot(java.io.File(c.filesDir,"command-history-collapse-failure.png"))
+  }
+  assertNotNull("Collapse runs not reachable after returning; readError="+PocketTranscript.readError+", appError="+Pocket.error,collapse)
+  collapse!!.click()
   assertTrue(device.wait(Until.gone(By.text("First full command detail")),5000))
   assertFalse(device.hasObject(By.text("Waiting for the operation")))
   assertTrue(reveal("Answer after commands"))

@@ -21,6 +21,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.*
@@ -94,9 +95,9 @@ class MainActivity:ComponentActivity(){
         if(Pocket.token.isNotBlank()){Pocket.refresh()}
         setContent{MaterialTheme(shapes=Shapes(extraSmall=RoundedCornerShape(2.dp),small=RoundedCornerShape(4.dp),medium=RoundedCornerShape(6.dp),large=RoundedCornerShape(8.dp),extraLarge=RoundedCornerShape(10.dp)),typography=Typography(titleLarge=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=20.sp,fontWeight=FontWeight.Medium),titleMedium=androidx.compose.ui.text.TextStyle(fontFamily=AppFont,fontSize=16.sp,fontWeight=FontWeight.Medium),bodyLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,lineHeight=22.sp,fontFamily=AppFont),bodyMedium=androidx.compose.ui.text.TextStyle(fontSize=14.sp,lineHeight=20.sp,fontFamily=AppFont),labelLarge=androidx.compose.ui.text.TextStyle(fontSize=15.sp,fontWeight=FontWeight.Medium,fontFamily=AppFont)),colorScheme=darkColorScheme(primary=Mint,onPrimary=Ink,background=Ink,surface=Panel,onSurface=Paper,onBackground=Paper,outline=Muted,secondary=Coral,onSecondary=Ink,surfaceVariant=Panel,onSurfaceVariant=Paper,surfaceContainer=Panel,surfaceContainerHigh=Panel,surfaceContainerHighest=Panel,surfaceContainerLow=Panel,surfaceContainerLowest=Ink,secondaryContainer=Panel,onSecondaryContainer=Paper,primaryContainer=Panel,onPrimaryContainer=Paper,tertiary=NextCerise,onTertiary=Ink,tertiaryContainer=Panel,onTertiaryContainer=Paper)){
             CompositionLocalProvider(LocalImmersionMotionState provides rememberImmersionMotionEnvironment(),LocalImmersionTransitionAnimated provides motionAllowed()){
-            ImmersionReadingWaveHost{NextCompDepthRoot{Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
+            ImmersionReadingWaveHost{NextCompDepthRoot{SettingsDrawerHost{Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()){
                 Box(Modifier.weight(1f)){if(Pocket.token.isBlank()||Pocket.pairingMode)PairScreen(initialServer,initialCode)else BackendApp()}
-            }}}}
+            }}}}}
         }}
     }
     override fun dispatchTouchEvent(event:android.view.MotionEvent):Boolean {ImmersionInteraction.touch(event.actionMasked);return super.dispatchTouchEvent(event)}
@@ -223,8 +224,10 @@ class MainActivity:ComponentActivity(){
 
     BackHandler(Pocket.tab==1&&Pocket.selected==null&&!Pocket.newTask){Pocket.tab=0}
     var workToolsOpen by remember{mutableStateOf(false)}
-    val workListState=rememberLazyListState()
+    val regularWorkListState=rememberLazyListState()
+    val attentionWorkListState=rememberLazyListState()
     val workCatalogView=remember{SessionCatalogViewState(Pocket.showArchived)}
+    val workListState=if(workCatalogView.filter.intValue==5)attentionWorkListState else regularWorkListState
     BackHandler(Pocket.selected!=null||Pocket.newTask){if(Pocket.newTask)Pocket.newTask=false else Pocket.closeTask()}
     Column(Modifier.fillMaxSize()){
         ConnectionNotice()
@@ -276,6 +279,7 @@ class MainActivity:ComponentActivity(){
     }
 }
 @Composable fun SpeechPlayer(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    if(!Pocket.voiceAvailable)return
     if(PocketSpeech.count==0)return
     Surface(color=containerColor,modifier=Modifier.fillMaxWidth()){
         Row(Modifier.padding(horizontal=12.dp,vertical=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
@@ -342,7 +346,14 @@ class MainActivity:ComponentActivity(){
     }
 }
 
-class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")}
+class SessionCatalogViewState(archived:Boolean=false){
+    val filter=mutableIntStateOf(if(archived)3 else 0);val query=mutableStateOf("")
+    private var previousFilter=0;private var previousQuery=""
+    fun toggleAttention(){
+        if(filter.intValue==5){filter.intValue=previousFilter;query.value=previousQuery}
+        else {previousFilter=filter.intValue.takeUnless{it==3}?:0;previousQuery=query.value;filter.intValue=5;query.value=""}
+    }
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun WorkScreen(toolsOpen:Boolean=false,onToolsOpen:(Boolean)->Unit={},listState:androidx.compose.foundation.lazy.LazyListState=rememberLazyListState(),view:SessionCatalogViewState=remember{SessionCatalogViewState(Pocket.showArchived)}){
     UnifiedWorkScreen(toolsOpen,onToolsOpen,listState,view)
@@ -355,7 +366,7 @@ class SessionCatalogViewState(archived:Boolean=false){val filter=mutableIntState
     if(toolsOpen)ModalBottomSheet(onDismissRequest={onToolsOpen(false)},containerColor=Panel){
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=16.dp).padding(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
             OutlinedTextField(query,{query=it},placeholder={BilingualLabel("Find sessions",centered=false)},singleLine=true,modifier=Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.refresh();UnifiedWorkCatalog.refresh()}},label={BilingualLabel(title)})}}
+            Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf("Recent","Working","Following","Archived","History","Needs you").forEachIndexed{i,title->FilterChip(selected=filter==i,onClick={filter=i;if(i==0)Pocket.requestSessionOrder();if(Pocket.showArchived!=(i==3)){Pocket.showArchived=i==3;Pocket.refresh();UnifiedWorkCatalog.refresh()}},label={BilingualLabel(title)})}}
             if(UnifiedWorkCatalog.hasEarlier)TextButton({Pocket.scope.launch{UnifiedWorkCatalog.more()}},enabled=!Pocket.loadingSessions){BilingualLabel(if(Pocket.loadingSessions)"Loading history…" else "Load older sessions")}
             ProfileSwitcher()
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)){
@@ -397,9 +408,10 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
     var observed by remember(identityScope,t.id){mutableStateOf(revision)}
     LaunchedEffect(identityScope,t.id,revision){if(observed!=revision){observed=revision;highlight.snapTo(1f);highlight.animateTo(0f,tween(durationMillis=1800,delayMillis=700))}}
     val cardText=Paper
-    val stateLabel=when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
+    val needsReview=t.needsReview()
+    val stateLabel=t.attentionLabel()?:when{active->if(t.status=="pending")"Starting" else "Working";t.needsInput->"Needs your input";t.status=="idle"->"Idle";t.status=="blocked"->"Blocked";t.status=="failed"->"Failed";else->"Status unavailable"}
     SessionArchiveReveal(t,onArchive,modifier){
-    WorkCardSurface(active,t.needsInput,if(t.needsInput&&!active)Coral else ageColor,highlight.value,Modifier,knownIdle=t.status=="idle"&&!t.needsInput){
+    WorkCardSurface(active,needsReview,if(needsReview)Coral else ageColor,highlight.value,Modifier,knownIdle=t.status=="idle"&&!needsReview){
         if(!t.archived)Row(Modifier.matchParentSize()){
             CardInteractionRegion("Chat",Modifier.weight(.78f).fillMaxHeight(),t.title){onOpen(false)}
             CardInteractionRegion("Keyboard",Modifier.weight(.22f).fillMaxHeight(),t.title){onOpen(true)}
@@ -423,7 +435,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             val age=now-activityTime
             val ageLabel=if(age in 20_000..59_999)"${age/1000}s" else lastActivity(activityTime)
             if(activityTime>0&&age>=20_000)Text(ageLabel,color=Muted,fontSize=11.sp,modifier=Modifier.semantics{contentDescription="Last active "+ageLabel}.widthIn(max=70.dp),maxLines=1,overflow=TextOverflow.Ellipsis)
-            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(stateLabel=="Idle")Icons.Rounded.Pause else Icons.Rounded.ErrorOutline,stateLabel,tint=if(t.needsInput||t.status in listOf("blocked","failed"))Coral else Muted,modifier=Modifier.size(18.dp))}
+            Box(Modifier.size(24.dp)){if(active)SymbolIcon(if(t.previewKind=="thinking")"Psychology" else "Codex",if(t.status=="pending")"Starting" else "Working",Modifier.fillMaxSize(),spinning=true) else SymbolIcon(if(stateLabel=="Idle")Icons.Rounded.Pause else Icons.Rounded.ErrorOutline,stateLabel,tint=if(needsReview||t.status in listOf("blocked","failed"))Coral else Muted,modifier=Modifier.size(18.dp))}
             if(onWatch!=null)Surface(onClick={onWatch(!t.watched)},modifier=Modifier.width(48.dp).heightIn(min=48.dp).semantics{contentDescription=if(t.watched)"Notifications on; tap to turn off" else "Notifications off; tap to turn on"},color=if(t.watched)Mint.copy(alpha=.2f)else Ink,shape=RoundedCornerShape(12.dp)){
                 Column(Modifier.fillMaxWidth().heightIn(min=48.dp).padding(vertical=4.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
                     SymbolIcon(if(t.watched)Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,null,modifier=Modifier.size(24.dp),tint=if(t.watched)Paper else Muted.copy(alpha=.65f))
@@ -433,13 +445,13 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
             SessionRestoreAction(t,onRestore)
 
         }
-        Row(Modifier.fillMaxWidth().height(previewHeight),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
+        Row(Modifier.fillMaxWidth().height(previewHeight).clipToBounds(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)){
             Box(Modifier.width(18.dp).height(previewHeight)){
             if(terminalActive&&Pocket.codexOnline)SymbolIcon("Terminal",null,Modifier.size(18.dp))
             else if(t.previewRole in listOf("user","assistant"))SymbolIcon(if(t.previewRole=="user")"User" else "Codex",null,Modifier.size(18.dp))
             else if(t.previewRole=="activity")SymbolIcon(when(t.previewKind){"command"->Icons.Rounded.Terminal;"edit"->Icons.Rounded.EditNote;"search"->Icons.Rounded.TravelExplore;"thinking"->Icons.Rounded.Psychology;else->Icons.Rounded.Build},null,tint=Mint,modifier=Modifier.size(18.dp))
             }
-            ImmersionText("card:"+identityScope+":"+t.id,if(terminalActive&&Pocket.codexOnline)"Using existing terminal" else if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(t.needsInput&&!active)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
+            ImmersionText("card:"+identityScope+":"+t.id,if(needsReview)stateLabel+" · "+t.preview.ifBlank{t.catalogContext} else if(terminalActive&&Pocket.codexOnline)"Using existing terminal" else if(!active&&t.catalogContext.isNotBlank())t.catalogContext else if(!active)(stateLabel+" · ")+t.preview.ifBlank{"No messages yet"} else t.preview,color=if(needsReview)Coral else cardText,fontSize=14.sp,lineHeight=20.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f),rescue=false,phraseRescue=false,links=false)
         }
 
     }
@@ -493,6 +505,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
         TaskPermissionsControl()
         CoordinatorReportingControl()
         Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.enabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Italian immersion",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.enabled,onCheckedChange=null)}
+        ImmersionProviderControl()
         if(PocketImmersion.enabled)ImmersionDensityControl()
         if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.motionEnabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setMotionEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("Automatic language cycling",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.motionEnabled,onCheckedChange=null)}
         if(PocketImmersion.enabled)Row(Modifier.fillMaxWidth().heightIn(min=48.dp).toggleable(value=PocketImmersion.supportEnabled,role=androidx.compose.ui.semantics.Role.Switch,onValueChange={PocketImmersion.setSupportEnabled(it)}),verticalAlignment=Alignment.CenterVertically){BilingualLabel("English support",modifier=Modifier.weight(1f),centered=false);Switch(PocketImmersion.supportEnabled,onCheckedChange=null)}
@@ -636,6 +649,7 @@ fun sessionAgeColor(time:Long,now:Long=System.currentTimeMillis()):Color{
 
 /** Captions supply the playback context, so conversations need only one speech surface. */
 @Composable fun ConversationSpeechDock(containerColor:androidx.compose.ui.graphics.Color=Panel){
+    if(!Pocket.voiceAvailable)return
     ForegroundWorkNotice()
     if(PocketVoice.captureFeedbackVisible)return
     if(PocketSpeechCaptions.state.visible)SpeechCaptionBanner(playbackControls=PocketSpeech.count>0,containerColor=containerColor)

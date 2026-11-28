@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.json.JSONObject
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,11 +34,12 @@ import java.util.Locale
     return maxOf((72*density.fontScale.coerceAtLeast(1f)).dp,with(density){width.toDp()}+24.dp)
 }
 
-@Composable internal fun compactUsageDockWidth(account:Boolean=false):androidx.compose.ui.unit.Dp{
+@Composable internal fun compactUsageDockWidth(account:Boolean=false,providerUsage:ProviderUsage?=Pocket.providerUsage):androidx.compose.ui.unit.Dp{
     val density=LocalDensity.current
     val measure=androidx.compose.ui.text.rememberTextMeasurer()
     val settings=measure.measure(androidx.compose.ui.text.AnnotatedString(PocketImmersion.label("Settings")),style=LocalTextStyle.current.copy(fontSize=12.sp)).size.width
-    val balance=measure.measure(androidx.compose.ui.text.AnnotatedString("99.9k cr"),style=LocalTextStyle.current.copy(fontSize=16.sp)).size.width
+    val provider=if(account)null else providerFooterUsage(providerUsage,null)
+    val balance=measure.measure(androidx.compose.ui.text.AnnotatedString(provider?.let{"DeepSeek ${it.compactBalanceLabel()}"}?:"99.9k cr"),style=LocalTextStyle.current.copy(fontSize=16.sp)).size.width
     val allowance=measure.measure(androidx.compose.ui.text.AnnotatedString("<0.1%"),style=LocalTextStyle.current.copy(fontSize=16.sp)).size.width
     // The actual value shares its row with a 20dp status icon. Text scaling must
     // not squeeze the visible allowance out of that row.
@@ -49,12 +52,21 @@ import java.util.Locale
 /** Conversation status needs room for its visible value, not an absent balance.
  * Profile names retain their existing bounded/ellipsized presentation.
  */
-@Composable internal fun conversationUsageDockWidth(usage:WeeklyUsage,contextLabel:String?=null):androidx.compose.ui.unit.Dp{
+@Composable internal fun conversationUsageDockWidth(usage:WeeklyUsage,contextLabel:String?=null,providerUsage:ProviderUsage?=Pocket.providerUsage,providerId:String?=null,conversationUsage:JSONObject?=null):androidx.compose.ui.unit.Dp{
     val density=LocalDensity.current
     val measure=androidx.compose.ui.text.rememberTextMeasurer()
     val textStyle=LocalTextStyle.current
     fun textWidth(text:String,size:androidx.compose.ui.unit.TextUnit,weight:FontWeight=FontWeight.Normal)=with(density){
         measure.measure(androidx.compose.ui.text.AnnotatedString(text),style=textStyle.copy(fontSize=size,fontWeight=weight)).size.width.toDp()
+    }
+    val profiles=Pocket.environmentProfiles.all()
+    val profile=contextLabel?:if(profiles.size>1)profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host else null
+    val profileWidth=profile?.let{(textWidth(PocketImmersion.label(it),12.sp)+8.dp).coerceAtMost(compactUsageDockWidth())}?:0.dp
+    val provider=providerFooterUsage(providerUsage,providerId)
+    if(provider!=null){
+        val balance=textWidth("DeepSeek ${provider.compactBalanceLabel()}",16.sp,FontWeight.SemiBold)+32.dp
+        val tokens=ConversationUsage.fromJson(conversationUsage)?.footerLabel()?.let{textWidth(it,12.sp)+8.dp}?:0.dp
+        return maxOf(48.dp,balance,tokens,profileWidth)
     }
     val primary=if(usage.remainingPercent==0.0&&usage.credits.compact()!=null)usage.credits.compact()
         else usage.remainingPercent?.let{usage.remainingLabel().replace(" left","")}
@@ -62,34 +74,95 @@ import java.util.Locale
     val resetWidth=usage.resetsAt?.let{
         textWidth(SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),12.sp)+8.dp
     }?:0.dp
-    val profiles=Pocket.environmentProfiles.all()
-    val profile=contextLabel?:if(profiles.size>1)profiles.firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host else null
-    val profileWidth=profile?.let{(textWidth(PocketImmersion.label(it),12.sp)+8.dp).coerceAtMost(compactUsageDockWidth())}?:0.dp
     return maxOf(48.dp,valueWidth,resetWidth,profileWidth)
 }
 
-@Composable fun UsageDetails(onNavigate:()->Unit={}){
+@Composable fun UsageDetails(onNavigate:()->Unit={},providerUsage:ProviderUsage?=Pocket.providerUsage,providerId:String?=null,conversationUsage:JSONObject?=null){
     val context=androidx.compose.ui.platform.LocalContext.current
-    TextButton({onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask();if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1}){BilingualLabel(if(Pocket.tab==1)"Work" else "Settings")}
-    ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
-    PocketUpdateControl()
-    TextButton({onNavigate();context.nextCompActivity()?.enterBlackout()}){BilingualLabel("Blackout")}
-    AccountUsageDetails()
+    val provider=providerFooterUsage(providerUsage,providerId)
+    if(provider!=null)DrawerSection("DeepSeek API"){DeepSeekUsageSummary(provider,conversationUsage)}
+    else DrawerSection("Account usage") { AccountUsageSummary() }
+    DrawerSection("App") {
+        DrawerAction(if(Pocket.tab==1)"Work" else "Settings",{
+            onNavigate();PocketCoordinator.close();PocketWorkUpdates.close();PocketVoice.showInPlace();Pocket.closeTask()
+            if(Pocket.tab==1){Pocket.requestSessionOrder();Pocket.tab=0}else Pocket.tab=1
+        })
+        ProfileSwitcher(inlineOptions=true,onSelected=onNavigate)
+        DrawerAction("Blackout",{onNavigate();context.nextCompActivity()?.enterBlackout()})
+        PocketUpdateControl()
+        // These controls already omit empty queues and disclose only the long
+        // recording history. Do not put a second expander around them.
+        SavedVoiceRecordingControls()
+    }
+}
+
+@Composable private fun DeepSeekUsageSummary(provider:ProviderUsage,conversationUsage:JSONObject?){
+    val now=System.currentTimeMillis()
+    val stale=provider.isStale(now,Pocket.connected&&Pocket.codexOnline)
+    val usage=ConversationUsage.fromJson(conversationUsage)
+    Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
+        Text(provider.balanceLabel(),color=if(stale)Muted else NextGreen,fontSize=24.sp,fontWeight=FontWeight.SemiBold)
+        BilingualLabel("DeepSeek API balance · account-wide",centered=false,color=Paper,fontSize=14.sp,maxLines=2)
+        BilingualLabel("Not ChatGPT credits or per-session spend",centered=false,color=Muted,fontSize=12.sp,maxLines=3)
+        if(provider.updatedAt>0){
+            val checked=SimpleDateFormat("MMM d · HH:mm:ss",Locale.getDefault()).format(Date(provider.updatedAt))
+            InterfaceText((if(stale)"Last known · " else "Checked · ")+checked,color=Muted,fontSize=12.sp)
+        }else BilingualLabel("Balance has not been observed",centered=false,color=Muted,fontSize=12.sp)
+        HorizontalDivider(color=Muted.copy(alpha=.25f))
+        if(usage==null){
+            BilingualLabel("Token usage appears after a DeepSeek turn",centered=false,color=Muted,fontSize=13.sp,maxLines=3)
+        }else{
+            val integer=NumberFormat.getIntegerInstance()
+            usage.lastTokens?.let{InterfaceText("Last context · ${integer.format(it)} tokens",color=Paper,fontSize=14.sp)}
+            usage.contextWindow?.let{window->
+                val percent=usage.contextPercent()?.let{value->" (${value}%)"}.orEmpty()
+                InterfaceText("Context window · ${integer.format(window)} tokens$percent",color=Muted,fontSize=13.sp)
+            }
+            usage.totalTokens?.let{InterfaceText("Cumulative thread · ${integer.format(it)} tokens",color=Paper,fontSize=14.sp)}
+            BilingualLabel("Token totals cover this conversation; they do not change the account balance.",centered=false,color=Muted,fontSize=12.sp,maxLines=3)
+        }
+    }
+}
+
+@Composable private fun AccountUsageSummary(){
+    val usage=Pocket.weeklyUsage
+    val now=System.currentTimeMillis()
+    Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+        Text(usage.remainingLabel(),color=if(usage.isStale(now,Pocket.connected&&Pocket.codexOnline))Muted else NextGreen,
+            fontSize=24.sp,fontWeight=FontWeight.SemiBold)
+        usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=14.sp)}
+        InterfaceText(usage.resetCredits.label(),color=Paper,fontSize=16.sp)
+        AccountResetControl()
+        if(usage.resetCredits.availableCount!=null&&usage.resetCredits.isStale(now,Pocket.connected&&Pocket.codexOnline))
+            BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=13.sp,maxLines=2)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically){
+            BilingualLabel("Codex credits",Modifier.weight(1f),centered=false,color=Muted,maxLines=2)
+            BilingualLabel(usage.credits.label(),Modifier.weight(1f),centered=false,color=Paper,fontSize=16.sp,maxLines=3,fontWeight=FontWeight.Medium)
+        }
+    }
+    DrawerDisclosure("Usage details"){AccountUsageDetails(includeSummary=false)}
 }
 
 /** Account facts only; each backend retains its own navigation and controls. */
-@Composable internal fun AccountUsageDetails(){
-    SavedVoiceRecordingControls()
+@Composable internal fun AccountUsageDetails(includeSummary:Boolean=true){
     val usage=Pocket.weeklyUsage
     val now=System.currentTimeMillis()
-    Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
-    usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    if(includeSummary){
+        Text(usage.remainingLabel(),color=NextGreen,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+        usage.resetsAt?.let{InterfaceText("Resets "+SimpleDateFormat("EEE, MMM d · HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it*1000)),color=Muted,fontSize=13.sp)}
+    }
     UsageForecast.deadline(Pocket.usageSamples,usage,now,Pocket.connected&&Pocket.codexOnline)?.let{
         InterfaceText("Estimated run-out "+SimpleDateFormat("EEE HH:mm",if(PocketImmersion.enabled)Locale.ITALIAN else Locale.getDefault()).format(Date(it)),color=Muted,fontSize=13.sp)
     }
     val credits=usage.credits
-    BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
-    Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    if(includeSummary){
+        val resets=usage.resetCredits
+        InterfaceText(resets.label(),color=Paper,fontSize=16.sp)
+        if(resets.availableCount!=null&&resets.isStale(now,Pocket.connected&&Pocket.codexOnline))
+            BilingualLabel("Last known observation",centered=false,color=Muted,fontSize=12.sp)
+        BilingualLabel("Codex credits",centered=false,color=Muted,fontSize=13.sp)
+        Text(credits.label(),color=Paper,fontSize=22.sp,fontWeight=FontWeight.SemiBold)
+    }
     BilingualLabel(usage.continuationLabel,centered=false,maxLines=3,color=if(usage.continuationState=="spending-blocked")Coral else Muted,fontSize=13.sp)
     if(credits.updatedAt>0){
         val checked=SimpleDateFormat("MMM d · HH:mm:ss",Locale.getDefault()).format(Date(credits.updatedAt))
@@ -108,10 +181,13 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun UsageDock(modifier:Modifier=Modifier,conversationOnly:Boolean=false,compact:Boolean=false,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,contextLabel:String?=null,onOpen:(()->Unit)?=null,
-    usage:WeeklyUsage=Pocket.weeklyUsage,accountSourceLabel:String?=null){
+    usage:WeeklyUsage=Pocket.weeklyUsage,providerUsage:ProviderUsage?=Pocket.providerUsage,providerId:String?=null,conversationUsage:JSONObject?=null,accountSourceLabel:String?=null){
     var open by remember{mutableStateOf(false)}
     var now by remember{mutableLongStateOf(System.currentTimeMillis())}
     LaunchedEffect(Unit){while(true){delay(30_000);now=System.currentTimeMillis()}}
+    val provider=providerFooterUsage(providerUsage,providerId,accountSourceLabel)
+    val providerUsageLine=ConversationUsage.fromJson(conversationUsage)?.footerLabel()
+    val providerStale=provider?.isStale(now,Pocket.connected&&Pocket.codexOnline)==true
     val accountFacts=accountSourceLabel?.let{accountToolbarFacts(usage,now,Pocket.connected&&Pocket.codexOnline)}
     val stale=usage.isStale(now,Pocket.connected&&Pocket.codexOnline)
     val remaining=usage.remainingPercent
@@ -123,27 +199,52 @@ import java.util.Locale
     val hasReset=day.isNotBlank()
     val hasProfiles=accountSourceLabel!=null||contextLabel!=null||Pocket.environmentProfiles.all().size>1
     val accountLines=(if(accountFacts?.credits!=null)1 else 0)+(if(accountFacts?.freshness?.isNotBlank()==true)1 else 0)
-    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*((if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+accountLines)+12.dp}.coerceAtLeast(58.dp)
+    val contentLines=if(provider!=null)1+(if(providerUsageLine!=null)1 else 0)+(if(hasProfiles)1 else 0)
+        else (if(hasReset)1 else 0)+(if(hasProfiles)1 else 0)+accountLines
+    val compactHeight=with(LocalDensity.current){20.sp.toDp()+14.sp.toDp()*contentLines+12.dp}.coerceAtLeast(58.dp)
+    val state=listOfNotNull(
+        if(provider!=null)"DeepSeek API balance" else accountSourceLabel,
+        contextLabel,statusLabel,
+        if(provider!=null)provider.balanceLabel() else usage.remainingLabel(),
+        if(provider!=null)providerUsageLine else usage.resetLabel(),
+        if(provider==null)usage.credits.label() else null,
+        accountFacts?.freshness,
+        if(provider!=null)providerUsageLine else null,
+        if(accountFacts!=null)usage.continuationLabel else null
+    ).filter{it.isNotBlank()}.joinToString("; ")
     Box(if(compact)modifier.heightIn(min=compactHeight)else modifier.height(usageDockHeight())) {
-    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates, usage and activity";stateDescription=listOfNotNull(accountSourceLabel,contextLabel,statusLabel,usage.remainingLabel(),usage.resetLabel(),usage.credits.label(),accountFacts?.freshness,if(accountFacts!=null)usage.continuationLabel else null).filter{it.isNotBlank()}.joinToString("; ")},color=Ink,shape=RoundedCornerShape(20.dp)){
+    Surface(onClick={if(onOpen!=null)onOpen()else open=true},modifier=(if(compact)Modifier.fillMaxWidth()else Modifier.fillMaxSize()).semantics{contentDescription="Settings, app updates and usage";stateDescription=state},color=Ink,shape=RoundedCornerShape(20.dp)){
         if(compact)Column(Modifier.fillMaxWidth().heightIn(min=compactHeight).padding(vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
                 SymbolIcon(statusIcon?:"Tune",null,Modifier.size(20.dp),spinning=statusSpinning)
-                if(accountFacts!=null||hasUsage)Text(accountFacts?.primary?:if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                if(provider!=null){
+                    Text("DeepSeek",color=if(providerStale)Muted else Paper,fontSize=11.sp,lineHeight=20.sp,maxLines=1)
+                    Text(provider.compactBalanceLabel(),color=if(providerStale)Muted else NextGreen,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                }else if(accountFacts!=null||hasUsage)Text(accountFacts?.primary?:if(creditPrimary)usage.credits.compact()!! else usage.remainingLabel().replace(" left",""),color=color,fontSize=16.sp,lineHeight=20.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
             }
-            accountFacts?.credits?.let{Text(it,color=if(usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline))Muted else Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
-            if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
-            accountFacts?.freshness?.takeIf{it.isNotBlank()}?.let{BilingualLabel(it,color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
+            if(provider!=null){
+                providerUsageLine?.let{Text(it,color=Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
+            }else{
+                accountFacts?.credits?.let{Text(it,color=if(usage.credits.isStale(now,Pocket.connected&&Pocket.codexOnline))Muted else Paper,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
+                if(hasReset)Text("$day $time",color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)
+                accountFacts?.freshness?.takeIf{it.isNotBlank()}?.let{BilingualLabel(it,color=Muted,fontSize=12.sp,lineHeight=14.sp,maxLines=1)}
+            }
             if(hasProfiles)BilingualLabel(accountSourceLabel?:contextLabel?:Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             // Status is already shown by the state icon and retained in the
             // accessible description/drawer. Do not repeat it as another row.
         }else Column(Modifier.fillMaxSize().padding(vertical=5.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(2.dp)){
-                if(!creditPrimary)AnimatedMark(20)
-                Text(if(creditPrimary)usage.credits.compact()!!.removeSuffix(" cr") else if(remaining==null)"—" else usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
-                if(creditPrimary)Text("cr",color=color,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
+                if(provider!=null){
+                    AnimatedMark(20)
+                    Text(provider.compactBalanceLabel(),color=if(providerStale)Muted else NextGreen,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                }else{
+                    if(!creditPrimary)AnimatedMark(20)
+                    Text(if(creditPrimary)usage.credits.compact()!!.removeSuffix(" cr") else if(remaining==null)"—" else usage.remainingLabel().replace(" left",""),color=color,fontSize=18.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold,maxLines=1)
+                    if(creditPrimary)Text("cr",color=color,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
+                }
             }
-            Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
+            if(provider!=null)Text(providerUsageLine?: "DeepSeek API balance",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
+            else Text(if(day.isBlank())"↻ —" else "$day $time",color=Muted,fontSize=12.sp,lineHeight=16.sp,maxLines=1)
             Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally){
                 if(Pocket.environmentProfiles.all().size>1)Text(Pocket.environmentProfiles.all().firstOrNull{it.id==Pocket.environmentId}?.name?:Pocket.host,fontSize=12.sp,lineHeight=14.sp,color=Paper,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 val online=Pocket.connected&&Pocket.codexOnline
@@ -157,12 +258,11 @@ import java.util.Locale
             }
         }
     }
-    val details:@Composable ()->Unit={
-        UsageDetails(onNavigate={open=false})
-        if(stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false)
-        TextButton({Pocket.retryConnection()}){BilingualLabel("Refresh")}
+    SettingsDrawer(open,{open=false}){
+        UsageDetails(onNavigate={open=false},providerUsage=providerUsage,providerId=providerId,conversationUsage=conversationUsage)
+        if(provider!=null&&providerStale)BilingualLabel("Waiting for fresh DeepSeek balance",color=Muted,centered=false,maxLines=2)
+        else if(provider==null&&stale)BilingualLabel("Waiting for fresh usage",color=Muted,centered=false,maxLines=2)
+        DrawerAction("Refresh",{Pocket.retryConnection()})
     }
-    if(conversationOnly)DropdownMenu(open,{open=false},modifier=Modifier.width(300.dp).heightIn(max=420.dp)){details()}
-    else ActivityPopup(open,{open=false},Pocket.selected,controlsFirst=true){details()}
     }
 }

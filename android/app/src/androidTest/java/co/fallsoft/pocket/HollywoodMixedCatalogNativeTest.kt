@@ -97,7 +97,7 @@ class HollywoodMixedCatalogNativeTest {
         capture("unstable-target");fail("Tap target did not settle: "+selector);return false
     }
     private fun openBlackout(){
-        click(By.desc("Settings, app updates, usage and activity"))
+        click(By.desc("Settings, app updates and usage"))
         await("Room popup missing"){device.hasObject(By.text("Work"))}
         for(step in 0..10){
             if(android.os.Build.VERSION.SDK_INT>=34)i.uiAutomation.clearCache()
@@ -138,7 +138,7 @@ class HollywoodMixedCatalogNativeTest {
     private fun menuBack(label:String,text:String,draft:String,marker:String){
         val environment=Pocket.environmentId;val selected=Pocket.selected;val native=BackendNavigation.nativeSelected()
         assertTrue(label+" source text not mounted before menu",device.hasObject(By.text(text)))
-        click(By.desc("Settings, app updates, usage and activity"))
+        click(By.desc("Settings, app updates and usage"))
         await(label+" menu not opened"){device.hasObject(By.text(marker))}
         capture(label+"-menu")
         rawBack()
@@ -172,7 +172,7 @@ class HollywoodMixedCatalogNativeTest {
             await("Lead conversation not mounted"){device.hasObject(By.text("Lead answer after reviewed work"))&&device.hasObject(By.clazz("android.widget.EditText"))}
             assertFalse("Internal task leaked into human conversation",device.hasObject(By.textContains("Internal task brief")))
             assertFalse("Pre-policy archive painted as current conversation",device.hasObject(By.text(roomText)))
-            click(By.desc("Settings, app updates, usage and activity"))
+            click(By.desc("Settings, app updates and usage"))
             click(By.res("native-room-team"))
             await("Team did not retain addressed task"){device.hasObject(By.text("Internal task brief for one selected worker"))}
             capture("lead-team")
@@ -209,7 +209,7 @@ class HollywoodMixedCatalogNativeTest {
             if(InstrumentationRegistry.getArguments().getString("nativeStateExpected")=="true")
                 await("Open-room footer lost native waiting state"){device.hasObject(By.text("Needs you"))}
             if(InstrumentationRegistry.getArguments().getString("roomOriginExpected")=="true") {
-                click(By.desc("Settings, app updates, usage and activity"))
+                click(By.desc("Settings, app updates and usage"))
                 showAddressControl();click(By.text("Original room · Room → All room agents"))
                 await("Mac room-owned participant missing"){device.hasObject(By.text("Original room · MacBook Pro"))}
                 assertFalse("Retained Global remained a current recipient",device.hasObject(By.text("Retained Global source owner")))

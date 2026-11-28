@@ -86,13 +86,13 @@ internal object CodexConversations {
         if(id==null){selectionKey=null;serial++;PocketTranscript.clearState();return}
         attach(id,openLatest,measureOpen=true)
     }
-    private fun attach(id:String,openLatest:Boolean=false,measureOpen:Boolean=false):Session? {
+    private fun attach(id:String,openLatest:Boolean=false,measureOpen:Boolean=false,retainPresentation:Boolean=false):Session? {
         val destination=Pocket.captureEnvironment()?:return null
         val scope=CoroutineScope(SupervisorJob(Pocket.scope.coroutineContext[Job])+Dispatchers.Main.immediate+EnvironmentRequestContext(destination))
         val value=Session(key(destination,id),++serial,destination,scope,uxOpen=if(measureOpen)UxMeasurements.begin(UxJourney.OPEN)else 0)
         selectionKey=value.key;session=value
-        detailValue=outgoing.overlay(value.key,null)
-        PocketTranscript.resetState(id,scope,openLatest)
+        detailValue=outgoing.overlay(value.key,if(retainPresentation)detailValue else null)
+        PocketTranscript.resetState(id,scope,openLatest,retainPresentation)
         startLatestPump(value)
         startProbe(value)
         return value
@@ -103,7 +103,7 @@ internal object CodexConversations {
         val value=session
         if(value!=null&&current(value)){startProbe(value);return value}
         retire()
-        return attach(id)
+        return attach(id,retainPresentation=selectionKey==key(Pocket.captureEnvironment()?:return null,id))
     }
     fun close(){select(null)}
     fun suspendReading(){retire()}
@@ -274,7 +274,9 @@ internal object CodexConversations {
         if(update.has("turn")||input.newInput)invalidate()
     }
     val snapshot:CodexConversationSnapshot get(){
-        val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList();val d=detail
+        val rows=if(PocketTranscript.presentationReady)PocketTranscript.rows else emptyList()
+        val local=PocketReplies.presentation(selected.orEmpty(),rows,detail)
+        val d=local.detail
         val pending=d?.optJSONArray("pending")?.length()?:rows.count{it.s("kind")=="request"}
         val task=Pocket.tasks.firstOrNull{it.id==selected}
         val turn=if(PocketTranscript.canonicalMode)d?.optJSONObject("nativeExecutionTurn")else rows.lastOrNull{it.s("kind")=="turn"}
@@ -294,6 +296,6 @@ internal object CodexConversations {
             CodexCoverage(PocketTranscript.earlier,PocketTranscript.before,PocketTranscript.browsingEarlier),
             conversationRunState(pending,task?.status.orEmpty(),d?.optJSONObject("thread")?.optJSONObject("status")?.s("type").orEmpty(),
                 if(verified)turn?.s("status").orEmpty()else "",d!=null&&verified,PocketTranscript.loading),
-            verified,pending,PocketReplies.visible(selected.orEmpty()))
+            verified,pending,local.deliveries)
     }
 }

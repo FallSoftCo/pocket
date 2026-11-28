@@ -45,6 +45,7 @@ object PocketSpeech {
     private var displayedProfile=""
     internal fun ownerProfile()=MessageDigest.getInstance("SHA-256").digest("${Pocket.local}:${Pocket.base}:${Pocket.token}".toByteArray()).joinToString(""){"%02x".format(it.toInt() and 255)}
     fun speakDisplayed(owner:String,text:String,title:String){
+        if(!Pocket.voiceAvailable)return
         if(owner.isBlank()||text.isBlank())return
         if(displayed.owner!=null&&displayedProfile!=ownerProfile()){stopDisplayed(displayed.owner!!);init()}
         val expectedProfile=ownerProfile()
@@ -173,6 +174,14 @@ object PocketSpeech {
         service?.discard();sessions=SessionSpeechQueues();queue=sessions.current;val remembered=storage.all.filterKeys{it.startsWith("heard:")};val edit=storage.edit().clear();remembered.forEach{(key,value)->if(value is String)edit.putString(key,value)};edit.commit();directory.deleteRecursively()
         Pocket.context.getSystemService(NotificationManager::class.java).cancel(998);publish()
     }
+    /** Disable the active profile without deleting another environment's saved speech. */
+    fun unavailable(){
+        ++selectionGeneration;++displayedGeneration
+        displayedOwner?.let{stopDisplayed(it)}
+        service?.discard();sessions=SessionSpeechQueues();queue=sessions.current
+        queue.pause(0,Pocket.voiceReason.ifBlank{"Voice is unavailable on this environment."});save(true)
+        PocketSpeechCaptions.dismiss();Pocket.context.getSystemService(NotificationManager::class.java).cancel(998);publish()
+    }
     fun clear(){
         if(displayedOwner!=null){stopDisplayed(displayedOwner!!);return}
         service?.discard();sessions.clearActive();queue=sessions.current;queue.pause(0,"Choose a speech session");save(true)
@@ -202,11 +211,13 @@ object PocketSpeech {
     internal fun voiceOwnsAudio()=PocketVoice.captureBusy ||
         PocketVoice.active&&(displayedOwner==null||PocketVoice.state !in setOf("Ready","Paused"))
     fun control(action:String){
+        if(!Pocket.voiceAvailable)return
         if(displayedOwner==null)sessions.explicitFocus=true
         if(action=="pause"){++displayedGeneration;displayedRunning=false;service?.pause("Paused by you")?:hold("Paused by you");return}
         if(queue.current!=null)start(Pocket.context,"resume")
     }
     private fun start(c:Context,action:String){
+        if(!Pocket.voiceAvailable)return
         notificationSpeechHoldReason(PocketSpeech.voiceOwnsAudio())?.let{hold(it);return}
         try{ContextCompat.startForegroundService(c,Intent(c,PocketSpeechService::class.java).setAction(action))}
         catch(_:RuntimeException){hold("Ready when you are")}

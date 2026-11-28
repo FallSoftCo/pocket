@@ -17,6 +17,7 @@ export class AccountRateLimits {
     this.codex=codex;this.onChange=onChange;this.clock=clock;this.ttl=ttl;
     this.buckets={};this.defaultBucket=null;this.updatedAt=null;this.lastAttempt=null;
     this.failed=false;this.loading=true;this.generation=0;this.inflight=null;this.pendingUpdates=null;
+    this.resetCount=null;this.resetUpdatedAt=null;
     this.accountId=null;this.observations=observations;this.creditAuthorization=creditAuthorization;this.creditUpdatedAt=null;this.creditComparison=null;
   }
   snapshot(){
@@ -35,11 +36,18 @@ export class AccountRateLimits {
     const state=credits.stale?'unverified':blocked?'spending-blocked':weekly?.remainingPercent===0?(confirmed&&authorized?'existing-credits-available':available?'credits-present-unverified':'included-exhausted'):weekly?'included-available':'unverified';
     const reason=state==='credits-present-unverified'?(!authorized?'authorization-unverified':!['plus','pro','promax'].includes(bucket?.planType)?'provider-plan-unverified':'provider-spending-control-unverified'):null;
     const labels={'spending-blocked':'Provider reports a spending or account limit','unverified':'Continuation status unavailable','existing-credits-available':'Included allowance exhausted · existing-credit continuation available','credits-present-unverified':'Included allowance exhausted · credits present; continuation unverified','included-exhausted':'Included allowance exhausted · no available credits reported','included-available':'Included allowance remains'};
-    return {weekly,credits,continuation:{state,label:labels[state],reason},updatedAt:this.updatedAt,stale,state:weekly?'available':this.loading?'loading':'unavailable'};
+    const resetCredits={availableCount:this.resetCount,updatedAt:this.resetUpdatedAt,
+      stale:this.failed||!this.codex.ready||this.resetUpdatedAt===null||this.clock()-this.resetUpdatedAt>this.ttl*2};
+    return {weekly,credits,resetCredits,continuation:{state,label:labels[state],reason},updatedAt:this.updatedAt,stale,state:weekly?'available':this.loading?'loading':'unavailable'};
   }
   update(payload,{replace=false}={}){
     if(!replace&&own(payload,'accountId')&&payload.accountId!==this.accountId){this.clear();replace=true;}
     if(replace){this.buckets={};this.defaultBucket=null;this.accountId=payload?.accountId||null;}
+    if(replace||own(payload,'rateLimitResetCredits')){
+      const count=payload?.rateLimitResetCredits?.availableCount;
+      this.resetCount=Number.isSafeInteger(count)&&count>=0?count:null;
+      this.resetUpdatedAt=this.resetCount===null?null:this.clock();
+    }
     if(own(payload,'rateLimitsByLimitId')){
       for(const [id,bucket] of Object.entries(payload.rateLimitsByLimitId||{})){
         this.buckets[id]=bucket===null?null:replace?bucket:{...this.buckets[id],...bucket};
@@ -64,6 +72,7 @@ export class AccountRateLimits {
   clear(){
     try{this.observations?.boundary(this.accountId,this.clock());}catch{}
     this.creditUpdatedAt=null;this.creditComparison=null;
+    this.resetCount=null;this.resetUpdatedAt=null;
     this.generation++;this.buckets={};this.defaultBucket=null;this.updatedAt=null;
     this.lastAttempt=null;this.inflight=null;this.pendingUpdates=null;this.failed=false;this.loading=true;
     this.accountId=null;

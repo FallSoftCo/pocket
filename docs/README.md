@@ -1,5 +1,9 @@
 # NextComp documentation
 
+[198 history retention update](qualification/ack-history-reliability-20261121.json) is published on both Android update channels. Returning to the same conversation retains its visible messages during refresh. All23 required native journeys and exact optimized APK review passed; phone installation remains unverified. Intermittent acknowledgement latency is still unresolved and is not claimed fixed by this release.
+
+[197 session preview repair](qualification/session-preview-overflow197.json) is published on both Android update channels and live on web: long errors and bilingual previews stay inside their cards, including enlarged text. Reload web or install the Android update; handset installation remains unverified.
+
 NextComp provides Android and web control of vanilla Codex sessions and native subagents across paired environments. NextComp’s room, LAX and Hollywood entry points were retired on 2026-11-07. Their documentation and original evidence remain historical; they do not describe selectable NextComp backends. This retirement does not establish that separate native runtimes or services are shut down; their lifecycle is outside this release. See [the Codex-only transition](CODEX-ONLY.md).
 
 The [current supported snapshot](CAPABILITIES.md#current-supported-snapshot--2026-11-07) records the published version, deployed sources and last verified handset installation. [182 delivery and qualification evidence](qualification/native-parity-182.json) records the delivered Android, backend and web182 release on both hosts; physical-phone installation remains separately unverified. Publication, synthetic/emulator qualification and physical-phone observations are distinct.
@@ -7,6 +11,18 @@ The [current supported snapshot](CAPABILITIES.md#current-supported-snapshot--202
 [183 reading update](qualification/immersion-reading-183.json) is published on both Android update channels, with the same soft immersion highlights live on web. It removes idle phrase outlines and corrects enlarged native phrase reserves. Backend182 remains in place; handset installation is separately unverified.
 
 The current controls include native session branching/context actions, configuration and installed-tool inspection, supported questions/approvals, retained command output and background terminals where the selected runtime supports them. The qualified Mac ARM64 0.163 runtime exposes read-only catalogs, terminal listing and retained command-output reads. Live backend 182 checks returned a 592-character output and an explicit unavailable response for a command without retained output; they made no model calls or mutations. Configuration changes and terminal termination remain unavailable on that runtime. [Capabilities and limits](CAPABILITIES.md) are method-specific; this is not a claim of complete Codex TUI parity.
+
+[185 Needs you update](qualification/needs-you-185.json) replaces the permanent Work updates feed with a filter on the original session list, and fixes a native preview/catalog feedback read found in qualification. Android is published on both channels, with web and both backends live; phone installation is separately unverified. [184 queued steering and Apps](qualification/queued-steering-apps-184.json) remains included.
+
+[187 sent-message visibility](qualification/sent-message-187.json) keeps accepted typed input visible until its exact canonical history entry arrives. History failures leave acceptance and the next draft intact. Android is published on both update channels; web is live on both private entry points. Phone installation remains separately unverified.
+
+[193 gallery previews](qualification/gallery-page-previews-193.json) extends inline previews to standalone review pages, gallery-home links and catalog-card aliases. Existing messages need no sender edits. Android193/alpha175 is published on both channels and web is live; handset installation is separately unverified. Native image open/close and actual rendered page previews are recorded with their limits.
+
+[194 manual banked resets](qualification/manual-banked-reset-194.json) adds an explicit account drawer action, confirmation and recovery of the original request after a lost acknowledgement. Android194/alpha176 is published; web is live. Automatic reset settings remain unchanged.
+
+[195 model providers](qualification/model-providers-195.json) adds native provider setup and explicit provider/model selection for new sessions in Android and web. The workstation is configured with the existing DeepSeek key and real native text/tool checks passed. Existing sessions retain their provider; [persistent cross-provider handoff](MODEL-PROVIDERS.md#cross-provider-continuation-follow-up) is a separate, recorded follow-up. Mac provider setup remains unavailable on its older native runtime.
+
+[196 provider continuation](qualification/provider-continuation196.json) adds durable contextual handoff to a fresh explicitly selected provider session, retaining the original conversation and send receipt.
 
 ## Understand and evaluate
 

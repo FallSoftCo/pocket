@@ -12,13 +12,13 @@ const waitFor=async fn=>{for(let i=0;i<180;i++){if(await fn())return;await new P
 async function fixture(t){
  const dir=await mkdtemp(join(tmpdir(),'pocket-reply-recovery-')),socket=join(dir,'codex.sock');
  const host=http.createServer(),wss=new WebSocketServer({server:host});await new Promise(r=>host.listen(socket,r));
- const calls=[];let rejectNext=false,holdNextAttach=false,heldAttach=null,snapshotTurns=[],threadStatus='idle',steerError=null,holdDelivery=false,heldDelivery=null;
+ const calls=[];let rejectNext=false,holdNextAttach=false,heldAttach=null,snapshotTurns=[],threadStatus='idle',steerError=null,holdDelivery=false,heldDelivery=null,afterHeadStatus=null,loseStart=false;
  const thread=params=>({id:'task-recovery',name:'Recovery fixture',cwd:dir,status:{type:threadStatus},...(params?.includeTurns===false?{}:{turns:snapshotTurns})});
  wss.on('connection',ws=>ws.on('message',raw=>{
   const m=JSON.parse(raw);if(!m.id)return;calls.push(m);let result={};
   if(m.method==='thread/read'&&holdNextAttach){holdNextAttach=false;heldAttach={ws,id:m.id,params:m.params};return;}
   if(m.method==='thread/read'||m.method==='thread/resume')result={thread:thread(m.params)};
-  if(m.method==='thread/turns/list')result={data:snapshotTurns.slice(-1).map(turn=>({...turn,items:[]})),nextCursor:snapshotTurns.length?'older-do-not-follow':null,backwardsCursor:'current-anchor'};
+  if(m.method==='thread/turns/list'){result={data:snapshotTurns.slice(-1).map(turn=>({...turn,items:[]})),nextCursor:snapshotTurns.length?'older-do-not-follow':null,backwardsCursor:'current-anchor'};if(afterHeadStatus)threadStatus=afterHeadStatus;}
   if(m.method==='thread/items/list')result={data:[],nextCursor:null};
   if(m.method==='turn/steer'){
    if(steerError){const error=steerError;steerError=null;if(error.idleAfter)threadStatus='idle';if(error.disconnect){ws.terminate();return;}ws.send(JSON.stringify({id:m.id,error:{code:-32602,message:error.message}}));return;}
@@ -26,6 +26,7 @@ async function fixture(t){
    result={turnId:snapshotTurns.at(-1)?.id};
   }
   if(m.method==='turn/start'){
+   if(loseStart){loseStart=false;ws.terminate();return;}
    if(rejectNext){rejectNext=false;ws.send(JSON.stringify({id:m.id,error:{code:-32602,message:'Synthetic definite rejection'}}));return;}
    result={turn:{id:'accepted-turn',status:'inProgress'}};
   }
@@ -33,7 +34,7 @@ async function fixture(t){
  }));
  const allocator=http.createServer();await new Promise(r=>allocator.listen(0,'127.0.0.1',r));const port=allocator.address().port;await new Promise(r=>allocator.close(r));const url=`http://127.0.0.1:${port}`;
  const child=spawn(process.execPath,['server/index.mjs'],{env:{...process.env,PORT:String(port),POCKET_DATA:dir,CODEX_SOCKET:socket},stdio:'ignore'});let db;
- t.after(async()=>{if(child.exitCode===null)await new Promise(r=>{child.once('exit',r);child.kill();});db?.close();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>host.close(r));await rm(dir,{recursive:true,force:true});});
+ t.after(async()=>{if(t.error&&db)console.error('REPLY_FIXTURE_DIAGNOSTIC',JSON.stringify({rows:db.prepare('SELECT id,state,result FROM outgoing').all(),calls:calls.map(m=>({method:m.method,params:m.params}))}));if(child.exitCode===null)await new Promise(r=>{child.once('exit',r);child.kill();});db?.close();for(const ws of wss.clients)ws.terminate();await new Promise(r=>wss.close(r));await new Promise(r=>host.close(r));await rm(dir,{recursive:true,force:true});});
  await waitFor(async()=>{if(child.exitCode!==null)throw Error('Fixture server exited before startup');try{return (await fetch(url+'/health')).ok;}catch{return false;}});
  const {adminToken}=JSON.parse(await readFile(join(dir,'secrets.json'),'utf8'));
  db=new DatabaseSync(join(dir,'pocket.sqlite'));const deviceToken='synthetic-paired-human-token';db.prepare('INSERT INTO devices(id,name,token_hash,created_at) VALUES(?,?,?,?)').run('paired-human','Synthetic human',createHash('sha256').update(deviceToken).digest('hex'),Date.now());
@@ -41,8 +42,38 @@ async function fixture(t){
  await api('/api/threads/task-recovery');
  const status=async id=>(await api('/api/replies/'+id)).data.state;
  const seed=(id,state,mode='steer')=>db.prepare('INSERT INTO outgoing(id,thread_id,text,state,result,created_at,updated_at,mode) VALUES(?,?,?,?,?,?,?,?)').run(id,'task-recovery','Preserved '+id,state,'Persisted delivery outcome',Date.now(),Date.now(),mode);
- return {api,setStatus:value=>threadStatus=value,steerError:value=>steerError=value,holdDelivery:()=>holdDelivery=true,deliveryBlocked:()=>!!heldDelivery,releaseDelivery:()=>{const held=heldDelivery;heldDelivery=null;held.ws.send(JSON.stringify({id:held.id,result:{turnId:snapshotTurns.at(-1)?.id}}));},releaseAttach:()=>{const held=heldAttach;heldAttach=null;held.ws.send(JSON.stringify({id:held.id,result:{thread:thread(held.params)}}));},adminApi:(path,body)=>api(path,body,true),status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
+ return {api,afterHeadStatus:value=>afterHeadStatus=value,loseStart:()=>loseStart=true,setStatus:value=>threadStatus=value,steerError:value=>steerError=value,holdDelivery:()=>holdDelivery=true,deliveryBlocked:()=>!!heldDelivery,releaseDelivery:()=>{const held=heldDelivery;heldDelivery=null;held.ws.send(JSON.stringify({id:held.id,result:{turnId:snapshotTurns.at(-1)?.id}}));},releaseAttach:()=>{const held=heldAttach;heldAttach=null;held.ws.send(JSON.stringify({id:held.id,result:{thread:thread(held.params)}}));},adminApi:(path,body)=>api(path,body,true),status,seed,calls,db,snapshotTurn:turn=>{snapshotTurns=[turn];},reject:()=>{rejectNext=true;},blockAttach:()=>{holdNextAttach=true;},attachBlocked:()=>heldAttach!==null,rejectAttach:()=>{heldAttach.ws.send(JSON.stringify({id:heldAttach.id,error:{code:-32602,message:'Synthetic attachment rejection'}}));},turns:()=>calls.filter(x=>x.method==='turn/start'||x.method==='turn/steer')};
 }
+
+test('HTTP manual continuation and retry accept a confirmed failed native turn without draining queued work',async t=>{
+ const f=await fixture(t);f.setStatus('systemError');f.snapshotTurn({id:'failed-original',status:'failed',error:{message:'Bad Request'},items:[]});
+ await f.api('/api/threads/task-recovery/reply',{id:'still-queued',text:'Later work',mode:'queue'});
+ assert.equal((await f.api('/api/threads/task-recovery/reply',{id:'manual-continue',text:'Continue preserved work',mode:'steer'})).status,202);
+ await waitFor(async()=>await f.status('manual-continue')==='accepted');
+ assert.equal(await f.status('still-queued'),'queued');
+ f.seed('previously-rejected','failed');assert.equal((await f.api('/api/threads/task-recovery/replies/previously-rejected',{action:'retry'})).status,200);
+ await waitFor(async()=>await f.status('previously-rejected')==='accepted');
+ assert.equal((await f.api('/api/threads/task-recovery/replies/previously-rejected',{action:'retry'})).status,409);
+ assert.deepEqual(f.turns().map(c=>[c.method,c.params.clientUserMessageId,c.params.input[0].text]),[['turn/start','manual-continue','Continue preserved work'],['turn/start','previously-rejected','Preserved previously-rejected']]);
+ assert.ok(f.turns().every(c=>!('model' in c.params)&&!('effort' in c.params)&&!('approvalPolicy' in c.params)));
+ const checks=f.calls.filter(c=>c.method==='thread/turns/list'&&c.params.itemsView==='summary');assert.ok(checks.length>=2);assert.ok(checks.every(c=>c.params.limit===1&&c.params.sortDirection==='desc'&&!c.params.cursor));
+});
+
+test('HTTP systemError is not permission to start without terminal evidence or across a concurrent start',async t=>{
+ const f=await fixture(t);
+ for(const status of ['inProgress','completed','interrupted']){
+  f.setStatus('systemError');f.snapshotTurn({id:'head-'+status,status,items:[]});const id='blocked-'+status;
+  await f.api('/api/threads/task-recovery/reply',{id,text:'New input',mode:'steer'});await waitFor(async()=>await f.status(id)==='failed');
+ }
+ f.setStatus('systemError');f.snapshotTurn({id:'failed-original',status:'failed',items:[]});f.afterHeadStatus('active');
+ await f.api('/api/threads/task-recovery/reply',{id:'concurrent-start',text:'New input',mode:'steer'});await waitFor(async()=>await f.status('concurrent-start')==='failed');assert.equal(f.turns().length,0);
+});
+
+test('HTTP lost acceptance of manual failed-turn continuation stays unknown and is not replayed',async t=>{
+ const f=await fixture(t);f.setStatus('systemError');f.snapshotTurn({id:'failed-original',status:'failed',items:[]});f.loseStart();
+ await f.api('/api/threads/task-recovery/reply',{id:'lost-start',text:'Continue preserved work',mode:'steer'});await waitFor(async()=>await f.status('lost-start')==='unknown');
+ assert.equal((await f.api('/api/threads/task-recovery/replies/lost-start',{action:'retry'})).status,409);assert.equal(f.turns().length,1);
+});
 
 test('HTTP checkpoints save progress on unregistered/stopped work without rearming recovery or starting a model',async t=>{
  const f=await fixture(t);f.snapshotTurn({id:'current-progress',status:'inProgress',items:[]});
@@ -166,4 +197,42 @@ test('HTTP promotion cannot reinterpret unknown delivery or start a turn without
   const deliveries=f.turns().filter(c=>c.params.clientUserMessageId===id);assert.deepEqual(deliveries.map(c=>c.method),idleAfter?['turn/steer','turn/start']:['turn/steer']);assert.equal(await f.status(id),idleAfter?'accepted':'failed');
  }
  f.setStatus('active');f.snapshotTurn({id:'uncertain-active',status:'inProgress',items:[]});f.seed('lost-steer','held','queue');f.steerError({disconnect:true});assert.equal((await action('lost-steer')).status,200);await waitFor(async()=>await f.status('lost-steer')==='unknown');const before=f.turns().length;assert.equal((await action('lost-steer')).status,409);await f.api('/api/replies/lost-steer');assert.equal(f.turns().length,before);
+});
+
+test('HTTP read deadline retains undelivered input and retries only its preflight after persisted backoff',async t=>{
+ const f=await fixture(t);f.blockAttach();
+ assert.equal((await f.api('/api/threads/task-recovery/reply',{id:'preflight-deadline',text:'Saved while history is unavailable',mode:'steer'})).status,202);
+ await waitFor(()=>f.attachBlocked());
+ await new Promise(r=>setTimeout(r,25300));
+ assert.equal(await f.status('preflight-deadline'),'queued');assert.equal(f.turns().length,0);
+ const boundary=f.db.prepare('SELECT * FROM reply_dispatch WHERE id=?').get('preflight-deadline');assert.equal(boundary.phase,'preflight');assert.ok(boundary.next_at>boundary.updated_at);
+ // The original read can finish late; it must not dispatch that abandoned attempt.
+ f.releaseAttach();
+ await waitFor(async()=>await f.status('preflight-deadline')==='accepted');
+ assert.equal(f.turns().length,1);assert.equal(f.turns()[0].params.clientUserMessageId,'preflight-deadline');
+});
+
+test('HTTP late native steer acknowledgement resolves the original timeout without a second submission',async t=>{
+ const f=await fixture(t);f.setStatus('active');f.snapshotTurn({id:'active-late',status:'inProgress',items:[]});f.holdDelivery();
+ await f.api('/api/threads/task-recovery/reply',{id:'late-ack',text:'Original correction',mode:'steer'});await waitFor(()=>f.deliveryBlocked());
+ await new Promise(r=>setTimeout(r,25300));assert.equal(await f.status('late-ack'),'unknown');assert.equal(f.turns().length,1);
+ f.releaseDelivery();await waitFor(async()=>await f.status('late-ack')==='accepted');
+ assert.equal(f.turns().length,1);assert.equal(f.db.prepare('SELECT phase FROM reply_dispatch WHERE id=?').get('late-ack').phase,'acknowledged');
+});
+
+test('HTTP direct sending needs only runtime metadata and one active-turn header, never transcript items',async t=>{
+ const f=await fixture(t);
+ for(const active of [false,true]){
+  f.setStatus(active?'active':'idle');f.snapshotTurn({id:'current-header',status:active?'inProgress':'completed',items:[]});
+  const before=f.calls.length,id=active?'header-steer':'metadata-start';
+  assert.equal((await f.api('/api/threads/task-recovery/reply',{id,text:'Send without loading message history',mode:'steer'})).status,202);
+  await waitFor(async()=>await f.status(id)==='accepted');
+  const calls=f.calls.slice(before);
+  assert.equal(calls.filter(c=>c.method==='thread/items/list'||c.method==='thread/timeline/list').length,0);
+  assert.ok(calls.filter(c=>c.method==='thread/read').every(c=>c.params.includeTurns===false));
+  const headers=calls.filter(c=>c.method==='thread/turns/list');
+  assert.equal(headers.length,active?1:0);
+  if(active)assert.deepEqual(headers[0].params,{threadId:'task-recovery',limit:1,sortDirection:'desc',itemsView:'notLoaded'});
+  const submitted=f.turns().filter(c=>c.params.clientUserMessageId===id);assert.equal(submitted.length,1);assert.equal(submitted[0].method,active?'turn/steer':'turn/start');
+ }
 });

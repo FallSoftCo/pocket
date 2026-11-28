@@ -85,3 +85,31 @@ reset type. A successful `reset` outcome means eligible rate-limit windows were
 reset; verify the resulting account snapshot rather than inventing a new deadline.
 
 [Official app-server account endpoints](https://learn.chatgpt.com/docs/app-server#api-overview-1).
+
+## Explicit manual redemption
+
+The account drawer provides **Use a banked reset** in Android and web. The
+confirmation spends one existing benefit now, independently of the automatic
+99% threshold. It never purchases benefits or enables a stopped timer. Zero
+usage, account mismatch, spending controls, unsupported benefits and unresolved
+older attempts still prevent a new consume.
+
+`GET /api/account/reset` exposes an opaque account binding and this paired
+client's pending result. `POST` requires authenticated human provenance, that
+binding and one durable client request ID. Android preferences/browser storage
+retain the source-bound ID before transmission. Lost replies offer **Check reset
+result** and reuse it. Provider benefit IDs remain private. Acknowledged manual
+resets wait for an actual decrease from the pre-reset usage, rather than treating
+an unchanged value below 99% as recovery.
+
+Both manual and automatic paths execute `scripts/account-reset.mjs` under the
+same `account-reset.lock` and fsynced policy journal. The manual path retains the
+automatic `enabled` value and records its prior stop reason. Runtime/account
+metadata only: no model turns, worker resumes, account setting changes or
+purchases. Configure the existing socket and standing-policy file on the reset
+owning Linux backend; other environments explicitly report this action
+unavailable. Do not silently establish a second reset scheduler or copy private
+account policy across hosts. When publishing a runner revision, keep a disabled
+timer disabled and pin both paths to the reviewed runner semantics.
+
+After a manual acknowledgement, the original locked runner reads usage once to retain the observed reset even when automatic resets are paused. A failed verification preserves the acknowledged result and exact pending observation; it does not consume a second benefit or enable a timer.

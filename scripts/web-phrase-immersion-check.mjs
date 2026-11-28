@@ -82,6 +82,9 @@ export async function grammarBoundaryJourney(context,{directory}={}){
    await page.mouse.move(0,0);
    const observation=await page.evaluate(()=>{
     const {layer}=window.grammarQA;const rects=()=>[...document.querySelectorAll('.immersion-phrase')].map(n=>{const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height];});
+    // Independent viewport cases begin unpinned. Real user choices persist;
+    // resetting the test's inputs must no longer rely on a global clock tick.
+    for(const choices of layer.phraseChoices.values())choices.clear();
     // The production stack hides its reserve parent while making the active
     // child visible; Chromium innerText on that parent is empty. Inspect actual
     // visible text nodes, excluding the hidden reserve language explicitly.
@@ -96,6 +99,7 @@ export async function grammarBoundaryJourney(context,{directory}={}){
      box.click();const first=box.dataset.language;box.click();const second=box.dataset.language;
      return {en,it,revealsBoth:en===it||first!==second,interactive:box.getAttribute('role')==='button',link:!!box.closest('a')};
     });
+    for(const choices of layer.phraseChoices.values())choices.clear();
     for(const entry of layer.nodes.values())entry.slots.setPhase(0);
     const cells=[...document.querySelectorAll('.immersion-phrase')];
     const styles=cells.map(n=>{const s=getComputedStyle(n);return {color:s.color,background:s.backgroundColor,edge:s.boxShadow,radius:s.borderRadius,font:s.fontSize};});
@@ -114,6 +118,14 @@ export async function grammarBoundaryJourney(context,{directory}={}){
    assert.ok(observation.styles.every(s=>s.edge==='none'&&s.radius==='3px'));
    const slot=page.locator('.immersion-phrase[role=button]').first();await slot.focus();
    const before=await slot.getAttribute('data-language');await page.keyboard.press('Enter');assert.notEqual(await slot.getAttribute('data-language'),before);await page.keyboard.press('Space');assert.equal(await slot.getAttribute('data-language'),before);
+   const hold=await page.evaluate(async()=>{
+    const {layer}=window.grammarQA,slot=document.querySelector('.immersion-phrase[role=button]'),owner=slot.closest('.body'),language=slot.dataset.language;
+    const untouched=[...owner.querySelectorAll('.immersion-phrase')].at(-1),seen=new Set([untouched.dataset.language]);
+    for(let phase=0;phase<4;phase++){clearTimeout(layer.timer);layer.flip();if(slot.dataset.language!==language)throw Error('Global flip overwrote manual phrase');seen.add(untouched.dataset.language);}clearTimeout(layer.timer);
+    owner.replaceChildren(document.createTextNode(owner.dataset.immersionText));await layer.scan();
+    return {held:owner.querySelector('.immersion-phrase[role=button]').dataset.language===language,untouchedCycles:seen.size};
+   });assert.equal(hold.held,true);assert.equal(hold.untouchedCycles,2);
+   await slot.focus();
    const focused=await slot.evaluate(n=>({outline:getComputedStyle(n).outlineStyle,width:getComputedStyle(n).outlineWidth}));assert.equal(focused.outline,'solid');assert.equal(focused.width,'2px');
    const label=page.locator('.phrase-label').filter({hasText:'Menu'}).first();const idle=await label.evaluate(n=>getComputedStyle(n).backgroundColor);await label.hover();assert.equal(await label.evaluate(n=>getComputedStyle(n).backgroundColor),idle);assert.equal(await label.getAttribute('role'),null);
    const link=page.locator('a[href="#grammar-link"]');assert.equal(await link.locator('[role=button]').count(),0);const clicks=await page.evaluate(()=>window.grammarQA.linkClicks);await link.click();assert.equal(await page.evaluate(()=>window.grammarQA.linkClicks),clicks+1);

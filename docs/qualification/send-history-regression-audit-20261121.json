@@ -1,0 +1,182 @@
+{
+  "date": "2026-11-21",
+  "status": "historical-boundary-established-trigger-not-proven",
+  "baseline": {
+    "appVersionCode": 194,
+    "backendCommit": "fdaeabeda681988b8426415b5426d131eb5bd3c2",
+    "backendDigest": "6c8bac513ac0fa93709724871730c049703d7937e40fdedfc60bba7bda536323",
+    "scope": "Observed workstation acknowledgement latency, not blanket Android/web stability certification. Android version installed for each historic send was not retained.",
+    "acceptedSends": 122,
+    "maxObservedMs": 161,
+    "nativeVersions": [
+      "0.170.0",
+      "0.171.0"
+    ]
+  },
+  "deploymentWindows": [
+    {
+      "name": "194 actual deployed before native upgrade",
+      "start": "2026-11-19T13:09:05Z",
+      "end": "2026-11-20T02:09:06Z",
+      "count": 45,
+      "medianMs": 45,
+      "maxMs": 161,
+      "over25s": 0,
+      "latestCreated": "2026-11-20T02:07:20.322000+00:00"
+    },
+    {
+      "name": "194 after native upgrade before provider release",
+      "start": "2026-11-20T02:09:06Z",
+      "end": "2026-11-20T15:24:11Z",
+      "count": 77,
+      "medianMs": 41,
+      "maxMs": 91,
+      "over25s": 0,
+      "latestCreated": "2026-11-20T14:51:53.151000+00:00"
+    },
+    {
+      "name": "195 before first timeout",
+      "start": "2026-11-20T15:24:11Z",
+      "end": "2026-11-20T16:47:32Z",
+      "count": 21,
+      "medianMs": 49,
+      "maxMs": 1006,
+      "over25s": 0,
+      "latestCreated": "2026-11-20T16:46:34.393000+00:00"
+    },
+    {
+      "name": "195 after first timeout before196",
+      "start": "2026-11-20T16:47:32Z",
+      "end": "2026-11-20T18:03:19Z",
+      "count": 9,
+      "medianMs": 69,
+      "maxMs": 3629939,
+      "over25s": 2,
+      "latestCreated": "2026-11-20T18:02:58.626000+00:00"
+    }
+  ],
+  "latencyMeaning": "Accepted outgoing creation-to-current-updated_at duration; later retries/status updates can extend duration. No request content read.",
+  "firstRetainedTimeout": "2026-11-20T16:47:32.588799Z",
+  "firstUnhealthyDeployment": {
+    "appVersionCode": 195,
+    "commit": "65ab523393bbeb80ec8927dff685381c6520459c",
+    "note": "Temporal boundary, not proof that this commit caused the timeout. Successful sends continued after deployment; later failures were intermittent."
+  },
+  "sourceComparison": [
+    {
+      "path": "server/codex.mjs",
+      "baselineBlob": "90c59591a2ba870b89953d94bc3e08cf5e94f7f5",
+      "providerReleaseBlob": "90c59591a2ba870b89953d94bc3e08cf5e94f7f5",
+      "identical": true
+    },
+    {
+      "path": "server/history.mjs",
+      "baselineBlob": "18a1fe67eaa2bf0f8b46eb88bcf250e09a9eab50",
+      "providerReleaseBlob": "18a1fe67eaa2bf0f8b46eb88bcf250e09a9eab50",
+      "identical": true
+    },
+    {
+      "path": "server/immersion-worker.mjs",
+      "baselineBlob": "d68bbdcccbc9ad779d8211627bbc2a42a4832b3c",
+      "providerReleaseBlob": "d68bbdcccbc9ad779d8211627bbc2a42a4832b3c",
+      "identical": true
+    },
+    {
+      "path": "server/voice-controller.mjs",
+      "baselineBlob": "780ea8e6e6ea4dcd3ce8f6dc59ba3b4acc580309",
+      "providerReleaseBlob": "780ea8e6e6ea4dcd3ce8f6dc59ba3b4acc580309",
+      "identical": true
+    },
+    {
+      "path": "android/app/src/main/java/co/fallsoft/pocket/CodexConversations.kt",
+      "baselineBlob": "8bacd9f10a71adafcf334490aa831623ac3d96d6",
+      "providerReleaseBlob": "8bacd9f10a71adafcf334490aa831623ac3d96d6",
+      "identical": true
+    }
+  ],
+  "confirmedExistingDefects": [
+    {
+      "defect": "Direct send calls conversation attach/history before native input submission.",
+      "presentInBaseline": true,
+      "evidence": "Baseline server/index.mjs sendOutgoing calls attach; attach calls history.read.",
+      "candidate": "381c139a removes transcript reads from direct-send preflight; built but not deployed."
+    },
+    {
+      "defect": "Foreground reattachment resets visible same-session presentation.",
+      "presentInBaseline": true,
+      "evidence": "Baseline CodexConversations.active calls attach, which clears detailValue and resets PocketTranscript.",
+      "candidate": "3848fb03 retains presentation only for identical environment/session; not published to Android."
+    },
+    {
+      "defect": "Ordinary RPC deadline removes pending native mutation reply observer.",
+      "presentInBaseline": true,
+      "evidence": "Baseline Codex.call clears its pending map at timeout.",
+      "candidate": "3848fb03/93a10457 retain bounded original turn observers; live backend, insufficient to establish overall latency repair."
+    }
+  ],
+  "counterEvidence": [
+    "77 accepted sends completed within91ms on baseline194 AFTER native0.171 selection; the native upgrade alone is not an established cause.",
+    "21 accepted sends occurred between195 deployment and first retained timeout; median49ms, maximum1006ms. Not every request regressed immediately.",
+    "The provider commit changes catalog provider inclusion, provider/settings routes and new-session selection, but not the transport/history/immersion implementation or direct-send history dependency.",
+    "A real user send after the initial198 backend repair took131847ms to become accepted. Earlier sub-second read probes did not prove repaired sends.",
+    "Fresh no-auth/no-model isolated0.170/0.171 initialize, thread/start and metadata probes completed quickly. This does not reproduce loaded production state or rule out native faults.",
+    "The earlier control-read-compare-r01 used /head, which now uses an independent history transport; it was not a shared-control isolation proof. A corrected gateway metadata probe returned in78ms versus31ms independent, at one instant only; optional config was unavailable due runtime qualification policy.",
+    "Corrected live gateway probe reached native metadata on shared control in78ms, but configuration RPC was skipped as unqualified. It does not demonstrate config/read readiness."
+  ],
+  "qualificationGaps": [
+    "The existing socket isolation tests use a simulated per-connection stall; they do not prove actual native runtime scheduling under the observed production stall.",
+    "Synthetic native checks and total unit-test counts did not cover a loaded production runtime with concurrent optional work and slow history.",
+    "Historic request logs do not preserve stage durations sufficient to distinguish preflight wait, native submission and delayed acknowledgement for every slow send.",
+    "Current native capability catalog still qualifies0.167 and a narrowMac0.163 profile; current0.171 reports configuration unavailable. This separate runtime-contract drift must not be disguised by labeling all parity features qualified.",
+    "Native stderr preceding the first timeout is not available in the retained rotated files. Later model-catalog and MCP network timeouts are observations, not proof of the original trigger."
+  ],
+  "releaseDecision": {
+    "android198Published": false,
+    "additionalBackendCandidateDeployed": false,
+    "rollbackPerformed": false,
+    "reason": "Do not replace the active runtime or discard provider support on a temporal correlation. Preserve194 as the comparison baseline; demonstrate the failure and correction on the same workload before another repair claim.",
+    "requiredEvidence": [
+      "Compare baseline194 and candidate on the same bounded slow-history/send workload.",
+      "Retain original outgoing identity and validate acknowledgement independently of transcript refresh.",
+      "Qualify actual native request timing with background activity; do not substitute independent quick metadata reads for send timing.",
+      "Complete current-source native visible-transcript recovery and exact signed APK review before publication."
+    ],
+    "preserved": [
+      "active native daemon",
+      "paired devices",
+      "saved drafts",
+      "original send receipts",
+      "provider selection",
+      "other owners workloads"
+    ]
+  },
+  "comparativeIntegration": {
+    "workload": "Identical existing HTTP/SQLite/native-socket fixture: paired human direct idle input and active steer; assert no message/item reads and only one current-turn header for active steer.",
+    "sourceSnapshots": [
+      "fdaeabeda681988b8426415b5426d131eb5bd3c2",
+      "65ab523393bbeb80ec8927dff685381c6520459c",
+      "381c139a1f3a2f9a038ff2d8d1c0fd8819310eb1"
+    ],
+    "results": [
+      {
+        "version": 194,
+        "passed": false,
+        "reason": "Observed thread/items/list before turn/start; failed no-transcript-read assertion."
+      },
+      {
+        "version": 195,
+        "passed": false,
+        "reason": "Same thread/items/list dependency as194; same assertion failed."
+      },
+      {
+        "version": "198 candidate",
+        "passed": true,
+        "reason": "Idle send needs metadata only; active steer uses one header and retains original request identity."
+      }
+    ],
+    "productionEffects": false,
+    "modelCalls": false,
+    "limits": "Controlled transport fixture, not a reproduction of the production native stall. This establishes a pre-existing architectural dependency and its removal, not the November20 trigger.",
+    "retainedHarnessFailure": "Initial private fixture temp path exceeded Unix socket path length. No gateway started; rerun used disk-backed /tmp. Both failures and corrected results retained."
+  }
+}

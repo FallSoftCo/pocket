@@ -16,3 +16,6 @@
 .native-settings>button{align-self:flex-end;flex-shrink:0}
 .native-settings [data-plugin-browser] form{display:flex;flex-wrap:wrap;gap:4px}
 .native-settings [data-plugin-browser] input{min-width:0;max-width:100%;flex:1 1 10rem;min-height:44px}
+
+.provider-form{display:flex;flex-direction:column;gap:12px;overflow:auto;min-height:0;padding:0 4px 12px;overscroll-behavior:contain}
+.provider-form label{display:flex;flex-direction:column;gap:6px}.provider-form input{min-width:0;width:100%;box-sizing:border-box}

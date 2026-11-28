@@ -1,0 +1,36 @@
+--- a/showcase/build.py
++++ b/showcase/build.py
+@@ -10,7 +10,7 @@
+ from asset_stats import BuildAssetStats
+ from deliveries import merge_deliveries
+ from frames import group_frames
+-from catalog_transport import packed_catalog,packed_cards,bootstrap_markup
++from catalog_transport import packed_catalog,packed_cards,bootstrap_markup,preview_catalog
+ from download_assets import available_downloads
+ 
+ ROOT = Path(__file__).resolve().parent
+@@ -292,6 +292,7 @@
+ if not asset_stats.atomic_transfer and not (OUT/'chrome-v2.html').exists():shutil.copyfile(OUT/'index.html',OUT/'chrome-v2.html')
+ for name in ['showcase.css','showcase.js','frames.js','farm.js']:atomic_write(OUT/name,(ROOT/name).read_text())
+ atomic_write(OUT/'showcase-catalog.json',fallback_catalog)
++atomic_write(OUT/'showcase-previews.json',preview_catalog(catalog))
+ atomic_write(OUT/'showcase-cards.html',card_payload['fallback'])
+ atomic_write(OUT/'showcase-static.html',static_result)
+ atomic_write(OUT/'index.html',result)
+--- a/showcase/catalog_transport.py
++++ b/showcase/catalog_transport.py
+@@ -18,6 +18,14 @@
+     if not isinstance(catalog, list):
+         raise ValueError('catalog_array_required')
+     return _pack(json.dumps(catalog, ensure_ascii=False, separators=(',', ':')).encode())
++
++
++def preview_catalog(catalog):
++    """Small, versioned media projection for embedded readers; originals stay intact."""
++    fields = ('id', 'title', 'poster', 'video', 'width', 'height')
++    cards = [{key: card[key] for key in fields if key in card} for card in catalog]
++    return json.dumps({'version': 1, 'cards': cards}, ensure_ascii=False,
++                      separators=(',', ':')) + '\n'
+ 
+ 
+ def packed_cards(catalog, cards):

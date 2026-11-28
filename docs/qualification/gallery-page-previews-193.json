@@ -1,0 +1,109 @@
+{
+  "feature": "Gallery previews across existing conversation links",
+  "date": "2026-11-11",
+  "cause": "Existing standalone review-page links were excluded by catalog-card-only recognition. Their actual HTML and images were available.",
+  "changes": [
+    "Existing catalog-card links, gallery homepage and index.html aliases resolve compact published metadata.",
+    "Standalone review directories and HTML pages show a declared Open Graph image or first review image. Original page links remain available.",
+    "Relative images resolve against the actual requested gallery page; scripts, styles and foreign HTML base tags are not embedded.",
+    "Missing or failed previews remain visible and retryable. No sender reformatting, message replay, authentication forwarding or model calls."
+  ],
+  "android": {
+    "versionCode": 193,
+    "versionName": "0.5.0-alpha.175",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "sha256": "c501125e89e7692407327a4119ba14c486e464635130af399848289e7e03782d",
+        "size": 52947855
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "sha256": "0058b215fc3c78e59725b31b79cd1bac8d4d4fc617e1c1e58adb6c79a51b7d1d",
+        "size": 52947855
+      }
+    ],
+    "productionSourceSha": "194bd0402ebd00d256642443b805a6970867e53622523f64d2ac0ea7063592d8",
+    "qualificationInputSha": "d0372d4552d9d29c2e85002934dc43166ee76def476db9076645a34d95de2b75",
+    "requiredNativeJourneys": 21,
+    "optimizedCatalogAndHistory": {
+      "codexCatalogDrawn": true,
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "optimizedPayloadVerified": true,
+      "catalogSnapshotStable": true
+    },
+    "gallery": {
+      "reviewed": true,
+      "at": 1794370756.1076024,
+      "scope": "Native original Markdown link to standalone HTML page; synthetic fixture image. Actual Vipi standalone pages rendered by candidate web module in browser conversation shell.",
+      "native": "Inline image, title, original link and following text visibly present; native open/close viewer passed; no auth leakage or task submission.",
+      "web": "Existing actual Vipi bot and chat screenshots displayed; desktop and narrow captures inspected; no DOM/CDP automation.",
+      "artifacts": [
+        {
+          "path": "gallery-native-page.png",
+          "sha256": "9b5fcaf757ec254ee475ce696c3014b34ecb08bac90d9ee2841f6b2c241d4bc8"
+        },
+        {
+          "path": "gallery-native-page.xml",
+          "sha256": "504908171720d345d1beb2f5a75d243e1156de1bf32cbb2ad69f3dd97da7578a"
+        },
+        {
+          "path": "gallery-web-desktop.png",
+          "sha256": "fe1720e0bc4175327f20d666274888ce073a6fa43a66b9518b289a04247a973e"
+        },
+        {
+          "path": "gallery-web-narrow.png",
+          "sha256": "288dcc26bd5c55d6a1ba3cdcca2e46df14836a4df27f4010821f9eabe51e4331"
+        },
+        {
+          "path": "gallery-web-second.png",
+          "sha256": "cb628764b06a2627e1461ecd167f7edee14032d43970c4977e801bd17594a690"
+        },
+        {
+          "path": "gallery-optimized.png",
+          "sha256": "682e6c76a25f3febb6cab706a238d85d6734dc75aaf6b3ff6fe26f8d93115d9f"
+        },
+        {
+          "path": "gallery-optimized.xml",
+          "sha256": "15e38c9713188d614587f7f5ac6672355536b629b82fd9596dc33d9091ec8a8d"
+        }
+      ],
+      "limits": "No physical-phone install observation. Native image is a controlled synthetic fixture; browser pages use actual existing published Vipi review images.",
+      "optimized": {
+        "state": "complete",
+        "apkSha256": "0058b215fc3c78e59725b31b79cd1bac8d4d4fc617e1c1e58adb6c79a51b7d1d",
+        "inlineImageVisible": true,
+        "nativeViewerOpenClose": true,
+        "originalAnswerRetained": true,
+        "retainedQaPreferencesRestored": true,
+        "visuallyReviewed": true
+      }
+    }
+  },
+  "focusedJourney": [
+    "Actual Markdown page link loads standalone HTML and its original relative image.",
+    "Native inline image opens and closes in the existing image viewer.",
+    "Original conversation text and gallery link remain visible.",
+    "Synthetic metadata/image HTTP requests contain no paired credentials or task submissions."
+  ],
+  "web": {
+    "release": "ee6cb3d635bffad856f7041cd427a36275be9fb729bda9c2c84ce29fab879a7c",
+    "candidateModuleSha256": "ae67f6a93519e06d8e4bd203bb429d1b2f951bf7371a290743f9ce25791c66aa",
+    "domHttpJourneys": 7,
+    "renderedReview": "Actual existing gallery pages/images displayed by candidate module and production styles in a synthetic conversation shell, using existing Chrome native control with debugging disabled. Desktop and narrow native windows visually inspected.",
+    "deployment": "Both existing private web entry points serve the reviewed module. Original cookies and task routing unchanged; backend/native runtime preserved."
+  },
+  "publication": {
+    "workstation": "Published with authenticated exact compatible APK readback",
+    "macbook": "Published with authenticated exact compatible APK readback"
+  },
+  "limits": [
+    "Owned emulator and browser evidence; physical-phone installation not claimed.",
+    "Browser image review uses a synthetic conversation wrapper; does not claim inspection of every private production session.",
+    "The original gallery frame-observation failure and queue test-clock failure are retained; test scheduling was corrected without changing the signed production APKs or weakening assertions.",
+    "Main gallery review-card index rebuild remains blocked by a pre-existing unrelated missing poster; review assets are retained and the actual linked review pages are available.",
+    "Pages without an accessible gallery image show unavailable rather than an invented preview."
+  ]
+}

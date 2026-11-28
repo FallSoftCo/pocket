@@ -14,9 +14,13 @@ test('complete Italian and Italian-order English survive worker request/cache/pe
   calls=[];
   async connect(){}
   async call(method,args){this.calls.push({method,args});
+   if(method==='config/read')return {config:{model:"fixture-model",mcp_servers:{}}};
+   if(method==='thread/archive'||method==='thread/delete')return {};
+   if(method==='thread/unsubscribe')return {status:'unsubscribed'};
+   if(method==='thread/loaded/list')return {data:[]};
    if(method==='account/read')return {account:{type:'chatgpt'}};
    if(method==='model/list')return {data:[]};
-   if(method==='thread/start')return {thread:{id:'grammar-qa'}};
+   if(method==='thread/start')return {thread:{id:'grammar-qa'},modelProvider:args.modelProvider,model:args.model};
    if(method==='turn/start'){const batch=JSON.parse(args.input[0].text).sources;queueMicrotask(()=>{
     this.emit('event',{method:'item/completed',params:{threadId:'grammar-qa',item:{type:'agentMessage',text:JSON.stringify(Object.fromEntries(batch.map(row=>[row.key,{'0':{target:target.slice(0,-1),words:segments.map((s,i)=>({...s,group:i<3?0:1}))}}])))}}});
     this.emit('event',{method:'turn/completed',params:{threadId:'grammar-qa',turn:{status:'completed'}}});

@@ -1,0 +1,76 @@
+{
+  "feature": "Direct primary drawer controls",
+  "date": "2026-11-11",
+  "changes": [
+    "Updates render directly in the App section.",
+    "Save reply and Queue message are direct session actions rather than hidden by More actions.",
+    "Saved recording controls omit empty state and retain only their existing history disclosure.",
+    "Extended usage does not repeat the allowance, reset count, deadline or credit summary."
+  ],
+  "android": {
+    "versionCode": 192,
+    "versionName": "0.5.0-alpha.174",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "sha256": "434b059641fb636c336b67f469761abaf011484bff28c9f8c8bf69b1118acd95",
+        "size": 52750471
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "sha256": "fc1062628222f1290a0d012e67f45e7a3ec7d68003d6449e508769538f213269",
+        "size": 52750471
+      }
+    ],
+    "productionSourceSha": "884cba5e994a33a6ebfcf8b43615403ca6ab0b0e21a08ee5a37121ce78f72f10",
+    "qualificationInputSha": "11b928fe1d3cca49959a812339a78e31b93b10e5256c35329d49e8f4d7dfbe85",
+    "requiredNativeJourneys": 21,
+    "optimizedCatalogAndHistory": {
+      "codexCatalogDrawn": true,
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "optimizedPayloadVerified": true,
+      "catalogSnapshotStable": true
+    },
+    "drawer": {
+      "state": "complete",
+      "versionCode": 192,
+      "apkSha256": "fc1062628222f1290a0d012e67f45e7a3ec7d68003d6449e508769538f213269",
+      "fontScale": 1.6,
+      "immersion": true,
+      "reviewed": true,
+      "description": "Exact optimized APK: enlarged English and Italian labels inspected. Grouped controls remain within the drawer width; primary update action is exposed in the scrollable App section. Native journey independently proves updates reachable without an expander, single reset summary, direct Queue/Rename, Activity focus and source/draft preservation. Synthetic account values; original preferences/font restored.",
+      "artifacts": [
+        {
+          "path": "drawer-large-english.png",
+          "sha256": "727dd549159c88f7634d6da62c6937e161a617f563d8f86f2b7b3bf60c574aaa"
+        },
+        {
+          "path": "drawer-large-italian.png",
+          "sha256": "6557e68607550b0e080a0aa479ec99f01849dfcacc2eee52ab702abc2a9ad700"
+        },
+        {
+          "path": "drawer-direct-updates.png",
+          "sha256": "56c62621eea394570ad884999582332a5faff38b421c3f42760737a3a94d8210"
+        }
+      ],
+      "physicalPhone": false
+    }
+  },
+  "focusedJourney": [
+    "Update button reached without expanding a section.",
+    "Expanded usage still has exactly one banked-reset summary.",
+    "Queue and Rename reachable without More actions.",
+    "Activity window ownership, original workstation and unsent draft retained."
+  ],
+  "publication": {
+    "workstation": "Published with authenticated exact compatible APK readback",
+    "macbook": "Published with authenticated exact compatible APK readback"
+  },
+  "limits": [
+    "Owned emulator and exact optimized APK evidence; no physical-phone install claimed.",
+    "Initial manual preflight used the wrong fixture; second run encountered an emulator System UI ANR. Original failures retained; corrected fixture and settled OS passed unchanged product checks.",
+    "Web/gallery behavior remains the qualified191 implementation; this update changes Android drawer composition."
+  ]
+}

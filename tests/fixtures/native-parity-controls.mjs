@@ -16,7 +16,7 @@ import {requestPresentation} from '../../server/native-request-contract.mjs';
 const port=Number(process.env.PORT||19991);
 const threadId='parity-thread',forkId='parity-fork',otherId='parity-other';
 const origins=['Alpha','Beta'].map((name,index)=>({name,index,sockets:new Set(),epoch:crypto.randomUUID(),revision:1,question:0,operations:new Map(),fork:false,terminalMode:'qualified',outputMode:'qualified',outputWaiters:[],commandVisible:false,pluginInstalled:false,pluginReceipts:[],appsHold:false,appsWaiters:[]}));
-const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[],nativeReloadStarts=[];
+const calls=[],nativeAnswers=[],nativeReads=[],nativeAuthStarts=[],nativeReloadStarts=[],outputResponses=[];
 const pluginCount=10074,pluginKey=crypto.createHash('sha256').update('synthetic-plugin').digest('hex');
 for(const origin of origins)origin.pluginCatalog=new PluginCatalogPages({secret:'synthetic-catalog-'+origin.name,capture:()=>({origin:origin.name,installed:origin.pluginInstalled}),check:source=>{if(source.origin!==origin.name||source.installed!==origin.pluginInstalled)throw Object.assign(Error('Synthetic plugin catalog changed'),{status:409});},load:async view=>{
  nativeReads.push({origin:origin.name,method:view==='browse'?'plugin/list':'plugin/installed'});
@@ -88,16 +88,21 @@ for(const origin of origins){
   const url=new URL(req.url,'http://localhost'),path=url.pathname;
   // Retain transport completion separately from request admission. A received
   // GET alone cannot explain a native dialog that remains in its loading state.
-  if(process.env.NEXTCOMP_QA_LOG&&(path==='/api/native/plugins/detail'||req.method==='GET'&&path==='/api/native/mcp-auth')){
+  const outputRead=req.method==='GET'&&path.endsWith('/command-output');
+  if(outputRead||process.env.NEXTCOMP_QA_LOG&&(path==='/api/native/plugins/detail'||req.method==='GET'&&path==='/api/native/mcp-auth')){
    const requestId=crypto.randomUUID(),startedAt=Date.now();
-   const trace=phase=>fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify({at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished})+'\n',{mode:0o600});
+   const trace=phase=>{
+    const observation={at:Date.now(),requestId,origin:origin.name,path,phase,elapsedMs:Date.now()-startedAt,status:res.statusCode,writableFinished:res.writableFinished};
+    if(outputRead){outputResponses.push(observation);if(outputResponses.length>100)outputResponses.shift();}
+    if(process.env.NEXTCOMP_QA_LOG)fs.appendFileSync(process.env.NEXTCOMP_QA_LOG,JSON.stringify(observation)+'\n',{mode:0o600});
+   };
    trace('request');res.once('finish',()=>trace('finish'));res.once('close',()=>trace('close'));
   }
   let raw='';for await(const chunk of req)raw+=chunk;
   const input=raw?JSON.parse(raw):{};
   calls.push({origin:origin.name,path,query:url.search,method:req.method,input});
   let body={};
-  if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()],nativeAnswers,nativeReads,nativeAuthStarts,nativeReloadStarts,reloadReceipts:authDb.prepare('SELECT id,state,native_outcome FROM native_mcp_reload').all()};
+  if(path==='/_qa/state')body={calls:calls.filter(c=>!c.path.startsWith('/_qa/')),operations:[...origin.operations.values()],nativeAnswers,nativeReads,nativeAuthStarts,nativeReloadStarts,outputResponses,reloadReceipts:authDb.prepare('SELECT id,state,native_outcome FROM native_mcp_reload').all()};
   else if(path==='/_qa/mcp-account'){
    if(!['original','secondary'].includes(input.account)){res.writeHead(400).end('{"error":"Unknown synthetic account"}');return;}
    account=input.account;authCodex.emit('event',{method:'account/updated',params:{}});for(const socket of origin.sockets)frame(socket,{type:'nativeAuthBoundary'});body={ok:true};
@@ -125,7 +130,8 @@ for(const origin of origins){
    origin.terminalMode=input.mode;body={ok:true};
   }
   else if(path==='/_qa/question'){origin.question=input.version;changed(origin);body={ok:true};}
-  else if(path==='/_qa/resolve-fork'){for(const op of origin.operations.values())if(op.kind==='fork')op.state='accepted';body={ok:true};}
+  else if(path==='/api/model-providers')body={state:'available',defaultProviderId:'openai',providers:[{id:'openai',name:'OpenAI'},{id:'deepseek',name:'DeepSeek',baseUrl:'https://api.deepseek.com'}]};
+  else if(path==='/_qa/resolve-fork'){for(const op of origin.operations.values())if(['fork','continue'].includes(op.kind))op.state='accepted';body={ok:true};}
   else if(path==='/api/backends')body={backends:[{id:'codex',configured:true,available:true}]};
   else if(path==='/api/status')body={host:origin.name,connected:true,deviceId:`parity-device-${origin.index}`,capabilities:{readOnlyTimeline:true,canonicalTimeline:1},...(url.searchParams.has('threadId')?{historyHead:head(origin,url.searchParams.get('threadId'))}:{})};
   else if(path==='/api/threads')body={threads:[metadata(origin),metadata(origin,otherId),...(origin.fork?[metadata(origin,forkId)]:[])]};
@@ -136,12 +142,13 @@ for(const origin of origins){
    const actions=new QuestionActions({pending:requests,codex:{answer:(id,result)=>nativeAnswers.push({origin:origin.name,id,threadId,turnId:requests.get(String(id))?.params.turnId,itemId:requests.get(String(id))?.params.itemId,requestToken:requests.get(String(id))?._pocketUI.token,result})}});
    try{body=actions.answer('same-native-request',input);origin.question=0;changed(origin);}catch(error){res.writeHead(error.status||500).end(JSON.stringify({error:error.message}));return;}
   }
-  else if(path.endsWith('/conversation-tools'))body={threadId,cwd:metadata(origin).cwd,active:false,warning:'Context changes do not undo working files.',usage:{last:{totalTokens:1234},total:{totalTokens:5678},modelContextWindow:10000},turns:[{id:origin.name.toLowerCase()+'-turn',status:'completed',userText:`${origin.name} original request`}],features:Object.fromEntries(['fork','revert','compact','review','changeDirectory'].map(k=>[k,{available:true}])),operations:[...origin.operations.values()]};
+  else if(path.endsWith('/conversation-tools'))body={threadId,cwd:metadata(origin).cwd,active:false,warning:'Context changes do not undo working files.',usage:{last:{totalTokens:1234},total:{totalTokens:5678},modelContextWindow:10000},turns:[{id:origin.name.toLowerCase()+'-turn',status:'completed',userText:`${origin.name} original request`}],features:Object.fromEntries(['continue','fork','revert','compact','review','changeDirectory'].map(k=>[k,{available:true}])),operations:[...origin.operations.values()]};
   else if(path.endsWith('/conversation-operations')&&req.method==='POST'){
    if(input.turnId&&input.turnId!==origin.name.toLowerCase()+'-turn'){res.writeHead(409).end('{"error":"Foreign turn boundary"}');return;}
-   body={id:input.id,threadId,kind:input.kind,state:input.kind==='fork'?'unknown':'accepted',result:{}};
-   if(input.kind==='fork'){origin.fork=true;body.thread=metadata(origin,forkId);body.error='Synthetic lost acknowledgement; inspect original receipt.';}
+   body={id:input.id,threadId,kind:input.kind,state:['fork','continue'].includes(input.kind)?'unknown':'accepted',result:{}};
+   if(['fork','continue'].includes(input.kind)){origin.fork=true;body.thread=metadata(origin,forkId);body.error='Synthetic lost acknowledgement; inspect original receipt.';}
    if(input.kind==='revert'){changed(origin);body.result={draft:`${origin.name} original request`,historyHead:head(origin)};}
+   if(input.kind==='continue'){body.result={checkpoint:{createdAt:Date.now(),turnCount:3,sourceThreadId:threadId},message:'Continuation saved and queued.'};}
    origin.operations.set(body.id,body);
   }
   else if(/\/conversation-operations\/[^/]+$/.test(path)){body=origin.operations.get(path.split('/').at(-1));if(!body){res.writeHead(404).end('{"error":"Original receipt missing"}');return;}}

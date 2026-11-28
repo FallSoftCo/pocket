@@ -345,7 +345,7 @@ class TranscriptRefreshNativeTest {
   try{
    for(scale in listOf(1.0f,1.3f,2.0f)){
     device.executeShellCommand("settings put system font_scale "+scale);await{kotlin.math.abs(context.resources.configuration.fontScale-scale)<.05f&&!PocketTranscript.updating}
-    reachable(By.text("Record"));reachable(By.text("Keyboard"));reachable(By.desc("Settings, app updates, usage and activity"))
+    reachable(By.text("Record"));reachable(By.text("Keyboard"));reachable(By.desc("Settings, app updates and usage"))
     assertTrue("Volume disappeared",device.hasObject(By.desc("Speech volume")))
     await{device.hasObject(By.text("Settings"))&&device.hasObject(By.text("↻ —"))};Thread.sleep(300)
     assertTrue(device.takeScreenshot(java.io.File(context.cacheDir,"bottom-controls-"+scale+".png")))
@@ -356,7 +356,7 @@ class TranscriptRefreshNativeTest {
    reachable(By.desc("Stop and send recording")).click();await{PocketVoice.state=="Ready"&&PocketVoice.problem.isNotBlank()}
    assertFalse("Silent emulator recording submitted work",prefs.contains("voicePendingId"))
    main{PocketVoice.stop()}
-   reachable(By.desc("Settings, app updates, usage and activity")).click()
+   reachable(By.desc("Settings, app updates and usage")).click()
    assertTrue("Updates inaccessible from dock",device.wait(Until.hasObject(By.text("App updates")),3000))
    device.pressBack();await{AppWindowVisibility.focused&&Pocket.selected=="same-thread"}
    reachable(By.text("Keyboard")).click();await{device.hasObject(By.clazz("android.widget.EditText"))&&device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")}
@@ -485,7 +485,7 @@ class TranscriptRefreshNativeTest {
   assertEquals("Dismiss replayed the uncertain send",1,qa("state").getJSONArray("replies").length())
   main{Pocket.closeTask()}
   fun popupReply(){
-   device.findObject(By.desc("Settings, app updates, usage and activity")).click()
+   device.findObject(By.desc("Settings, app updates and usage")).click()
    repeat(10){if(!device.hasObject(By.desc("Reply to Other synthetic work")))device.findObjects(By.scrollable(true)).lastOrNull()?.scroll(Direction.DOWN,.8f)}
    assertTrue("Popup target reply action unavailable",device.hasObject(By.desc("Reply to Other synthetic work")))
    device.findObject(By.desc("Reply to Other synthetic work")).click()

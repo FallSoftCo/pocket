@@ -1,0 +1,27 @@
+{
+  "change": "Failed terminal turn events retain systemError rather than overriding native failure with idle.",
+  "sourceCommit": "d3b97d4f",
+  "runtimeDigest": "74f80e02b31ddf2fcb35a7ee0c5eb3e41f14b24f4fa7273d2a890f5e50c6acce",
+  "tests": {
+    "passed": 17,
+    "scope": "Session discovery plus composed HTTP/native WebSocket attention journey, including real terminal-failure ordering and subsequent recovery."
+  },
+  "deployment": {
+    "workstationBackend": true,
+    "macBackend": false,
+    "androidChangeRequired": false,
+    "nativeDaemonRestarted": false,
+    "phoneInstall": false
+  },
+  "providerIncident": {
+    "originalFailure": "Upstream Responses HTTP400 generic Bad Request",
+    "ordinaryResume": "Same failure before any tools",
+    "nativeCompaction": "Completed; original history retained",
+    "postCompaction": "Native turn accepted and Responses HTTP200 observed; work outcome tracked privately",
+    "exactProviderValidationCause": "Unavailable; generic response contains no field-level detail"
+  },
+  "limits": [
+    "No generic HTTP400 automatic retry policy added.",
+    "Physical phone interaction not performed."
+  ]
+}

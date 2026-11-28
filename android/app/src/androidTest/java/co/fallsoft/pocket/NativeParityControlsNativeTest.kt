@@ -56,7 +56,7 @@ class NativeParityControlsNativeTest {
     private fun editor()=compose.onNode(hasSetTextAction())
     private fun editorText()=editor().fetchSemanticsNode().config[SemanticsProperties.EditableText].text
     private fun menu(action:String,captureMenu:Boolean=false){
-        compose.onNodeWithContentDescription("Settings, app updates, usage and activity").assertIsDisplayed().performClick()
+        compose.onNodeWithContentDescription("Settings, app updates and usage").assertIsDisplayed().performClick()
         // These work controls must be in the initial viewport, before any
         // performScrollTo in tap() could hide an ordering regression.
         for(label in listOf("Context & files","Background terminals","Model, effort, tier & mode","Codex settings & agents"))
@@ -149,6 +149,35 @@ class NativeParityControlsNativeTest {
         assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
         assertEquals("Beta retained draft",prefs.getString("environment:parity_beta:draft:$thread",null))
         assertTrue("Inspection submitted a human reply",calls("/api/threads/$thread/reply").isEmpty())
+    }
+
+    @Test fun providerContinuationPreservesDraftAndOriginalReceipt(){
+        workflow("provider-continuation"){
+            contextTools()
+            tap("Continue with another provider")
+            tap("Provider: OpenAI")
+            tap("DeepSeek")
+            compose.onNode(hasSetTextAction() and hasText("Provider model ID")).assertTextContains("deepseek-flash")
+            compose.onNode(hasSetTextAction() and hasText("Handoff instructions (optional)")).performScrollTo().performTextInput("Preserve original external receipt.")
+            tap("Save handoff & continue")
+            tap("Confirm",inDialog=true)
+            await{calls("/api/threads/$thread/conversation-operations").size==1}
+            val original=calls("/api/threads/$thread/conversation-operations").single().getJSONObject("input")
+            assertEquals("continue",original.s("kind"))
+            assertEquals("deepseek",original.getJSONObject("selection").s("providerId"))
+            assertEquals("deepseek-flash",original.getJSONObject("selection").s("model"))
+            assertEquals("alpha-turn",original.s("expectedLastTurnId"))
+            assertEquals("Alpha retained draft",prefs.getString("draft:$thread",null))
+            tap("Check saved operation")
+            assertEquals("Lost acknowledgement must not re-create a session",1,calls("/api/threads/$thread/conversation-operations").size)
+            qa("resolve-fork",JSONObject())
+            tap("Check saved operation")
+            await{Pocket.selected=="parity-fork"&&PocketTranscript.currentHistoryVerified}
+            visible("Alpha branch response")
+            assertOriginalDraftsAndNoReplies()
+            assertEquals(1,calls("/api/threads/$thread/conversation-operations").size)
+            capture("provider-continuation-recovered")
+        }
     }
 
     @Test fun requestsKeepOriginalIdentityAndReturnToCommandOutput(){
@@ -265,6 +294,9 @@ class NativeParityControlsNativeTest {
             navigate("parity_beta");absent("Command output")
             qa("output-release",JSONObject());openOutput();await{outputStarts("Beta retained output page one")}
             assertFalse(outputText().contains("Alpha"));assertEquals("Beta",calls("/api/threads/$thread/command-output","GET").last().s("origin"))
+            assertTrue("Beta output HTTP response did not finish",qa("state").getJSONArray("outputResponses").objects().any{
+                it.s("origin")=="Beta"&&it.s("path")=="/api/threads/$thread/command-output"&&it.s("phase")=="finish"&&it.optInt("status")==200&&it.optBoolean("writableFinished")
+            })
             tap("Close",inDialog=true)
             qa("output-mode",JSONObject().put("mode","unavailable"),origin=1)
             val readsBeforeUnavailable=calls("/api/threads/$thread/command-output","GET").size

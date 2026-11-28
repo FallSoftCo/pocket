@@ -1,0 +1,87 @@
+{
+  "feature": "Toolbar settings and banked-reset visibility",
+  "date": "2026-11-10",
+  "android": {
+    "versionCode": 189,
+    "versionName": "0.5.0-alpha.171",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "sha256": "99f539fa6110989b6f52bb1d1324c8d391892d32b9b50d3b0780db5d0fd32994",
+        "size": 52714431
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "sha256": "bd52659ce10ed325c8d367d81fe543b381467a4c565761d07e2ac8f05959ae3a",
+        "size": 52714431
+      }
+    ],
+    "productionSourceSha": "82e7c7fc2322fe5bd28d417239be927e6a75406139267212498b477b91cdf6ea",
+    "qualificationInputSha": "983ae351d2afa6d7c73c8ccd3436e31c390e08a1905c5f3324440dea0739c366",
+    "unit": {
+      "debug": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "requiredNativeJourneys": 20,
+    "optimizedCatalogAndHistory": {
+      "codexCatalogDrawn": true,
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "optimizedPayloadVerified": true,
+      "catalogSnapshotStable": true
+    },
+    "additionalOptimizedMenuJourney": {
+      "providerFixtureCountDisplayed": 2,
+      "oldActivityFeedAbsent": true,
+      "scrollable": true,
+      "originalQaPreferencesRestored": true
+    }
+  },
+  "browser": {
+    "actualRenderedViewports": [
+      1440,
+      390
+    ],
+    "countCases": [
+      "positive",
+      "zero",
+      "stale",
+      "unavailable"
+    ],
+    "visualReview": true
+  },
+  "api": {
+    "httpNativeSocketAndCacheChecks": 13,
+    "existingAuthenticatedStatusAndEvents": true,
+    "separateResetFreshness": true,
+    "privateBenefitIdentifiersExposed": false,
+    "newQuotaPolling": false,
+    "redemptionChanged": false
+  },
+  "delivery": {
+    "android": "Both existing update channels",
+    "web": "Both existing private routes",
+    "backends": "Workstation and Mac",
+    "backendReleaseDigest": "ea6496116088695c98da68067f7baaae56dcfd7452cda17d4daf47098f26c3b6",
+    "nativeCodexRestarted": false,
+    "phoneInstallPerformed": false
+  },
+  "limits": [
+    "Owned emulator and browser evidence, not physical handset installation or rendering.",
+    "A first packaging attempt stopped at the disk reserve guard; only superseded test APKs were retired before rebuilding.",
+    "Native screenshot review caught unpadded menu text; the corrected source was rebuilt and requalified before publication.",
+    "Dedicated menu harness setup failures are retained privately; no legacy emulator ownership guard was bypassed.",
+    "Gallery metadata/media staged, but the shared index builder is blocked by an unrelated pre-existing missing poster."
+  ]
+}

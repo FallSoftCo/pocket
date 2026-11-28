@@ -1,0 +1,67 @@
+{
+  "state": "deployed",
+  "cause": "Translation rotation and error paths discarded thread identity without unloading native threads; inherited MCP services multiplied residency. Late thread/start acknowledgements could be lost at the ordinary RPC deadline.",
+  "containment": {
+    "gatewayOnlyRestart": true,
+    "nativeProcessPreserved": true,
+    "threadsBefore": 160,
+    "threadsAfter": 6,
+    "mcpConnectionsBefore": 1120,
+    "mcpConnectionsAfter": 42,
+    "immersionDisabled": true
+  },
+  "tests": {
+    "affectedBeforeFinalGuard": 52,
+    "focusedAfterGuard": 40,
+    "actualNativeVersion": "0.171.0",
+    "actualNativeLifecycleCycles": 4,
+    "modelTurnsStarted": 0,
+    "mcpRequests": 0,
+    "macNativeVersion": "0.163.0",
+    "macNativeResult": "Actual isolated runtime retained one retired thread after unsubscribe and 65 seconds. Replacement allocation was correctly blocked; no MCP requests or model turns. Fixture process stopped; production runtime untouched."
+  },
+  "limits": [
+    "Actual phone send latency after final deployment not yet measured.",
+    "Thermal throttling is independently confirmed; this does not establish it as the sole cause of send delays.",
+    "Unknown startup or turn transport loss fails closed; it does not authorize replay.",
+    "Mac legacy native runtime does not unload the retired immersion thread as expected: replacement is blocked rather than accumulated. Immersion remains disabled; full Mac immersion lifecycle compatibility is not qualified."
+  ],
+  "androidChanged": false,
+  "release": {
+    "sourceCommit": "03a60cb994349cd8507935b2d3f2963cb7bb9e05",
+    "releaseDigest": "9b4f6508f5badbb2a5943599fe58943dd0bd55b19ef62582c7ff8fd20ada1540",
+    "system76GatewayOnly": true,
+    "macGatewayOnly": true,
+    "nativeDaemonsPreserved": true,
+    "pairingAndOriginalReceiptsPreserved": true,
+    "androidInstallRequired": false
+  },
+  "postContainmentRealSendReceipts": [
+    {
+      "state": "accepted",
+      "ms": 62,
+      "createdAt": 1795276641080
+    },
+    {
+      "state": "accepted",
+      "ms": 1497,
+      "createdAt": 1795276770896
+    },
+    {
+      "state": "queued",
+      "ms": 0,
+      "createdAt": 1795277357360
+    }
+  ],
+  "postDeployReadTimingsMs": [
+    6,
+    49,
+    4
+  ],
+  "afterDeployment": {
+    "loadedThreads": 8,
+    "loadedImmersionThreads": 0,
+    "mcpConnections": 56,
+    "note": "Additional active human work accounts for the change from the initial six-thread drain snapshot."
+  }
+}

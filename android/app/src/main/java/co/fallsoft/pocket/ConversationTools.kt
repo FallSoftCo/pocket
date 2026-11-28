@@ -42,6 +42,8 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
     var boundary by remember{mutableStateOf("")};var query by remember{mutableStateOf("")}
     var files by remember{mutableStateOf<List<JSONObject>>(emptyList())};var diff by remember{mutableStateOf("")}
     var cwd by remember{mutableStateOf("")};var reviewTarget by remember{mutableStateOf("")}
+    var continuation by remember{mutableStateOf(false)};var provider by remember{mutableStateOf<JSONObject?>(null)}
+    var note by remember{mutableStateOf("")};var manageProviders by remember{mutableStateOf(false)};var providerRevision by remember{mutableIntStateOf(0)}
     var confirmation by remember{mutableStateOf<JSONObject?>(null)}
     var file by remember{mutableStateOf<JSONObject?>(null)};var first by remember{mutableStateOf("1")};var last by remember{mutableStateOf("40")};var selection by remember{mutableStateOf<JSONObject?>(null)}
     fun current()=alive&&Pocket.selected==thread&&Pocket.captureEnvironment()?.matches(destination)==true
@@ -59,7 +61,7 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
         val result=receipt.optJSONObject("result")?:JSONObject()
         if(!Pocket.prefs.getBoolean(appliedKey,false)){
             Pocket.prefs.edit().putBoolean(appliedKey,true).apply()
-            if(receipt.s("kind")=="fork"){receipt.optJSONObject("thread")?.s("id")?.takeIf{it.isNotBlank()}?.let{onClose();Pocket.refresh();Pocket.open(it)}}
+            if(receipt.s("kind") in listOf("fork","continue")){receipt.optJSONObject("thread")?.s("id")?.takeIf{it.isNotBlank()}?.let{onClose();Pocket.refresh();Pocket.open(it)}}
             if(receipt.s("kind")=="revert"){result.optJSONObject("historyHead")?.let{CodexSessionRepository.historyReplaced(thread,it,destination)};onInsert(result.s("draft"));Pocket.refreshDetail()}
             if(receipt.s("kind")=="changeDirectory")Pocket.refreshDetail()
         }
@@ -72,9 +74,21 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
             Text("Working directory: ${data?.s("cwd").orEmpty()}")
             Text(conversationUsageLabel(data?.optJSONObject("usage")))
             if(error.isNotBlank())Text(error,color=MaterialTheme.colorScheme.error)
-            if(busy)LinearProgressIndicator(Modifier.fillMaxWidth())
+            if(busy){LinearProgressIndicator(Modifier.fillMaxWidth());if(continuation)Text("Saving handoff and checking the original receipt…")}
             val features=data?.optJSONObject("features");val active=data?.optBoolean("active")==true
             fun available(kind:String)=features?.optJSONObject(kind)?.optBoolean("available")==true
+            data?.optJSONObject("continuationSource")?.s("threadId")?.takeIf{it.isNotBlank()}?.let{source->
+                TextButton({if(current()){onClose();Pocket.open(source)}}){Text("Open original conversation · "+java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,java.text.DateFormat.SHORT).format(java.util.Date(data?.optJSONObject("continuationSource")?.optLong("at")?:0)))}
+            }
+            Button({continuation=!continuation},enabled=!busy&&!active&&available("continue")){Text("Continue with another provider")}
+            if(data!=null&&!available("continue"))Text(features?.optJSONObject("continue")?.s("reason").orEmpty())
+            if(active)Text("Finish or stop the current turn before continuing with another provider.")
+            if(continuation){
+                ProviderChoice(provider,{choice->provider=choice?.apply{if(s("providerId")==data?.s("modelProvider")&&s("model").isBlank())put("model",data?.s("model"))}},!busy,{manageProviders=true},providerRevision,explicitModel=true)
+                OutlinedTextField(note,{note=it},label={Text("Handoff instructions (optional)")},modifier=Modifier.fillMaxWidth(),enabled=!busy)
+                Text("Saves a private checkpoint and public history, then continues in a linked session. Original messages and drafts stay here. Uses the selected provider’s billing.")
+                Button({prepare("continue",JSONObject().put("selection",provider).put("note",note).put("expectedLastTurnId",data?.optJSONArray("turns")?.optJSONObject(0)?.s("id")))},enabled=!busy&&provider?.s("model")?.isNotBlank()==true&&data?.optJSONArray("turns")?.length()!=0){Text("Save handoff & continue")}
+            }
             Button({prepare("compact")},enabled=!busy&&!active&&available("compact")){Text("Compact context")}
             Text("Native code review starts model work in this conversation. Saved notes are separate.")
             Button({prepare("review")},enabled=!busy&&!active&&available("review")){Text("Review working changes")}
@@ -103,18 +117,20 @@ internal fun conversationUsageLabel(value:JSONObject?):String {
             HorizontalDivider();Text("Operation receipts",style=MaterialTheme.typography.titleMedium)
             data?.optJSONArray("operations")?.objects()?.forEach{receipt->
                 Text(receipt.s("kind")+": "+receipt.s("state")+" "+receipt.s("error"))
-                if(receipt.s("state") in listOf("dispatching","unknown"))TextButton({run{accepted(request("/conversation-operations/"+receipt.s("id")));refresh()}},enabled=!busy){Text("Check receipt")}
+                receipt.optJSONObject("result")?.optJSONObject("checkpoint")?.let{checkpoint->Text("Checkpoint · "+checkpoint.s("providerId")+" · "+java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,java.text.DateFormat.SHORT).format(java.util.Date(checkpoint.optLong("createdAt"))))}
+                if(receipt.s("state") in listOf("preparing","dispatching","unknown"))TextButton({run{accepted(request("/conversation-operations/"+receipt.s("id")));refresh()}},enabled=!busy){Text("Check receipt")}
                 if(receipt.s("state")=="unknown")TextButton({prepare("acknowledge",JSONObject().put("id",receipt.s("id")))},enabled=!busy){Text("Acknowledge after inspection")}
                 if(receipt.s("kind")=="revert"&&receipt.s("state")=="accepted")TextButton({if(current())onInsert(receipt.optJSONObject("result")?.s("draft").orEmpty())}){Text("Restore original message to draft")}
-                if(receipt.s("kind")=="fork"&&receipt.s("state")=="accepted")TextButton({if(current())receipt.optJSONObject("thread")?.s("id")?.let{onClose();Pocket.open(it)}}){Text("Open branch")}
+                if(receipt.s("kind") in listOf("fork","continue")&&receipt.optJSONObject("thread")!=null)TextButton({if(current())receipt.optJSONObject("thread")?.s("id")?.let{onClose();Pocket.open(it)}}){Text(if(receipt.s("kind")=="continue")"Open continuation"else "Open branch")}
             }
             Pocket.prefs.getString(key,null)?.let{saved->TextButton({run{val id=JSONObject(saved).s("id");accepted(request("/conversation-operations/$id"));refresh()}},enabled=!busy){Text("Check saved operation")}}
             TextButton({run{refresh()}},enabled=!busy){Text("Refresh context and receipts")}
             TextButton(onClose){Text("Close")};Spacer(Modifier.height(20.dp))
         }
     }
+    if(manageProviders)ProviderSettingsDialog{manageProviders=false;providerRevision++}
     confirmation?.let{operation->
-        val kind=operation.s("kind");val text=when(kind){"revert"->data?.s("warning").orEmpty()+" Remove the selected turn and every later turn from conversation context?";"review"->"Start native code review? This uses model capacity.";"compact"->"Ask Codex to compact this conversation context?";"changeDirectory"->"Use this folder for subsequent turns? Existing files are not moved.";"acknowledge"->"Have you inspected the conversation and workspace for the uncertain effect? This unlocks subsequent input without retrying the operation.";else->"Create a new conversation through this turn? Working files are shared."}
+        val kind=operation.s("kind");val text=when(kind){"continue"->"Save the current work checkpoint and start one linked session on ${provider?.s("providerId")}? Existing files are shared. The original conversation and unsent draft remain here.";"revert"->data?.s("warning").orEmpty()+" Remove the selected turn and every later turn from conversation context?";"review"->"Start native code review? This uses model capacity.";"compact"->"Ask Codex to compact this conversation context?";"changeDirectory"->"Use this folder for subsequent turns? Existing files are not moved.";"acknowledge"->"Have you inspected the conversation and workspace for the uncertain effect? This unlocks subsequent input without retrying the operation.";else->"Create a new conversation through this turn? Working files are shared."}
         AlertDialog(onDismissRequest={confirmation=null},title={Text("Confirm conversation action")},text={Text(text)},confirmButton={TextButton({confirmation=null;run{
             if(kind=="acknowledge")request("/conversation-operations/"+operation.s("id")+"/acknowledge",JSONObject().put("inspected",true))
             else {operation.put("id",UUID.randomUUID().toString());check(Pocket.prefs.edit().putString(key,operation.toString()).commit()){"Could not save the operation before sending."};try{accepted(request("/conversation-operations",operation))}catch(e:CancellationException){throw e}catch(e:Exception){if(current())error="Delivery is uncertain. Check the saved operation; it will not be sent again. "+e.message}}

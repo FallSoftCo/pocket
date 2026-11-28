@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "versionCode": 187,
+  "versionName": "0.5.0-alpha.169",
+  "state": "published-android-both-channels-web-live",
+  "sourceCommit": "9a079161c9d3ef013448b39d918432efaba4db8f",
+  "qualificationSourceCommit": "9a079161",
+  "additionalProductCommit": "9a079161",
+  "changes": [
+    "Full original typed input appears locally before network acceptance",
+    "Accepted input remains visible until exact canonical clientId is committed and presented",
+    "History refresh failure cannot revoke acceptance or block the next draft",
+    "Source-bound local dismissal preserves canonical history and original request receipt",
+    "No text-based deduplication, inferred ordering, retry, new model polling or backend endpoint",
+    "Retained command output confines UI work to Main and releases loading by request generation; stale source replies remain rejected"
+  ],
+  "evidence": {
+    "nativeSend": "One actual synthetic composer steer; delayed original acceptance and canonical echo, reopen, alternate environment isolation, unrelated same-text input preserved, exactly one submission",
+    "web": "Actual application DOM journey: accepted receipt plus503, next draft, source switch, stale sending event, exact echo and local dismissal; rendered1100px/390px normal pointer journey one submission",
+    "nativeGate": "20 existing required native journeys passed",
+    "optimized": "Exact compatible optimized APK catalog/history/reconnect/decision journey passed",
+    "build": {
+      "debug": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 485,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "webRuntime": "ab87a8ffc42e9b61af5ff1f873585fddbf88d34ede9e47d4b0bdd771a1ed8a6a",
+    "backends": "Workstation and Mac backends/native runtimes unchanged; web gateways only replaced",
+    "commandOutput": "Original failed source-switch/held-output journey passes on final source with Beta HTTP finish200 and exact output assertion; generation-owned UI cleanup, stale-source guards and cancellation preserved."
+  },
+  "apk": {
+    "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf": {
+      "sha256": "cc5ffd118f4d0259c4f0bf735da953aedcb7d02c43b6db723e3611321a270b49",
+      "bytes": 52714431
+    },
+    "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31": {
+      "sha256": "2c8998a347c5bf41c7e290b0539ebef057c520417b86d0420b5d175c3a48dac9",
+      "bytes": 52714431
+    }
+  },
+  "limits": [
+    "Provider must supply exact client identity to retire automatically; absent identity retains a dismissible local copy",
+    "Typed direct-session input only; no new claim for coordinator/audio/notification reply mechanisms",
+    "Synthetic/emulator UI and separately recorded native audio checks do not establish physical handset behavior",
+    "No automatic replay of failed or uncertain delivery"
+  ],
+  "phoneInstalled": "unverified",
+  "announcement": {
+    "announced": 1,
+    "versionCode": 187,
+    "notificationId": 2898,
+    "pushEnabled": true,
+    "transportState": "accepted_by_fcm",
+    "attempts": 1,
+    "phoneDisplay": "unverified"
+  },
+  "retainedQualificationFailure": "Initial new native assertion required Send message while the active-session composer correctly exposed Steer running turn. Test now taps either actual control and verifies original mode/text. Initial test-only correction kept APKs unchanged. A later existing command-output journey exposed a stuck loading lifecycle after source switch; narrow lifecycle correction and response-completion evidence added before final rebuild. Browser setup failures retained separately.",
+  "publishedAt": 1794285429.3417244,
+  "coreSendCommit": "223ae30463818cd4b04909d5b73d512b47c61e15",
+  "webSourceCommit": "223ae30463818cd4b04909d5b73d512b47c61e15"
+}

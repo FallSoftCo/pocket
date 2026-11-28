@@ -2,7 +2,7 @@ package co.fallsoft.pocket
 
 import org.json.JSONObject
 
-internal fun catalogTask(t:JSONObject)=Task(t.s("id"),t.s("name"),t.s("cwd"),t.optJSONObject("status")?.s("type")?:"unknown",t.optLong("updatedAt"),t.optBoolean("watched"),t.optBoolean("archived"),t.s("preview"),t.s("previewRole","context"),t.s("previewKind","message"),t.optLong("activityAt"),t.optLong("recencyAt",t.optLong("createdAt")),t.s("parentThreadId").takeIf{it.isNotBlank()},t.optBoolean("isChild",t.s("parentThreadId").isNotBlank()),t.s("agentNickname"),t.s("agentRole"),t.optBoolean("canAcceptDirectInput",!t.optBoolean("isChild",t.s("parentThreadId").isNotBlank())),t.optInt("unreadCount"),t.s("catalogContext"),t.optBoolean("needsInput"))
+internal fun catalogTask(t:JSONObject)=Task(t.s("id"),t.s("name"),t.s("cwd"),t.optJSONObject("status")?.s("type")?:"unknown",t.optLong("updatedAt"),t.optBoolean("watched"),t.optBoolean("archived"),t.s("preview"),t.s("previewRole","context"),t.s("previewKind","message"),t.optLong("activityAt"),t.optLong("recencyAt",t.optLong("createdAt")),t.s("parentThreadId").takeIf{it.isNotBlank()},t.optBoolean("isChild",t.s("parentThreadId").isNotBlank()),t.s("agentNickname"),t.s("agentRole"),t.optBoolean("canAcceptDirectInput",!t.optBoolean("isChild",t.s("parentThreadId").isNotBlank())),t.optInt("unreadCount"),t.s("catalogContext"),t.optBoolean("needsInput"),workAttention(t.optJSONObject("attention")))
 internal fun taskWorkTime(t:Task)=maxOf(t.recencyAt,t.activityAt)
 data class SessionGroup(val task:Task,val children:List<Task>)
 /** Parent identity comes from the runtime, never a title/name heuristic. */
@@ -16,7 +16,7 @@ internal fun sessionGroups(tasks:List<Task>):List<SessionGroup>{
 internal fun ungroupedChildren(tasks:List<Task>):List<Task>{val grouped=sessionGroups(tasks).flatMap{it.children}.map{it.id}.toSet();return tasks.filter{it.isChild&&it.id !in grouped}}
 
 /** Empty shells remain searchable in History; new/working/watched work is never hidden. */
-internal fun meaningfulCatalogTask(t:Task)=t.status in listOf("active","pending")||t.watched||t.unreadCount>0||t.preview.isNotBlank()||t.title.isNotBlank()&&t.title !in listOf("Untitled task","New task","Untitled")
+internal fun meaningfulCatalogTask(t:Task)=t.needsReview()||t.status in listOf("active","pending")||t.watched||t.unreadCount>0||t.preview.isNotBlank()||t.title.isNotBlank()&&t.title !in listOf("Untitled task","New task","Untitled")
 
 internal fun Task.catalogJson()=JSONObject().put("id",id).put("name",title).put("cwd",cwd)
     .put("status",JSONObject().put("type",status)).put("updatedAt",updated).put("watched",watched)
@@ -24,4 +24,4 @@ internal fun Task.catalogJson()=JSONObject().put("id",id).put("name",title).put(
     .put("activityAt",activityAt).put("recencyAt",recencyAt).put("parentThreadId",parentThreadId)
     .put("isChild",isChild).put("agentNickname",agentNickname).put("agentRole",agentRole)
     .put("canAcceptDirectInput",canAcceptDirectInput).put("unreadCount",unreadCount)
-    .put("catalogContext",catalogContext).put("needsInput",needsInput)
+    .put("catalogContext",catalogContext).put("needsInput",needsInput).put("attention",attention?.json())

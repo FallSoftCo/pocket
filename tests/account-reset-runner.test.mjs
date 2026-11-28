@@ -7,6 +7,7 @@ import {spawn} from 'node:child_process';
 import http from 'node:http';
 import {WebSocketServer} from 'ws';
 import {standingAccountReset} from '../server/account-reset.mjs';
+import {invokeReset} from '../server/account-reset-routes.mjs';
 
 async function fixture(t){
  const dir=await mkdtemp(join(tmpdir(),'banked-reset-')),path=join(dir,'policy.json'),legacyPath=join(dir,'oneoff.json'),socket=join(dir,'native.sock');
@@ -33,12 +34,16 @@ async function fixture(t){
   assert.deepEqual(m.params,{creditId:persisted.attempt.creditId,idempotencyKey:persisted.attempt.idempotencyKey},'exact intent must be on disk before native dispatch');
   f.consume.push(m.params);const duplicate=f.seen.has(m.params.idempotencyKey);f.seen.add(m.params.idempotencyKey);
   if(f.loseAck){f.loseAck=false;ws.close();return;}
+  if(f.afterConsumeUsed!==undefined)f.used=f.afterConsumeUsed;
+  if(f.afterConsumeReadFailure)f.readFailure=true;
   reply({outcome:duplicate?'alreadyRedeemed':f.outcome});
  }));
+ f.invoke=request=>invokeReset({root:process.cwd(),path,lock:join(dir,'reset.lock'),socket,request});
  f.state=async()=>JSON.parse(await readFile(path,'utf8'));
- f.tick=async patch=>{
+ f.tick=async (patch,manual=null)=>{
   const state=await f.state();await writeFile(path,JSON.stringify({...state,...patch,nextAt:0}));
-  const child=spawn(process.execPath,['scripts/account-reset.mjs'],{cwd:process.cwd(),env:{PATH:process.env.PATH,HOME:dir,CODEX_HOME:dir,CODEX_SOCKET:socket,POCKET_RESET_STATE:path},stdio:['ignore','pipe','pipe']});
+  const child=spawn(process.execPath,['scripts/account-reset.mjs',...(manual?['--manual']:[])],{cwd:process.cwd(),env:{PATH:process.env.PATH,HOME:dir,CODEX_HOME:dir,CODEX_SOCKET:socket,POCKET_RESET_STATE:path},stdio:['pipe','pipe','pipe']});
+  child.stdin.end(manual?JSON.stringify(manual):'');
   let output='';child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>output+=b);
   const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve);});
   assert.equal(code,0,output);assert.ok(!output.includes('fixture-account')&&!output.includes('original-key'));
@@ -77,4 +82,65 @@ test('standing native runner waits through missing bank, account/cap stops and n
  f.outcome='noCredit';let s=await f.tick({enabled:true});assert.equal(s.status,'armed');assert.equal(f.consume.length,1);await f.tick();f.credits.reverse();await f.tick();assert.equal(f.consume.length,1,'unchanged multi-credit inventory cannot acquire new keys');
  f.credits.push(f.credit('new'));f.outcome='nothingToReset';s=await f.tick();assert.equal(s.status,'armed');assert.equal(f.consume.length,2);assert.equal(f.consume[1].creditId,'new');await f.tick();assert.equal(f.consume.length,2,'unchanged no-reset snapshot cannot churn keys');
  f.used=99;f.outcome='reset';s=await f.tick();assert.equal(s.status,'awaitingUsageDrop');assert.equal(f.consume.length,3);assert.equal(f.consume[2].creditId,'new','old rejected inventory cannot reenter after another negative outcome');assert.notEqual(f.consume[1].idempotencyKey,f.consume[2].idempotencyKey);
+});
+
+
+test('explicit manual reset works below automatic threshold while keeping the automatic policy stopped; replay and later deliberate reset',async t=>{
+ const f=await fixture(t);f.used=30;f.credits=[f.credit('one'),f.credit('two')];
+ const request={id:'manual-request-one',deviceId:'phone',accountId:'fixture-account'};
+ let s=await f.tick({enabled:false,status:'paused',reason:'Owner stopped automatic resets'},request);
+ assert.equal(s.enabled,false);assert.equal(s.automaticStop.reason,'Owner stopped automatic resets');
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(f.consume.length,1);
+ await f.tick({},request);assert.equal(f.consume.length,1,'same acknowledged request never consumes twice');
+ await f.tick({}, {...request,id:'manual-stale-usage'});assert.equal(f.consume.length,1,'stale pre-reset usage cannot admit another reset');
+ await f.tick();assert.equal(f.consume.length,1,'disabled timer does not rearm or consume');
+ f.used=0;f.credits=[f.credit('two')];
+ s=await f.tick({}, {...request,id:'manual-request-two'});assert.equal(f.consume.length,1,'zero usage does not waste a reset');
+ f.used=45;s=await f.tick({}, {...request,id:'manual-request-three'});assert.equal(f.consume.length,2);assert.equal(s.enabled,false);
+});
+
+test('manual reset survives lost acknowledgement and restart without consuming another benefit',async t=>{
+ const f=await fixture(t);f.used=40;f.credits=[f.credit('one'),f.credit('two')];f.loseAck=true;
+ const request={id:'manual-lost-ack-01',deviceId:'phone',accountId:'fixture-account'};
+ let s=await f.tick({enabled:false,status:'paused'},request);assert.equal(s.status,'redeeming');assert.equal(f.consume.length,1);
+ await f.tick({}, {...request,id:'other-request-001'});assert.equal(f.consume.length,1,'second action cannot replace uncertainty');
+ f.used=0;f.credits=[];s=await f.tick({},request);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.deepEqual(f.consume[0],f.consume[1]);assert.equal(s.enabled,false);
+});
+
+test('manual request still refuses a changed native account and spending blocks',async t=>{
+ const f=await fixture(t);f.used=99;f.credits=[f.credit('one')];
+ const request={id:'manual-account-01',deviceId:'phone',accountId:'fixture-account'};
+ f.accountId='different';await f.tick({enabled:false,status:'paused'},request);assert.equal(f.consume.length,0);
+ f.accountId='fixture-account';f.spend=true;await f.tick({}, {...request,id:'manual-account-02'});assert.equal(f.consume.length,0);
+});
+
+test('concurrent HTTP runner invocations share one process lock and do not spend a second reset on stale usage',async t=>{
+ const f=await fixture(t);f.used=40;f.credits=[f.credit('one'),f.credit('two')];
+ await f.tick({enabled:false,status:'paused'});
+ const results=await Promise.all(['manual-parallel-one','manual-parallel-two'].map(id=>f.invoke({id,deviceId:'phone',accountId:'fixture-account'})));
+ assert.equal(f.consume.length,1);assert.equal(results.filter(r=>r.state==='acknowledged').length,1);assert.equal(results.filter(r=>r.state==='not-reset').length,1);
+ assert.equal((await f.state()).enabled,false);
+});
+
+
+test('manual acknowledgement records usage recovery without an enabled timer before a later deliberate reset',async t=>{
+ const f=await fixture(t);f.used=30;f.credits=[f.credit('one'),f.credit('two')];f.afterConsumeUsed=0;
+ const request={id:'manual-observe-one',deviceId:'phone',accountId:'fixture-account'};
+ let s=await f.tick({enabled:false,status:'paused'},request);
+ assert.equal(s.status,'paused');assert.equal(s.attempt,null);assert.equal(s.receipts[0].afterHighestUsedPercent,0);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(f.consume.length,1);
+ f.used=80;f.credits=[f.credit('two')];s=await f.tick({}, {...request,id:'manual-observe-two'});
+ assert.equal(f.consume.length,2);assert.equal(s.enabled,false);assert.equal(s.status,'paused');
+});
+
+
+test('manual acknowledgement survives verification outage and same-request observation later restores paused state',async t=>{
+ const f=await fixture(t);f.used=40;f.credits=[f.credit('one')];f.afterConsumeReadFailure=true;
+ const request={id:'manual-verify-outage',deviceId:'phone',accountId:'fixture-account'};
+ let s=await f.tick({enabled:false,status:'paused'},request);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(s.status,'awaitingUsageDrop');
+ f.readFailure=false;f.used=0;s=await f.tick({},request);
+ assert.equal(s.status,'paused');assert.equal(s.enabled,false);assert.equal(f.consume.length,1);
+ assert.equal(s.manualRequests[request.id].result.state,'acknowledged');assert.equal(s.receipts[0].afterHighestUsedPercent,0);
 });

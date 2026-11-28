@@ -79,8 +79,8 @@ export function standingAccountReset(legacy,{accountId,authorizationReference,no
  return state;
 }
 
-async function runStandingReset({state,call,save,now}){
- if(!accountResetDue(state,now))return state;
+async function runStandingReset({state,call,save,now,manualId=null}){
+ if(!manualId&&!accountResetDue(state,now))return state;
  if(state.schemaVersion!==2||state.mode!=='standing'||!state.accountId||!state.authorizationReference||state.thresholdPercent!==99||
     !['armed','redeeming','awaitingUsageDrop'].includes(state.status)||(!Array.isArray(state.receipts)||state.receipts.some(r=>r?.outcome==='noCredit'&&!Array.isArray(r.eligibleCreditIds))))throw Error('Invalid standing reset authorization.');
  const attempt=state.attempt;
@@ -108,7 +108,7 @@ async function runStandingReset({state,call,save,now}){
   const weekly=windows.find(w=>w.windowDurationMins===10080);
   await persist({lastCheck:now,weeklyUsedPercent:weekly?.usedPercent??null,highestUsedPercent:used,availableCount:usage.rateLimitResetCredits?.availableCount??null});
   if(state.status==='awaitingUsageDrop'){
-   if(Number.isFinite(used)&&used>=0&&used<state.thresholdPercent){
+   if(Number.isFinite(used)&&used>=0&&used<(state.attempt.manualId?state.attempt.beforeHighestUsedPercent:state.thresholdPercent)){
     await persist({status:'armed',attempt:null,receipts:[...state.receipts,{...state.attempt,verifiedAt:now,afterHighestUsedPercent:used}],reason:'Usage fell below threshold; standing policy rearmed.',nextAt:now+60000});
    }else await defer('Acknowledged attempt retained; waiting for usage below threshold.');
    return state;
@@ -118,7 +118,7 @@ async function runStandingReset({state,call,save,now}){
    await defer('Spending-control health does not authorize a reset.',3600000);return state;
   }
   if(state.status==='armed'){
-   if(!Number.isFinite(used)||used<state.thresholdPercent||used>100){await defer('Waiting for 99 percent usage in a Codex allowance window.');return state;}
+   if(!Number.isFinite(used)||used<(manualId?0.000001:state.thresholdPercent)||used>100){await defer('Waiting for 99 percent usage in a Codex allowance window.');return state;}
    if(state.receipts.at(-1)?.outcome==='nothingToReset'&&state.receipts.at(-1).windowFingerprint===fingerprint){
     await defer('Provider found nothing to reset; waiting for changed usage windows.');return state;
    }
@@ -133,7 +133,7 @@ async function runStandingReset({state,call,save,now}){
    eligible.sort((a,b)=>(a.expiresAt??Infinity)-(b.expiresAt??Infinity)||a.id.localeCompare(b.id));
    const credit=eligible[0];
    if(!credit){await defer('No eligible banked reset; policy remains armed.');return state;}
-   await persist({status:'redeeming',attempt:{creditId:credit.id,idempotencyKey:randomUUID(),status:'pending',attemptedAt:now,attempts:0,beforeHighestUsedPercent:used,windowFingerprint:fingerprint,eligibleCreditIds:[...new Set(available.map(c=>c.id))]},reason:'Exact banked reset intent saved.',nextAt:now});
+   await persist({status:'redeeming',attempt:{...(manualId?{manualId}:{}),creditId:credit.id,idempotencyKey:randomUUID(),status:'pending',attemptedAt:now,attempts:0,beforeHighestUsedPercent:used,windowFingerprint:fingerprint,eligibleCreditIds:[...new Set(available.map(c=>c.id))]},reason:'Exact banked reset intent saved.',nextAt:now});
   }
   // Once dispatch is uncertain, expiry/usage/list changes cannot select a new
   // benefit: reconcile the exact provider-idempotent operation after guards.
@@ -149,4 +149,41 @@ async function runStandingReset({state,call,save,now}){
   await defer('Account/reset transport unavailable; retaining exact durable attempt.',Math.min(3600000,120000*2**Math.min(state.attempt?.attempts||0,5)));
  }
  return state;
+}
+
+// Invoked only under the same process lock as the automatic runner. A manual
+// action never changes enabled, threshold or authorization of the standing job.
+export async function runManualAccountReset({state,call,save,request,now=Date.now()}){
+ if(!request||!/^[a-zA-Z0-9_-]{16,100}$/.test(request.id)||!request.deviceId||request.accountId!==state.accountId||state.schemaVersion!==2||state.mode!=='standing')
+  throw Error('Reset account or request does not match the configured source.');
+ const persist=async patch=>{const next={...state,...patch};await save(next);Object.assign(state,next);};
+ const previous=state.manualRequests?.[request.id];
+ if(previous&&previous.deviceId!==request.deviceId)throw Error('Reset request belongs to another device.');
+ const resultFor=attempt=>({state:attempt.outcome==='reset'||attempt.outcome==='alreadyRedeemed'?'acknowledged':'not-reset',
+  message:({reset:'Reset applied. Refreshing account usage.',alreadyRedeemed:'This reset was already applied.',noCredit:'That banked reset is no longer available.',nothingToReset:'The provider found no allowance to reset.'})[attempt.outcome]});
+ const finish=async result=>{await persist({...(state.enabled===false&&state.status==='armed'?{status:'paused'}:{}),manualRequests:{...state.manualRequests,[request.id]:{...state.manualRequests?.[request.id],deviceId:request.deviceId,result,updatedAt:now}}});return result;};
+ // Verify an acknowledged manual reset while its original lock is held. This
+ // read-only pass also works while the automatic policy is deliberately paused.
+ // Failed verification retains the acknowledged receipt and exact attempt.
+ const verify=async()=>{
+  if(state.status==='awaitingUsageDrop'&&state.attempt?.manualId===request.id)
+   await runStandingReset({state,call,save,now,manualId:request.id});
+ };
+ if(previous?.result){if(previous.result.state==='acknowledged')await verify();return finish(previous.result);}
+ const acknowledge=async attempt=>{await verify();return finish(resultFor(attempt));};
+ const old=[state.attempt,...state.receipts].find(a=>a?.manualId===request.id&&a.outcome);
+ if(old)return acknowledge(old);
+ if(!previous){
+  if(state.status==='awaitingUsageDrop')await runStandingReset({state,call,save,now,manualId:request.id});
+  // A second tap/device must not inherit or replace an unresolved reset.
+  if(state.attempt||Object.values(state.manualRequests||{}).some(r=>!r.result))return finish({state:'not-reset',message:'An earlier reset is still being reconciled. No additional reset was used.'});
+  if(!['armed','paused'].includes(state.status))return {state:'unavailable',message:'Reset state needs reconciliation before another reset can be used.'};
+  await persist({...(state.enabled===false?{automaticStop:state.automaticStop||{status:state.status,reason:state.reason}}:{}),manualRequests:{...state.manualRequests,[request.id]:{deviceId:request.deviceId,createdAt:now}},status:'armed'});
+ }
+ await runStandingReset({state,call,save,now,manualId:request.id});
+ const attempt=[state.attempt,...state.receipts].find(a=>a?.manualId===request.id);
+ if(attempt?.outcome)return acknowledge(attempt);
+ if(attempt)return {state:'pending',message:'The reset acknowledgement is pending. Check this same request; do not start another.'};
+ // No provider mutation was admitted. A later deliberate action can recheck.
+ return finish({state:'not-reset',message:state.reason||'No eligible banked reset is currently available.'});
 }

@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.json.JSONObject
 
 /** Shared catalog geometry; each backend owns identities, ordering and pagination. */
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
@@ -103,43 +104,19 @@ internal val WorkCardShape=RoundedCornerShape(8.dp)
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable internal fun ConversationActionsMenu(expanded:Boolean,onExpandedChange:(Boolean)->Unit,
     modifier:Modifier=Modifier,statusIcon:String?=null,statusLabel:String?=null,statusSpinning:Boolean=false,bottomActions:Boolean=false,contextLabel:String?=null,
+    providerUsage:ProviderUsage?=Pocket.providerUsage,providerId:String?=null,conversationUsage:JSONObject?=null,
     accountUsage:WeeklyUsage?=null,accountSourceLabel:String?=null,
     content:@Composable ColumnScope.()->Unit){
     val context=androidx.compose.ui.platform.LocalContext.current
-    // A fresh opening starts with current work before the popup is measured.
-    val menuScroll=androidx.compose.runtime.remember(expanded,bottomActions){androidx.compose.foundation.ScrollState(if(bottomActions)Int.MAX_VALUE else 0)}
-    // Follow the work edge across measurement changes only while it is the
-    // user's current edge. A manual scroll away suspends following until the
-    // user returns or reopens. This effect observes only the open popup.
-    androidx.compose.runtime.LaunchedEffect(expanded,bottomActions,menuScroll){
-        if(expanded&&bottomActions){
-            var previousMax=-1
-            var followWork=true
-            androidx.compose.runtime.snapshotFlow{Triple(menuScroll.maxValue,menuScroll.value,menuScroll.isScrollInProgress)}.collect{(maximum,value,scrolling)->
-                if(maximum!=Int.MAX_VALUE){
-                    if(scrolling)followWork=value>=maximum-2
-                    else if(maximum==previousMax)followWork=value>=maximum-2
-                    if(maximum!=previousMax&&followWork&&!scrolling)menuScroll.scrollTo(maximum)
-                    previousMax=maximum
-                }
-            }
-        }
-    }
     Box{
         val usage=accountUsage?:Pocket.weeklyUsage
-        val dockWidth=if(accountSourceLabel!=null)compactUsageDockWidth(account=true)else conversationUsageDockWidth(usage,contextLabel)
-        UsageDock(modifier.width(dockWidth),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=usage,accountSourceLabel=accountSourceLabel)
-        DropdownMenu(expanded,{onExpandedChange(false)},scrollState=menuScroll,modifier=Modifier.width(300.dp).heightIn(max=if(bottomActions)280.dp else 420.dp).semantics{testTagsAsResourceId=true},
-            properties=androidx.compose.ui.window.PopupProperties(focusable=false),content={
-                val report:@Composable ()->Unit={
-                    TextButton({onExpandedChange(false);context.nextCompActivity()?.let{ResponsivenessReport.toggle(it)}},
-                        modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("native-measure-responsiveness")){
-                        BilingualLabel(if(ResponsivenessReport.measuring)"Finish responsiveness report" else "Report a slowdown")
-                    }
-                }
-                if(bottomActions){report();HorizontalDivider()}
-                content()
-                if(!bottomActions){HorizontalDivider();report()}
-            })
+        val dockWidth=if(accountSourceLabel!=null)compactUsageDockWidth(account=true,providerUsage=null)else conversationUsageDockWidth(usage,contextLabel,providerUsage,providerId,conversationUsage)
+        UsageDock(modifier.width(dockWidth),conversationOnly=true,compact=true,statusIcon=statusIcon,statusLabel=statusLabel,statusSpinning=statusSpinning,contextLabel=contextLabel,onOpen={onExpandedChange(true)},usage=usage,providerUsage=providerUsage,providerId=providerId,conversationUsage=conversationUsage,accountSourceLabel=accountSourceLabel)
+        SettingsDrawer(expanded,{onExpandedChange(false)},title="Conversation"){
+            content()
+            DrawerAction(if(ResponsivenessReport.measuring)"Finish responsiveness report" else "Report a slowdown",{
+                onExpandedChange(false);context.nextCompActivity()?.let{ResponsivenessReport.toggle(it)}
+            },modifier=Modifier.testTag("native-measure-responsiveness"))
+        }
     }
 }

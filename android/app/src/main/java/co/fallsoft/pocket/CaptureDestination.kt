@@ -15,6 +15,7 @@ internal data class CaptureDestination(
 ){
     fun matchesCurrent():Boolean=Pocket.captureEnvironment(Pocket.environmentId)?.let(source::matches)==true
     fun start(context:Context){
+        if(!Pocket.voiceAvailable){PocketVoice.captureFailure(Pocket.voiceReason.ifBlank{"Voice is unavailable on this environment. Use a typed message."},inPlace);return}
         if(!PocketVoice.foreground||!matchesCurrent()){
             PocketVoice.captureFailure("The recording environment changed. Press a volume button again; your draft is kept.",inPlace)
             return

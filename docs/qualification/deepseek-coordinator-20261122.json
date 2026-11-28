@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "requirement": "The NextComp coordinator must create its hidden native session with the DeepSeek provider and model configured for the environment, without requiring a client model argument or silently falling back to OpenAI.",
+  "date": "2026-11-22",
+  "source": {
+    "baseCommit": "bc7f3ad6c7952d548b2106b6b40ec16db3e42740",
+    "deploymentSnapshotCommit": "b25f38e3e028f5c0daae5cbfd036620c333075fa",
+    "runtimeChanges": [
+      "server/coordinator-provider.mjs",
+      "server/voice-controller.mjs",
+      "server/index.mjs"
+    ],
+    "testsAdded": [
+      "tests/coordinator-provider.test.mjs"
+    ]
+  },
+  "coordinator": {
+    "providerResolution": "config/read",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "allowProviderModelFallback": false,
+    "legacyRotation": "idle only; active coordinator turns are never interrupted",
+    "persistedFields": [
+      "voice_sessions.coordinator_provider",
+      "voice_sessions.coordinator_model"
+    ]
+  },
+  "backend": {
+    "releaseDigest": "793c2ccb190f450baa14bdc8add74b2f1f8d4545894a20e5cb73c6a968d604e3",
+    "artifactSha256": "3d2a6c8dc439201047f021ca415b29c67e08b753e404986d2c9577d9c16795ef",
+    "system76": {
+      "service": "nextcomp-deepseek.service",
+      "mainPid": 2762916,
+      "releasePath": "/home/ai/.local/share/nextcomp-federation-release-20261030-r01/releases/793c2ccb190f450baa14bdc8add74b2f1f8d4545894a20e5cb73c6a968d604e3",
+      "health": "ok",
+      "stockMainPidBefore": 798947,
+      "stockMainPidAfter": 798947,
+      "stockRestarted": false
+    },
+    "macbook": {
+      "launchdLabel": "co.fallsoft.nextcomp.deepseek-gateway",
+      "mainPid": 87645,
+      "releasePath": "/Users/Apple/.local/share/nextcomp-deepseek/releases/793c2ccb190f450baa14bdc8add74b2f1f8d4545894a20e5cb73c6a968d604e3",
+      "health": "ok",
+      "stockMainPidBefore": 73245,
+      "stockMainPidAfter": 73245,
+      "stockGatewayRestarted": false
+    }
+  },
+  "liveEvidence": {
+    "linuxProductionConfigRead": {
+      "source": "live DeepSeek app-server socket used by nextcomp-deepseek.service",
+      "modelProvider": "deepseek",
+      "model": "deepseek-flash",
+      "configuredProviders": [
+        "deepseek"
+      ],
+      "credentialAliasPresent": true
+    },
+    "macProductionTurn": {
+      "threadId": "01a2063b-342b-7ca0-8613-6f1ba949843d",
+      "turnId": "75d2f012-6885-4897-a060-df27bd529932",
+      "modelProvider": "deepseek",
+      "model": "deepseek-flash",
+      "state": "completed",
+      "response": "COORDINATOR_DEEPSEEK_READY",
+      "elapsedSeconds": 2.044,
+      "path": "/api/voice/start then /api/voice/text on the production Mac gateway"
+    },
+    "linuxIsolatedTurn": {
+      "threadId": "01a20637-769f-7010-b394-9feac6acd5d0",
+      "modelProvider": "deepseek",
+      "model": "deepseek-flash",
+      "state": "completed",
+      "response": "READY",
+      "elapsedSeconds": 3.5,
+      "evidenceDirectory": "/mnt/extradrive1/nextcomp/coordinator-deepseek-verify-minimal-20261122"
+    },
+    "linuxProductionRequestDuringAgentTurn": {
+      "path": "/api/voice/start",
+      "result": "CODEX_TIMEOUT",
+      "blockedMethod": "thread/start",
+      "interpretation": "The production gateway shares the DeepSeek app-server that was executing this qualification agent turn. The app-server serialized the nested thread creation. This did not exercise provider routing and is not a DeepSeek provider failure."
+    }
+  },
+  "verification": [
+    "Coordinator/provider/routing/model provider/voice/provider usage suites passed 100/100",
+    "Permissions/native execution/voice queue/recordings suites passed 18/18",
+    "Mac production /api/voice/start returned its hidden coordinator thread in 0.08 seconds",
+    "Mac thread metadata reported modelProvider=deepseek and model=deepseek-flash",
+    "Mac production coordinator text turn completed with the expected deterministic response",
+    "Both DeepSeek health endpoints report releaseDigest 793c2ccb190f450baa14bdc8add74b2f1f8d4545894a20e5cb73c6a968d604e3",
+    "The live Linux coordinator socket resolved provider=deepseek and model=deepseek-flash from config/read",
+    "Linux and Mac stock services retained their original PIDs"
+  ],
+  "limits": [
+    "The Linux production coordinator endpoint could not be validated end-to-end during this agent turn because the shared app-server serializes nested thread creation behind the active turn. It passed against an isolated live DeepSeek app-server and the same release passed end-to-end on the independent Mac production daemon.",
+    "No Android APK or update notification was published; this is a backend-only coordinator routing change."
+  ]
+}

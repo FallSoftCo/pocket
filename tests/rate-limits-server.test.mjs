@@ -15,7 +15,7 @@ test('authenticated status and live events expose actual weekly allowance withou
   const weekly=usedPercent=>({usedPercent,windowDurationMins:10080,resetsAt:2000000000});
   wss.on('connection',ws=>{peer=ws;ws.on('message',raw=>{
     const m=JSON.parse(raw);if(!m.id)return;
-    const result=m.method==='account/rateLimits/read'?{rateLimits:{limitId:'codex',primary:weekly(82)},accountId:'private-account',rateLimitResetCredits:{availableCount:1}}:{};
+    const result=m.method==='account/rateLimits/read'?{rateLimits:{limitId:'codex',primary:weekly(82)},accountId:'private-account',rateLimitResetCredits:{availableCount:1,credits:[{id:'private-benefit-id'}]}}:{};
     ws.send(JSON.stringify({id:m.id,result}));
   });});
   const port=45000+Math.floor(Math.random()*1000);
@@ -27,6 +27,8 @@ test('authenticated status and live events expose actual weekly allowance withou
   const status=()=>fetch(`http://127.0.0.1:${port}/api/status`,{headers:{Authorization:`Bearer ${adminToken}`}}).then(r=>r.json());
   const first=await wait(async()=>{const s=await status();return s.usage?.weekly?.remainingPercent===18&&s;});
   assert.ok(!JSON.stringify(first).includes('private-account'));
+  assert.deepEqual(first.usage.resetCredits,{availableCount:1,updatedAt:first.usage.resetCredits.updatedAt,stale:false});
+  assert.ok(!JSON.stringify(first).includes('private-benefit-id'));
   const events=[];
   const client=new WebSocket(`ws://127.0.0.1:${port}/events`,{headers:{Authorization:`Bearer ${adminToken}`}});
   client.on('message',raw=>events.push(JSON.parse(raw)));t.after(()=>client.terminate());
@@ -34,5 +36,10 @@ test('authenticated status and live events expose actual weekly allowance withou
   peer.send(JSON.stringify({method:'account/rateLimits/updated',params:{rateLimits:{limitId:'codex',primary:weekly(84)}}}));
   await wait(()=>events.find(e=>e.type==='rateLimits'&&e.usage.weekly?.remainingPercent===16));
   assert.equal((await status()).usage.weekly.remainingPercent,16);
+  assert.equal((await status()).usage.resetCredits.availableCount,1,'partial quota events retain reset observation');
+  peer.send(JSON.stringify({method:'account/rateLimits/updated',params:{rateLimitResetCredits:{availableCount:0}}}));
+  await wait(()=>events.find(e=>e.type==='rateLimits'&&e.usage.resetCredits?.availableCount===0));
+  assert.equal((await status()).usage.resetCredits.availableCount,0);
+  assert.ok(!JSON.stringify(events).includes('private-benefit-id'));
   assert.ok(!JSON.stringify(events).includes('private-account'));
 });

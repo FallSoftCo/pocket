@@ -1,6 +1,6 @@
 {
   "project": "NextComp / codex-pocket",
-  "updated": "2026-11-09",
+  "updated": "2026-11-22",
   "user_authorization": {
     "push_and_install": true,
     "no_phone_reset": true,
@@ -13,6 +13,127 @@
     "phone_codex_installs_compatible_updates": true
   },
   "requests": [
+    {
+      "id": "deepseek-voice-gating-20261122",
+      "request": "DeepSeek does not accept voice, so disable voice controls when the selected environment is using DeepSeek while keeping typed coordinator and session control usable.",
+      "cause": "Android199 rendered voice capture/playback controls for DeepSeek even though the backend has no Realtime audio path; using them returned 409 VOICE_UNAVAILABLE.",
+      "implementation": [
+        "Project provider-scoped voice availability with input and output disabled for DeepSeek and an explicit text-only reason",
+        "Hide microphone, Listen, speech-volume and coordinator playback controls when either voice direction is unavailable",
+        "Make volume-key capture ineligible on text-only environments while retaining stop/cancel for an existing capture",
+        "Keep coordinator text on the environment-configured DeepSeek provider/model and preserve the DeepSeek balance/token footer"
+      ],
+      "verification": "Android v200/alpha182 passed 835 Node tests, 494 debug and 494 release unit tests, 22 required native journeys and exact optimized catalog/history review. Authenticated metadata for both exact APK hashes is live on all four feeds. Notification3172 was accepted by FCM. The phone-compatible APK is staged at /storage/emulated/0/Download/nextcomp-200-deepseek-text-only.apk with matching SHA-256; installation is not verified. The stock OpenAI Realtime live-audio case is explicitly excluded because the account quota blocked it before model/audio work, so v200 does not certify that path.",
+      "status": "Delivered: Android200 published on workstation and Mac stock/DeepSeek feeds; DeepSeek text-only capability verified live on both backends; phone installation pending",
+      "evidence": "docs/qualification/deepseek-voice-gating-200.json"
+    },
+    {
+      "id": "deepseek-coordinator-provider-20261122",
+      "request": "Make the NextComp coordinator work on DeepSeek environments instead of remaining stuck on Codex/OpenAI routing.",
+      "implementation": [
+        "Resolve each hidden coordinator's provider and model from the environment's native Codex configuration",
+        "Start the coordinator with the resolved modelProvider, model and allowProviderModelFallback=false",
+        "Persist the coordinator provider/model and rotate an idle legacy coordinator when the environment provider changes",
+        "Never interrupt an active coordinator or cross-provider active turn during rotation"
+      ],
+      "verification": "Focused coordinator/provider/routing suites passed 100/100 and permissions/native execution/voice queue/recordings passed 18/18. Immutable release 793c2ccb was deployed only to the Linux and Mac DeepSeek gateways; stock gateways were not restarted and retained their original PIDs. A production Mac coordinator turn completed on deepseek/deepseek-flash in 2.0 seconds. Linux provider selection and an isolated live DeepSeek coordinator turn passed; the production Linux request made while this agent held the shared app-server was serialized at thread/start and is recorded as a harness limitation rather than a provider failure.",
+      "status": "Deployed to Linux and Mac DeepSeek; Mac production coordinator turn verified end-to-end; Linux live verification completed against an isolated app-server",
+      "evidence": "docs/qualification/deepseek-coordinator-20261122.json"
+    },
+    {
+      "id": "deepseek-footer-usage-20261122",
+      "request": "Show DeepSeek API credit remaining and token usage in the NextComp footer.",
+      "implementation": [
+        "Read the account-wide DeepSeek balance server-side from /user/balance with a bounded timeout, single-flight cache and credential-free projection",
+        "Keep provider balance separate from the stock ChatGPT weekly allowance, credits and reset controls",
+        "Show DeepSeek balance plus last-context and cumulative thread tokens in the conversation footer when the active provider matches",
+        "Expose fuller balance and token details in the existing drawer, including context-window percentage and observation freshness"
+      ],
+      "verification": "Focused server tests passed 17/17 and the Android debug unit suite passed. Immutable backend release deployed only to Linux and Mac DeepSeek gateways; stock gateways were not restarted and stock provider usage remains null. Live balance and per-thread token reads verified. Optimized phone-signed Android199 published to all four update feeds; notification3171 accepted by FCM; APK staged on the phone at /sdcard/Download/nextcomp-199-deepseek-usage.apk with matching SHA-256. On-device installation remains unverified.",
+      "status": "Deployed to Linux and Mac DeepSeek; Android199 update published and notification accepted by FCM; phone installation pending",
+      "evidence": "docs/qualification/deepseek-footer-usage-199.json"
+    },
+    {
+      "id": "immersion-runtime-residency-20261121",
+      "request": "Diagnose intermittent slow acknowledgements and whether workstation thermal throttling causes them.",
+      "status": "Active thermal throttling confirmed. Native diagnostics150 loaded threads;144 are registered immersion threads;1050 live MCP connections. Rotation/failure paths omit native cleanup. Repair and latency attribution remain open.",
+      "evidence": "docs/qualification/send-runtime-diagnosis-20261121.json"
+    },
+    {
+      "id": "git-stability-audit-20261121",
+      "request": "Trace Git and real deployment history to establish what was stable before adding more fixes.",
+      "status": "Baseline194 established from122 accepted sends; first unhealthy deployment195; exact trigger unproven. Android198 history-preservation update published separately; audit remains open.",
+      "evidence": "docs/qualification/send-history-regression-audit-20261121.json"
+    },
+    {
+      "id": "ack-history-reliability-20261121",
+      "request": "Every send hits an acknowledgement timeout and message history disappears in between; diagnose host connectivity and repair delivery/read lifetimes.",
+      "status": "Android198/alpha180 published both channels; history retention native journey passed. Initial198 backend repair live, but intermittent real send delays persist; latency work remains open.",
+      "implementation": [
+        "Retain original native turn acknowledgement observer beyond UI deadline",
+        "Persist preflight versus dispatch boundary; back off undelivered input without falsely marking an uncertain write",
+        "Keep history reads off the shared control transport",
+        "Explicit saved replies run before optional watch discovery",
+        "Retain visible same-source history across foreground reattachment without marking it fresh"
+      ],
+      "verification": "23 required native journeys and exact optimized native/visual review pass; both authenticated update APIs offer compatible198. One update notification accepted by FCM. Phone installation not verified; no overall latency repair claim."
+    },
+    {
+      "id": "session-card-error-overflow-20261120",
+      "request": "Error messages in the session list overflow individual items.",
+      "status": "Android197/alpha179 published both channels; web live; physical install unverified",
+      "implementation": [
+        "Bound phrase placeholder measurement and glyph rendering to caller maxLines",
+        "Clip the fixed preview viewport; retain complete errors in the opened session",
+        "Bound web preview and bilingual slots without adding nested scrollbars"
+      ],
+      "verification": [
+        "Native long error, multiline and unbroken token previews at normal/large text with immersion on/off",
+        "Rendered desktop/narrow web adjacent card boundaries"
+      ],
+      "evidence": "docs/qualification/session-preview-overflow197.json"
+    },
+    {
+      "id": "live-session-timeout-recovery-20261120",
+      "request": "Keep active Vipi work and Android session updates responsive through gateway reconnection.",
+      "status": "Gateway repair candidate; targeted regression tests passed, live verification pending.",
+      "implementation": [
+        "Reconnect observes only enabled, already-loaded watches; only active runtimes are subscribed, without loading historical runtimes.",
+        "Foreground timeline, coordinator observation and historical work-record reads use separate transports.",
+        "Missed completions retain their original saved boundary; successful live subscriptions are registered for event forwarding."
+      ],
+      "evidence": "docs/qualification/live-session-timeout-recovery-20261120.json"
+    },
+    {
+      "id": "native-model-providers-20261120",
+      "request": "Choose external model providers such as DeepSeek in Android and web.",
+      "status": "Android195/alpha177 published both channels; web and both backends live; phone installation unverified",
+      "implementation": [
+        "Native Codex provider registry and version-guarded private provider configuration; no proxy and no ChatGPT credential replacement",
+        "Explicit provider/model on new tasks, frozen into durable original creation receipts",
+        "Provider-specific sessions remain visible in unified catalog; existing conversations retain their provider",
+        "Secret input stays out of client preferences, response projections and receipt database; provider credentials live in native Codex configuration"
+      ],
+      "limits": [
+        "Current setup qualified against installed Codex 0.171.0; older runtimes report unavailable",
+        "Responses API-compatible providers only; existing owner DeepSeek key configured, one bounded real native deepseek-flash turn completed; no default provider changed",
+        "Existing session provider migration is not implemented; start a separate session with explicit provider/model"
+      ],
+      "evidence": "docs/qualification/model-providers-195.json"
+    },
+    {
+      "id": "persistent-cross-provider-handoff-20261120",
+      "request": "Continue conversations across providers using durable contextual handoff, original transcript and current work evidence.",
+      "status": "Delivered Android/web196; source checkpoint + fresh native destination, original receipt; phone install unverified",
+      "architecture": [
+        "Create a fresh native target-provider thread from a completed source-turn boundary; preserve the original session and durable source/destination link",
+        "Store a portable work checkpoint: task/constraints, decisions, completed artifacts, next steps, blockers and original external-action receipts/unknown effects",
+        "Export public conversation and tool-result evidence for on-demand reference; exclude provider-specific opaque reasoning and raw protocol replay",
+        "Use existing durable operation admission and receipt recovery; no automatic replay or concurrent continuation of the original worker"
+      ],
+      "proof": "Native0.171 fork passes ordinary user/assistant context but also forwards opaque source-provider reasoning to the new provider. This blocks blindly using raw fork for cross-provider handoff. Isolated proof made no paid requests.",
+      "evidence": "docs/qualification/provider-continuation196.json"
+    },
     {
       "id": "local-ux-measurement-visual-native-parity-20261109",
       "request": "Instrument UX locally, visually check borders/clipping and continue meaningful Codex TUI parity with Astra medium team.",
@@ -3589,6 +3710,23 @@
       ],
       "verification": "Pending integrated source qualification; inherited180 test counts do not qualify this work.",
       "evidence": "docs/UX-MEASUREMENT-PLAN.md"
+    },
+    {
+      "id": "gallery-all-published-page-forms-20261111",
+      "request": "Gallery previews must work in other sessions, including standalone review pages, not only the single catalog-card example. All gallery links should work.",
+      "status": "Delivered: Android193/alpha175 published on both update channels; web live on both entry points. Native message/image journey and actual rendered standalone pages passed. Physical-phone installation not claimed.",
+      "evidence": "docs/qualification/gallery-page-previews-193.json"
+    },
+    {
+      "id": "manual-banked-reset-20261119",
+      "request": "Provide a usable manual reset action alongside banked-reset availability on Android and web.",
+      "status": "Delivered: Android194/alpha176 published on both update channels; web live. Confirmation, original-request recovery and count refresh verified. Automatic reset pause preserved; phone install unverified.",
+      "constraints": [
+        "Preserve November16 deliberate automatic-reset stop.",
+        "One existing benefit per confirmed source/account-bound intent; no purchase, worker resumption or auto-recharge.",
+        "Share automatic-runner locking and durable exact-attempt reconciliation."
+      ],
+      "evidence": "docs/qualification/manual-banked-reset-194.json"
     }
   ],
   "current_state": {
@@ -4012,5 +4150,81 @@
     "behavior": "Steer now for active work; Send now for confirmed idle work. Retain the original outgoing identity, text, environment and receipt. Do not delete/recreate the message, replay unknown delivery, resume unrelated held messages, or send twice on repeated taps. Keep drafts and keyboard intact.",
     "status": "Delivered184: Android published to both channels; web and both backends live. Physical-phone installation unverified.",
     "verification": "27 focused real HTTP/native-socket checks, composed DOM/browser queue interactions,20 native journeys and exact optimized release review passed. Native queue test verifies direct promotion, repeated tap protection, same original identity, draft/IME retention and source-bound late ACK. See qualification/queued-steering-apps-184.json."
+  },
+  "needs_you_catalog_20261109": {
+    "requirement": "Replace redundant Work updates UX with useful actionable work, across Android and web.",
+    "design": "Needs you filters the existing source-bound session catalog; original session cards show current request/delivery reason. Count sessions, expose affected delegated children, retain ordinary list position/query, return to all sessions after resolution. No separate report feed, automatic resume/retry or model polling. Routine progress/results remain in conversations/cards.",
+    "evidenceContract": "Additive per-session attention v1 from current native pending requests, original failed/unknown delivery records, valid explicit input requests and verified runtime systemError. Missing/stale data is not all-clear; idle/interrupted work is not inferred broken.",
+    "preservation": "Retain stored reports, preferences, notification deep-link reader and source/delivery identities. Remove report-entry polling; questions and safe original delivery actions stay in conversation.",
+    "status": "Delivered185: both Android channels published, web and both backends live; phone installation unverified.",
+    "verification": "Real HTTP/native socket projection, browser DOM and narrow/wide rendered journeys,20 native journeys and exact optimized APK review passed. Qualification caught and fixed a native-preview/catalog feedback read using forced overlap. No worker submission or original uncertain delivery replay. See qualification/needs-you-185.json."
+  },
+  "failed_turn_catalog_20261109": {
+    "requirement": "A failed Codex turn must stay visible as a runtime error in the session list and Needs you, rather than silently becoming idle.",
+    "cause": "SessionDiscovery mapped every turn/completed event to idle, including failed turns; this could override the preceding native systemError status.",
+    "implementation": "Map failed terminal events to systemError; preserve normal idle after completion/interruption and clear error on the next turn start. No model polling or generic HTTP 400 auto-retry.",
+    "verification": "17 focused discovery/real HTTP-native socket integration checks pass, including systemError followed by failed terminal event, stale idle index hydration, Needs you visibility and subsequent active/completed transitions.",
+    "status": "Deployed to workstation backend; Android/web185 consume unchanged attention contract. Native Codex process, pairing and outgoing receipts preserved. Mac backend now carries the fix in the186 immutable closure; native Codex preserved."
+  },
+  "needs_you_parent_resolution_20261109": {
+    "requirement": "Needs you must identify subagent ownership and offer usable resolution on Android and web.",
+    "design": "Keep affected children expanded under their named owning task. Offer original-source parent navigation, preserving drafts. Child questions/approvals use existing native decision controls even when direct child text input is unsupported. Runtime errors route guidance to parent; no automatic retry or agent/human impersonation. Missing parent remains explicitly unavailable with same-source identity navigation.",
+    "status": "Delivered: Android186 available from workstation and Mac channels; web and both backends live.20 current-source native journeys and exact optimized APK passed; parent/child native and browser captures reviewed. Phone installation not independently verified.",
+    "evidence": "docs/qualification/needs-you-parent-186.json"
+  },
+  "sent_message_visibility_20261109": {
+    "requirement": "Sent input must appear immediately and remain visible across verified acceptance until matching canonical history arrives. A history read failure must not revoke acceptance or block further input.",
+    "design": "Source-bound durable local sent presentation separate from canonical ordering; use exact clientId identity only. Preserve unknown/queued controls and newer drafts, never replay because history is late. Accepted local evidence retires after exact stored canonical match; optional missing provider identity stays honest and explicitly dismissible.",
+    "status": "Delivered187: both Android update channels; web live on both private routes. Exact delayed-echo native journey, composed DOM, visual and optimized qualification passed. Phone installation unverified.",
+    "evidence": "docs/qualification/sent-message-187.json"
+  },
+  "manual_retry_failed_turn_20261110": {
+    "requirement": "An explicit new message or retry must be usable after a confirmed failed Codex turn, including generic provider Bad Request.",
+    "design": "Only explicit immediate input checks the newest native turn in one bounded summary read and rechecks current thread/transport before turn/start. Failure must be terminal; active, missing, unknown and changed transport remain protected. Queued work does not auto-resume; original outgoing identity and provenance remain intact.",
+    "verification": "Real HTTP paired-device admission, SQLite receipt and native socket integration: manual send, retry identity/dedup, pending queue preservation, active race, nonfailed head rejection and lost acknowledgement hold. No generic400 automatic retry or changed runtime settings.",
+    "status": "Deployed to workstation and Mac backends; existing Android/web clients use unchanged API. Native Codex processes, pairing, queued work and uncertain receipts preserved. No APK required."
+  },
+  "immersion_phrase_hold_20261110": {
+    "requirement": "Tapped phrases hold the explicitly chosen language rather than rejoining the global flip phase.",
+    "design": "Manual phrase state is separate from automatic phase; repeated tap switches and holds the opposite language. Content-bound native saveable state and bounded web reading-session choices survive ordinary redraw/scroll. Untouched phrases continue cycling; replacement text does not inherit stale offsets.",
+    "status": "Delivered: Android188/alpha170 published on workstation and Mac; web live on both private routes. Actual browser8cases,20native journeys and exact optimized APK passed. Phone install not performed.",
+    "evidence": "docs/qualification/immersion-phrase-hold188.json"
+  },
+  "toolbar_settings_resets_20261110": {
+    "requirement": "Remove the obsolete per-chat activity/reply list from the toolbar menu; display available banked Codex resets.",
+    "design": "Settings uses the same anchored menu in list and conversation. Existing account quota cache exposes only provider reset count and its independent observation freshness; missing fields remain unavailable. No new quota polling or redemption. Speech-source popup and actionable Needs you remain intact.",
+    "status": "Delivered: Android189/alpha171 available on both existing channels; web and both backends live. Required native journeys, exact optimized menu/catalog/history and browser checks passed. No phone installation performed.",
+    "evidence": "docs/qualification/toolbar-resets-189.json"
+  },
+  "toolbar_drawer_20261110": {
+    "requirement": "Replace the cramped toolbar popup with a coherent bottom drawer; immersion must not distort action spacing.",
+    "design": "Shared list/conversation bottom sheet; full-width natural bilingual action labels with stable whole-label height; grouped session/app/account sections; detailed usage, saved recordings and updates expand in place. Preserve native actions, source identity, update access and reset freshness.",
+    "status": "Delivered: Android190/alpha172 published on workstation and Mac with authenticated exact-APK readback.21 native journeys, optimized catalog/history and enlarged bilingual drawer inspection passed. Phone installation not performed.",
+    "evidence": "docs/qualification/toolbar-drawer-190.json"
+  },
+  "inline_gallery_preview_20261110": {
+    "requirement": "Restore inline gallery views on Android and web.",
+    "cause": "Full gallery metadata grew to20.5MB, above Android16MiB limit; web compatibility origin skipped canonical443 links.",
+    "design": "Version1 small preview projection, credential-free bounded reads and single-flight cache;404-only legacy fallback; same-host canonical-to-private-mirror mapping and explicit web retry. Gallery originals/full metadata unchanged.",
+    "status": "Delivered: Android191/alpha173 published; web live; qualification docs/qualification/inline-gallery-191.json."
+  },
+  "drawer_direct_controls_20261111": {
+    "requirement": "Reduce accordion overuse in the otherwise improved settings drawer. Provide a real inline gallery example in this conversation.",
+    "design": "Updates and ordinary session actions stay directly visible. Saved recording controls omit empty state and retain only their existing history disclosure. Extended usage remains optional but no longer repeats allowance, reset and credit summary.",
+    "status": "Delivered: Android192/alpha174 published on workstation and Mac; direct-action native journey and exact optimized bilingual drawer review passed. Phone install not claimed.",
+    "evidence": "docs/qualification/direct-drawer-192.json"
+  },
+  "immersion_native_lifecycle_20261121": {
+    "request": "Immediately clear immersion resource leakage and fix delayed human sends without interrupting active Codex work. User disabled immersion.",
+    "implementation": "Each translation worker owns a bounded native connection and one original thread/turn identity; tools disabled; late mutation replies retained; cancellation awaits terminal identity; unsubscribe verifies native residency before replacement; unknown startup blocks replacement. Human send uses runtime metadata instead of transcript loading.",
+    "qualification": "52 affected tests before final retirement guard; 40 focused tests after guard including delayed unload and lost-start reply; actual isolated Codex 0.171 four create/release cycles, no model turns or MCP requests. Deployment evidence tracked separately.",
+    "evidence": "docs/qualification/immersion-lifecycle-20261121.json",
+    "status": "Backend deployed on workstation and Mac; immersion disabled; Mac legacy unload compatibility remains limited and fails closed."
+  },
+  "immersion_provider_complete_20261121": {
+    "request": "Repair immersion fully, including native cleanup on Mac, and support configured model providers including existing DeepSeek. Preserve disabled setting until user enables.",
+    "implementation": "Provider/model choice per device and environment, native credential ownership, explicit provider verification without fallback, one stateless scratch thread per batch, archive+delete with durable cleanup ownership, cached validated plans preserved.",
+    "qualification": "45 focused checks; actual short DeepSeek/OpenAI plans validated; longer DeepSeek plans showed latency and one validation failure, so complete provider quality is not claimed. Native archive/delete verified on Linux0.171 and Mac0.163. Android preflight settings/reading passed; full signed qualification not finished after user deferral.",
+    "status": "Deferred by explicit user request on 2026-11-21. Immersion disabled on workstation and Mac; no active owned translation threads. Android199 build and owned QA emulator stopped; no199 publication. Existing provider/cleanup source retained."
   }
 }

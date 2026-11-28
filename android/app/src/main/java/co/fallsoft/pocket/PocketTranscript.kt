@@ -252,7 +252,8 @@ object PocketTranscript {
         reads.reset();refreshPending=false;missedUpdates=false;pendingHead=null;buffered.clear()
     }
     fun reset(id:String)=CodexConversations.select(id,force=true)
-    internal fun resetState(id:String,scope:CoroutineScope,openLatest:Boolean=false){
+    internal fun resetState(id:String,scope:CoroutineScope,openLatest:Boolean=false,retainPresentation:Boolean=false){
+        val retain=retainPresentation&&owner==id&&ownerScope==scopeKey()&&canonicalMode&&rows.isNotEmpty()
         CodexSessionRepository.inspectEmptyRead(id)
         operationScope=scope
         latestReadError="";historicalReadError="";positionReadError="";readFailureSince=0L
@@ -263,6 +264,13 @@ object PocketTranscript {
         generation++;owner=id;ownerScope=scopeKey();observedHead=null;pendingHead=null;headSnapshotsSupported=null;automaticRetryAllowed=true
         canonicalMode=CodexSessionRepository.nativeEnabled()
         if(canonicalMode){
+            if(retain){
+                // Foreground reattachment is not navigation or history replacement.
+                // Keep the visible window while refreshing; only a successful read
+                // may acknowledge freshness or notifications.
+                freshForRead=false;cachedNeedsConfirmation=false;needsDiskRestore=false
+                reads.reset();refreshPending=true;buffered.clear();revision++;return
+            }
             rows=emptyList();Pocket.detail=null;readPosition=null;before=null;earlier=false;gapWindows=emptyList()
             coverageVerified=false;confirmedRows=emptySet();historyLoaded=false;freshForRead=false
             cachedNeedsConfirmation=true;needsDiskRestore=true;reads.reset();refreshPending=false;buffered.clear()
@@ -671,6 +679,9 @@ object PocketTranscript {
             parseHead(value.optJSONObject("historyHead"),id)?.let{observedHead=it;headSnapshotsSupported=true}
         }
         if(changed)revision++
+        // The stored canonical row and selected projection now own the same
+        // body. Retire local sent evidence only after this atomic UI handoff.
+        Pocket.captureEnvironment()?.let{PocketReplies.transcriptCommitted(it,id,rows)}
     }
     private suspend fun readNativePage(id:String,older:Boolean,bridgeCursor:String?,retryAttempt:Int,beforeApply:suspend()->Unit,onLegacy:(JSONObject)->Unit):Boolean{
         if(owner!=id||ownerScope!=scopeKey())return true

@@ -1,8 +1,8 @@
 // Use the connected Codex catalogue, including its advertised effort values.
-export async function modelCatalogue(codex){
+export async function modelCatalogue(codex,modelProvider){
  const models=[],seen=new Set();let cursor=null;
  do{
-  const page=await codex.call('model/list',{...(cursor?{cursor}:{}),limit:100,includeHidden:false});
+  const page=await codex.call('model/list',{...(modelProvider?{modelProvider}:{}),...(cursor?{cursor}:{}),limit:100,includeHidden:false});
   models.push(...(page.data||[]).filter(m=>!m.hidden));cursor=page.nextCursor;
   if(cursor&&seen.has(cursor))throw Error('Codex returned a repeated model cursor.');
   if(cursor)seen.add(cursor);

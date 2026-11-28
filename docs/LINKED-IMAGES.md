@@ -22,7 +22,7 @@ Ordinary Markdown links and bare URLs ending in PNG, JPEG, GIF, WebP, BMP, AVIF 
 
 Images remain next to their surrounding prose, including within a paragraph. Image presentation does not alter the canonical text or offsets used by optional inline immersion. Italian phrase taps still switch the text in place; viewing an image does not introduce a translated line or help modal.
 
-To show an image stored only on the execution host, an agent should share that exact file through the existing authenticated attachment path, or link to an HTTPS image resource the phone can reach. The notification tool's `files` argument supports explicitly requested local attachments. A raw workstation filesystem path is not a phone-download URL. A link to a gallery **page** remains a page link; use its actual image URL when the picture should be visible in the conversation.
+To show an image stored only on the execution host, an agent should share that exact file through the existing authenticated attachment path, or link to an HTTPS image resource the phone can reach. The notification tool's `files` argument supports explicitly requested local attachments. A raw workstation filesystem path is not a phone-download URL. Gallery-card links (`/8bar/#card-id` or `/8bar/index.html#card-id`) resolve their published preview. A gallery homepage link previews its first published card. Standalone review directories and HTML pages under `/8bar/` preview their declared Open Graph image or first review image. Their scripts and styles are never executed; a preview is not an embedded web page. Pages without an accessible image retain an explicit unavailable/retry state. The original link remains available beside the preview.
 
 ## Loading and access
 
@@ -37,3 +37,31 @@ Opaque file links use a HEAD MIME check, falling back to a Range GET when HEAD i
 [Markdown parsing](../android/app/src/main/java/co/fallsoft/pocket/MarkdownContent.kt) retains image positions, [rendering](../android/app/src/main/java/co/fallsoft/pocket/MarkdownRenderer.kt) slices already annotated text, and [native image loading/viewing](../android/app/src/main/java/co/fallsoft/pocket/LinkedImage.kt) handles access and bounds. The same image flow is used in [immersion content](../android/app/src/main/java/co/fallsoft/pocket/BilingualMessage.kt) and explicit image attachments.
 
 Runtime observations are recorded separately from source claims in the release qualification. Synthetic emulator images establish UI/transport behavior with controlled inputs; they do not establish access to arbitrary private image services or a permanent fix for phone DNS.
+
+## Gallery-card metadata
+
+The gallery publishes `showcase-previews.json` alongside its full catalog:
+`{"version":1,"cards":[{"id":"card-id","title":"Title","poster":"card/poster.png","video":"card/preview.mp4","width":800,"height":600}]}`.
+Only those six fields belong in this projection; downloads, production notes and
+source archives remain in the full gallery catalog. The publisher integration
+patch is retained in `integrations/gallery/preview-projection.patch`.
+
+Android and web bound this metadata to4MiB/20,000cards, coalesce concurrent reads
+and cache briefly. Only a404 uses the old16MiB full-catalog fallback. No pairing
+credential is sent to gallery metadata or media. Failed browser previews expose
+Retry; they do not silently disappear or poll in the background.
+
+The private compatibility web origin must mirror the existing `/8bar/` static
+route. The browser maps only canonical HTTPS links on its own hostname to that
+same-origin mirror. Other hosts, arbitrary ports and credential-bearing links
+are not rewritten. The gallery remains tailnet-only; no CORS wildcard, new
+public listener or application authentication exception is needed.
+
+
+Standalone page metadata is capped at512KiB, cached for60seconds with up to16
+pages, and uses credential-free reads with redirects disabled. Relative image
+paths resolve against the requested page, ignoring HTML `base` tags. Only images
+on the same gallery origin under `/8bar/` qualify. This supports existing agent
+review pages without requiring authors to copy images into a catalog card or
+change previously sent messages. Android uses jsoup’s detached HTML parser;
+web uses a detached DOM document. Neither embeds the page’s executable content.

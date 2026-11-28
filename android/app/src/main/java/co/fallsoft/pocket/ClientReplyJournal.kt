@@ -24,4 +24,9 @@ internal class ClientReplyJournal(private val read:()->String,private val write:
     @Synchronized fun get(id:String)=all().firstOrNull{it.id==id}
     @Synchronized fun update(id:String,change:(ClientReplyIntent)->ClientReplyIntent):ClientReplyIntent?{val rows=all();val old=rows.firstOrNull{it.id==id}?:return null;val next=change(old);save(rows.map{if(it.id==id)next else it});return next}
     @Synchronized fun remove(id:String){save(all().filterNot{it.id==id})}
+    @Synchronized fun removeAccepted(environment:String,owner:String,thread:String,clientIds:Set<String>):Boolean{
+        val rows=all();val retained=rows.filterNot{it.state=="accepted"&&it.environment==environment&&it.owner==owner&&it.thread==thread&&it.id in clientIds}
+        if(retained.size==rows.size)return false
+        save(retained);return true
+    }
 }

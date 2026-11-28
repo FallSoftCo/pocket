@@ -6,7 +6,13 @@ A prepared intent has not been dispatched and can finish its original send once.
 
 Only a matching known receipt state can acknowledge handoff. Queued/held/sending means handed to the durable server outbox, not completed work. Failed, unknown, malformed or wrong-thread responses preserve the draft and recovery controls. An acknowledgment clears only the original draft generation; edits, including retyping identical words, survive delayed acknowledgments. Changed pairing credentials cannot inspect or replay an old owner's intent.
 
-The journal stores message text and receipt metadata in app-private preferences with Android backups disabled. Accepted entries are pruned after safe draft reconciliation. Voice, coordinator, notification reply and team paths are separate mechanisms; this qualification does not certify them or exactly-once external execution.
+The journal stores message text and receipt metadata in app-private preferences with Android backups disabled. An accepted receipt clears only the original draft generation and releases the composer; it does not prove that conversation history already contains that input. The full local message remains visible as Sent until the exact canonical echo is stored and handed to the conversation. This presentation is separate from canonical message ordering.
+
+Retirement matches the original outgoing ID to the canonical `clientId`, within the original environment, credential owner and thread. Identical text, a matching turn ID, a newer timestamp or an empty outbox is insufficient. A delayed or failed history refresh cannot downgrade an accepted send. Unknown delivery retains its recovery controls even when history contains an apparent match. Accepted local presentation never triggers resubmission or model polling.
+
+Web uses the same separation between durable intent/receipt and local presentation. Accepted evidence in its existing delivered-receipt journal masks stale queued/sending snapshots; fetching history is independent of acknowledging the original submission. If the provider supplies no exact echo identity, the local copy stays honestly labeled until the user chooses Hide local copy. That action removes presentation only, not the accepted request or canonical history. Android offers the same accepted-only dismissal.
+
+Voice, coordinator and notification reply paths are separate mechanisms; this direct-session typed-input behavior does not certify them or exactly-once external execution.
 
 ## Canonical Hollywood notification replies
 

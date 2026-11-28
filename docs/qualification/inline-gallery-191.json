@@ -1,0 +1,95 @@
+{
+  "feature": "Inline gallery preview repair",
+  "date": "2026-11-11",
+  "cause": {
+    "android": "Full gallery metadata20519044bytes exceeded16MiB client bound.",
+    "web": "Canonical443 links were rejected on compatibility8448; no same-origin gallery mirror existed."
+  },
+  "implementation": {
+    "projection": "Version1 compact preview catalog;4MiB bound;404-only16MiB legacy fallback; bounded single-flight cache.",
+    "web": "Same-host canonical443 links resolve through current-origin private gallery mirror. Failed loads expose Retry. Metadata requests omit credentials.",
+    "galleryPublisher": "Versioned projection emitted beside the existing full catalog; exact owning-source patch retained in integrations/gallery/preview-projection.patch.",
+    "currentProjection": {
+      "cards": 3620,
+      "bytes": 931552,
+      "sha256": "5c552cf1dd566a457a1fdfd3a3beaebb5f9d7a713a7a426b4d7d0fd14adba6d8"
+    }
+  },
+  "android": {
+    "versionCode": 191,
+    "versionName": "0.5.0-alpha.173",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "sha256": "0861405b2a9c17c07bb7f8df032d07f1386aaa4b29d6e350fa699a6d92ccee81",
+        "size": 52750467
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "sha256": "13d3408702359b1d59acf9f2227468e8cbaacbf6332ac671a9cea15487b1b0a2",
+        "size": 52750467
+      }
+    ],
+    "productionSourceSha": "3ce1c8443841d8060b38c128fb7c3ac3ec323794d57f9a44f066f66c96256e9e",
+    "qualificationInputSha": "8264287598b386997fe0d44087b69fd0873019e68d8ecc877624fb9d45f1c39b",
+    "requiredNativeJourneys": 21,
+    "galleryJourney": {
+      "passed": true,
+      "metadataReads": 1,
+      "posterDecoded": true,
+      "galleryCredentialLeaks": 0,
+      "workSubmissions": 0,
+      "screenshotSha256": "ea25cda517cc25624d705984d098dffa03b1d28bc69ea294a3aebae66436a4ba"
+    },
+    "optimized": {
+      "codexCatalogDrawn": true,
+      "canonicalPairOrder": true,
+      "reopenOriginalPairExactlyOnce": true,
+      "questionSkipOnce": true,
+      "optimizedPayloadVerified": true,
+      "catalogSnapshotStable": true
+    }
+  },
+  "web": {
+    "live": true,
+    "releaseDigest": "128e00c11989039f9bebbbdecb3bdc19f0b54582e216ddd40f2d0371587fff47",
+    "domIntegrationCases": 4,
+    "rendered": {
+      "state": "complete",
+      "sourceSha": "57877f9eef8335cc7faa2ad490b3d33c16423ab1e9410d4b2a89e20716ed77f0",
+      "realPublishedGalleryMetadataAndPoster": true,
+      "syntheticHtml": true,
+      "results": [
+        {
+          "route": "canonicalHTTPS",
+          "viewportWidth": 1440,
+          "elapsedMs": 238,
+          "figures": 1,
+          "overflow": false,
+          "screenshotSha256": "a6d452970d8bd28ffd2f6a220bcb3065cbb24cc2b25ab7db28f6dc4f0309ca4f"
+        },
+        {
+          "route": "compatibilityHTTPS",
+          "viewportWidth": 390,
+          "elapsedMs": 202,
+          "figures": 1,
+          "overflow": false,
+          "screenshotSha256": "6c90488f7c6df6c427c784867ff76181cbcd5eee79d54d3b87c32dbebc22854c"
+        }
+      ]
+    },
+    "gatewayAuthCookieAndRoutingSourceUnchanged": true,
+    "existingConnectionsPreserved": true
+  },
+  "publication": {
+    "workstation": "Published; authenticated exact-compatible191readback",
+    "macbook": "Published; authenticated exact-compatible191readback"
+  },
+  "limits": [
+    "Native fixture and exact optimized APK verified on owned emulator; physical phone installation not claimed.",
+    "Rendered browser candidate used real gallery metadata/media at1440and390 viewports. Intrinsic image width in original receipt is not viewport width.",
+    "Additional post-cutover live-CSS browser attempt was blocked before script execution by existing Chrome CDP refusal. Live served module bytes independently matched the qualified candidate.",
+    "Review images and gallery metadata staged, but main gallery index build remains blocked by a pre-existing missing poster; no placeholder introduced.",
+    "Android previews use gallery posters; this repair does not add native inline video playback."
+  ]
+}

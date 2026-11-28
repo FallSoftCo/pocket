@@ -66,6 +66,10 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     val cwdKey=Pocket.key("newTaskCwd");val projectKey=Pocket.key("lastProject");val promptKey=Pocket.key("newTaskPrompt")
     var cwd by remember(cwdKey,projectKey){mutableStateOf(Pocket.prefs.getString(cwdKey,Pocket.prefs.getString(projectKey,Pocket.tasks.firstOrNull()?.cwd?:Pocket.defaultCwd))?:Pocket.defaultCwd)}
     var prompt by remember(promptKey){mutableStateOf(Pocket.prefs.getString(promptKey,"")?:"")}
+    var selection by remember(Pocket.environmentId){mutableStateOf<JSONObject?>(null)}
+    var providersOpen by remember{mutableStateOf(false)}
+    var providerRevision by remember{mutableIntStateOf(0)}
+    if(providersOpen)ProviderSettingsDialog{providersOpen=false;providerRevision++}
     Column(Modifier.fillMaxSize().imePadding()){
         Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically){IconButton({Pocket.newTask=false}){SymbolIcon(Icons.AutoMirrored.Rounded.ArrowBack,"Back")};BilingualLabel("New task",fontSize=23.sp,fontWeight=FontWeight.Medium)}
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
@@ -79,12 +83,13 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
                 }
             }
             TaskPermissionsControl()
+            ProviderChoice(selection,{selection=it},!Pocket.starting,{providersOpen=true},providerRevision)
             OutlinedTextField(prompt,{prompt=it;Pocket.prefs.edit().putString(promptKey,it).apply()},label={BilingualLabel("What would you like Codex to do?",centered=false)},placeholder={WorkflowText("Describe the task, context and what done looks like.",fontSize=14.sp)},enabled=!Pocket.starting,modifier=Modifier.fillMaxWidth().heightIn(min=150.dp),minLines=4,maxLines=10,shape=RoundedCornerShape(18.dp))
             WorkflowText("You’ll see progress here and get a notification when the task needs you or finishes.",fontSize=12.sp,color=Muted,lineHeight=19.sp)
             if(Pocket.startStatus.isNotBlank())WorkflowText(Pocket.startStatus,fontSize=13.sp,color=Mint)
             ErrorBanner();Spacer(Modifier.height(10.dp))
         }
-        Button({Pocket.startTask(cwd.trim(),prompt.trim())},enabled=cwd.isNotBlank()&&prompt.isNotBlank()&&!Pocket.starting,modifier=Modifier.fillMaxWidth().padding(20.dp).height(54.dp),shape=RoundedCornerShape(6.dp)){
+        Button({Pocket.startTask(cwd.trim(),prompt.trim(),selection)},enabled=cwd.isNotBlank()&&prompt.isNotBlank()&&!Pocket.starting,modifier=Modifier.fillMaxWidth().padding(20.dp).height(54.dp),shape=RoundedCornerShape(6.dp)){
             if(Pocket.starting)CircularProgressIndicator(Modifier.size(20.dp),strokeWidth=2.dp,color=Ink)else SymbolIcon(Icons.Rounded.ArrowUpward,null)
             Spacer(Modifier.width(9.dp));BilingualLabel(if(Pocket.starting)"Starting…" else if(Pocket.startStatus.isNotBlank())"Check task status" else "Start task")
         }
@@ -484,19 +489,21 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     }
     if(conversationToolsOpen)ConversationToolsSheet(onClose={conversationToolsOpen=false},onInsert={text->val next=if(editor.text.isBlank())text else editor.text+"\n\n"+text;editor=TextFieldValue(next,TextRange(next.length));saveReplyDraft(draftKey,next);keyboardInput=true})
     val ConversationActivityControls:@Composable ColumnScope.()->Unit={
-            TextButton({actionsOpen=false;conversationToolsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Context & files")}
+        DrawerSection("Session"){
+            DrawerAction("Context & files",{actionsOpen=false;conversationToolsOpen=true})
             NativeTerminalsControl()
-            TextButton({actionsOpen=false;settingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Model, effort, tier & mode")}
-            TextButton({actionsOpen=false;nativeSettingsOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Codex settings & agents")}
-            if(reviewCount>0)TextButton({actionsOpen=false;reviewMode=ConversationReviewMode.MANUAL},modifier=Modifier.fillMaxWidth()){BilingualLabel("Needs you · $reviewCount",color=Coral)}
-            d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=12.sp,color=Muted)}
-            TextButton({Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false},modifier=Modifier.fillMaxWidth()){BilingualLabel(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow")}
-            if(waiting.isNotEmpty())TextButton({actionsOpen=false;queueOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue · ${waiting.size}")}
-            TextButton({rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"},modifier=Modifier.fillMaxWidth()){BilingualLabel("Keep latest reply in notes")}
-            TextButton({actionsOpen=false;taskName=t?.s("name").orEmpty().let{TextFieldValue(it,TextRange(0,it.length))};renameOpen=true},modifier=Modifier.fillMaxWidth()){BilingualLabel("Rename")}
-            TextButton({actionsOpen=false;confirmArchive=true},enabled=!active,modifier=Modifier.fillMaxWidth()){BilingualLabel("Archive")}
-            TextButton({actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending,modifier=Modifier.fillMaxWidth()){BilingualLabel("Queue message")}
-            UsageDetails()
+            DrawerAction("Model, effort, tier & mode",{actionsOpen=false;settingsOpen=true})
+            d?.optJSONObject("turnSettings")?.let{settings->Text(listOf(settings.s("model"),settings.s("effort"),settings.s("mode")).filter{it.isNotBlank()}.joinToString(" · "),fontSize=13.sp,color=Muted)}
+            DrawerAction("Codex settings & agents",{actionsOpen=false;nativeSettingsOpen=true})
+            if(reviewCount>0)DrawerAction("Needs you · $reviewCount",{actionsOpen=false;reviewMode=ConversationReviewMode.MANUAL})
+            if(waiting.isNotEmpty())DrawerAction("Queue · ${waiting.size}",{actionsOpen=false;queueOpen=true})
+            DrawerAction(if(d?.optBoolean("watched")==true)"Unfollow" else "Follow",{Pocket.watch(!(d?.optBoolean("watched")?:false));actionsOpen=false})
+            DrawerAction("Rename",{actionsOpen=false;taskName=t?.s("name").orEmpty().let{TextFieldValue(it,TextRange(0,it.length))};renameOpen=true})
+            DrawerAction("Archive",{actionsOpen=false;confirmArchive=true},enabled=!active)
+            DrawerAction("Keep latest reply in notes",{rows.lastOrNull{it.s("kind")=="message"&&it.s("text").isNotBlank()}?.let{keepConversationReply(it)};actionsOpen=false},enabled=rows.any{it.s("kind")=="message"})
+            DrawerAction("Queue message",{actionsOpen=false;submit("queue")},enabled=hasDraft&&!Pocket.sending)
+        }
+        UsageDetails(onNavigate={actionsOpen=false},providerId=t?.s("modelProvider"),conversationUsage=d?.optJSONObject("usage"))
     }
     val visibleSpeechKeys by remember(list){derivedStateOf{list.layoutInfo.visibleItemsInfo.map{it.key}.toSet()}}
     val hasVisibleSpeech=shownRows.any{it.s("id") in visibleSpeechKeys&&it.s("kind")=="message"&&it.s("text").isNotBlank()}
@@ -673,9 +680,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
         ConversationFooter{
             InlineSpeechVolume(Modifier.width(inlineVolumeControlWidth()))
             ConversationNotesControls(reviewCount,reviewResults.size,{reviewMode=ConversationReviewMode.MANUAL},hasVisibleSpeech,visibleSpeech)
-            ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning){
-                TextButton({actionsOpen=false;keyboard?.hide();Pocket.closeTask()}){BilingualLabel("Back")}
-                if(PocketSpeech.count>0)TextButton({PocketSpeech.clear();actionsOpen=false}){BilingualLabel("Clear speech from active session")}
+            ConversationActionsMenu(actionsOpen,{actionsOpen=it},statusIcon=status.icon,statusLabel=status.label,statusSpinning=status.spinning,providerId=t?.s("modelProvider"),conversationUsage=d?.optJSONObject("usage")){
+                DrawerAction("Back",{actionsOpen=false;keyboard?.hide();Pocket.closeTask()})
+                if(PocketSpeech.count>0)DrawerAction("Clear speech from active session",{PocketSpeech.clear();actionsOpen=false})
                 ConversationActivityControls()
             }
             key(important){ReaderPagingButtons(list,hasEarlier=(PocketTranscript.earlier||historyGaps.isNotEmpty())&&!important,
@@ -815,7 +822,9 @@ fun turnTime(value:Long):String=if(value<=0)"Current turn" else SimpleDateFormat
     var modelMenu by remember{mutableStateOf(false)};var effortMenu by remember{mutableStateOf(false)}
     var problem by remember{mutableStateOf("")};var loading by remember{mutableStateOf(true)}
     LaunchedEffect(Unit){try{
-        models=Pocket.api("/api/models").optJSONArray("models")?.objects()?:emptyList()
+        val response=Pocket.api("/api/models?threadId=${android.net.Uri.encode(Pocket.selected.orEmpty())}")
+        models=response.optJSONArray("models")?.objects()?:emptyList()
+        if(response.optBoolean("manual"))problem="This session uses ${response.s("providerId")}. Its model is retained. Choose another provider/model in New task."
         val current=models.firstOrNull{it.s("model")==model}?:models.firstOrNull()
         current?.let{model=it.s("model");if(it.optJSONArray("efforts")?.objects()?.none{e->e.s("reasoningEffort")==effort}!=false)effort=it.s("defaultEffort")}
     }catch(e:Exception){problem=e.message?:"Could not load models"}finally{loading=false}}

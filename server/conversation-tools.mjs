@@ -7,7 +7,7 @@ import {requireDirectSessionInput} from './session-catalog.mjs';
 const execute=promisify(execFile);
 const fail=(message,status=409)=>Object.assign(Error(message),{status});
 const identifier=value=>{if(typeof value!=='string'||!/^[a-zA-Z0-9_-]{5,100}$/.test(value))throw fail('Invalid source identifier.',400);return value;};
-const methods={fork:'thread/fork',revert:'thread/revert',compact:'thread/compact/start',review:'review/start',changeDirectory:'thread/settings/update'};
+const methods={continue:'thread/start',fork:'thread/fork',revert:'thread/revert',compact:'thread/compact/start',review:'review/start',changeDirectory:'thread/settings/update'};
 export const HISTORY_WARNING='This changes conversation context only. Files, commands, running jobs and external actions are not undone. Review their actual state before sending more work.';
 const textOf=turn=>(turn.items||[]).filter(i=>i.type==='userMessage').flatMap(i=>i.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n');
 
@@ -15,44 +15,58 @@ const textOf=turn=>(turn.items||[]).filter(i=>i.type==='userMessage').flatMap(i=
  * receipt BEFORE dispatch. Unknown outcomes are never retried, including after
  * process restart. Reads never attach a runtime or create model work. */
 export class ConversationTools {
- constructor({db,codex,supports=()=>false,publish=()=>{},checkSource=()=>{},hasPending=()=>false,onFork=()=>{},onChanged=()=>{},clock=Date.now}){
-  Object.assign(this,{db,codex,supports,publish,checkSource,hasPending,onFork,onChanged,clock});this.busy=new Set();this.usage=new Map();this.revertEvents=new Map();
+ constructor({db,codex,supports=()=>false,publish=()=>{},checkSource=()=>{},hasPending=()=>false,onFork=()=>{},onChanged=()=>{},handoff=null,admitContinuation=()=>{},dispatchContinuation=()=>{},admissions=null,clock=Date.now}){
+  Object.assign(this,{db,codex,supports,publish,checkSource,hasPending,onFork,onChanged,handoff,admitContinuation,dispatchContinuation,admissions,clock});this.busy=new Set();this.usage=new Map();this.revertEvents=new Map();
   db.exec(`CREATE TABLE IF NOT EXISTS conversation_operations(id TEXT PRIMARY KEY,device TEXT NOT NULL,thread TEXT NOT NULL,kind TEXT NOT NULL,request TEXT NOT NULL,state TEXT NOT NULL,result TEXT,error TEXT,at INTEGER NOT NULL);
    CREATE TABLE IF NOT EXISTS conversation_operation_acknowledgements(operation_id TEXT PRIMARY KEY,device TEXT NOT NULL,at INTEGER NOT NULL);
-   UPDATE conversation_operations SET state='unknown',error='Connection ended before native acknowledgement. Inspect the session; this operation will not be replayed.' WHERE state='dispatching';`);
+   UPDATE conversation_operations SET state='unknown',error='Connection ended before native acknowledgement. Inspect the session; this operation will not be replayed.' WHERE state='dispatching';
+   UPDATE conversation_operations SET state='failed',error='Handoff preparation stopped before creating a session. Source work is unchanged.' WHERE state='preparing';`);
   codex.on?.('event',m=>this.observe(m));
  }
  observe(m){const p=m.params||{},id=p.threadId;if(!id)return;
   if(m.method==='thread/tokenUsage/updated'&&p.tokenUsage){this.usage.delete(id);this.usage.set(id,{...p.tokenUsage,turnId:p.turnId,observedAt:this.clock()});while(this.usage.size>256)this.usage.delete(this.usage.keys().next().value);this.publish('conversationUsage',{threadId:id,usage:this.usage.get(id)});}
   if(m.method==='thread/reverted'){const head=this.onChanged(id,'revert');if(this.busy.has(id))this.revertEvents.set(id,head);}
  }
- allowed(kind){return this.supports(methods[kind]);}
- assertInputAllowed(threadId,{ownOperation=false}={}){if(!ownOperation&&this.busy.has(threadId))throw fail('A conversation control is running. Wait for its receipt before sending more work.');if(this.db.prepare("SELECT 1 FROM conversation_operations WHERE thread=? AND state IN ('dispatching','unknown') AND kind IN ('revert','changeDirectory','compact','review') LIMIT 1").get(threadId))throw fail('A conversation operation is pending or uncertain. Inspect its receipt before sending more work.');}
+ usageFor(threadId){return this.usage.get(threadId)||null;}
+ allowed(kind){return kind==='continue'?this.handoff?.available()===true:this.supports(methods[kind]);}
+ assertInputAllowed(threadId,{ownOperation=false,ownOperationId=''}={}){if(!ownOperation&&this.busy.has(threadId))throw fail('A conversation control is running. Wait for its receipt before sending more work.');if(this.db.prepare("SELECT 1 FROM conversation_operations WHERE thread=? AND id<>? AND state IN ('dispatching','unknown') AND kind IN ('revert','changeDirectory','compact','review','continue') LIMIT 1").get(threadId,ownOperationId))throw fail('A conversation operation is pending or uncertain. Inspect its receipt before sending more work.');}
  pairedDevice(device){return typeof device==='string'&&device!=='owner'&&!!this.db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='devices'").get()&&!!this.db.prepare('SELECT 1 FROM devices WHERE id=?').get(device);}
- receipt(device,thread,id){const r=this.db.prepare('SELECT * FROM conversation_operations WHERE id=?').get(identifier(id));if(!r||r.thread!==thread||r.device!==device&&(!['dispatching','unknown','acknowledged'].includes(r.state)||!this.pairedDevice(device)))return null;const acknowledgement=this.db.prepare('SELECT device,at FROM conversation_operation_acknowledgements WHERE operation_id=?').get(r.id);const result=r.result?JSON.parse(r.result):null;return {id:r.id,threadId:r.thread,kind:r.kind,state:r.state,sharedRecovery:r.device!==device,...(acknowledgement?{acknowledgedBy:acknowledgement.device,acknowledgedAt:acknowledgement.at}:{}),...(result?.thread?{thread:result.thread}:{}),result,error:r.error,createdAt:r.at};}
+ receipt(device,thread,id){const r=this.db.prepare('SELECT * FROM conversation_operations WHERE id=?').get(identifier(id));if(!r||r.thread!==thread||r.device!==device&&(!['dispatching','unknown','acknowledged'].includes(r.state)||!this.pairedDevice(device)))return null;const acknowledgement=this.db.prepare('SELECT device,at FROM conversation_operation_acknowledgements WHERE operation_id=?').get(r.id);const result=r.result?JSON.parse(r.result):null;if(result)delete result.turnOptions;return {id:r.id,threadId:r.thread,kind:r.kind,state:r.state,sharedRecovery:r.device!==device,...(acknowledgement?{acknowledgedBy:acknowledgement.device,acknowledgedAt:acknowledgement.at}:{}),...(result?.thread?{thread:result.thread}:{}),result,error:r.error,createdAt:r.at};}
  async source(threadId){identifier(threadId);await this.codex.connect();const {thread}=await this.codex.call('thread/read',{threadId,includeTurns:false});if(thread?.id!==threadId)throw fail('The native response belongs to another session.');return thread;}
  async turns(threadId,cursor=null){if(cursor!==null&&(typeof cursor!=='string'||cursor.length>16384))throw fail('Invalid turn cursor.',400);return this.codex.call('thread/turns/list',{threadId,limit:30,sortDirection:'desc',itemsView:'full',...(cursor?{cursor}:{})});}
- async describe(threadId,device,cursor=null){const thread=await this.source(threadId),page=await this.turns(threadId,cursor);return {threadId,cwd:thread.cwd,historyMode:thread.historyMode,active:thread.status?.type==='active',usage:this.usage.get(threadId)||null,warning:HISTORY_WARNING,
+ async describe(threadId,device,cursor=null){const thread=await this.source(threadId),page=await this.turns(threadId,cursor);return {threadId,cwd:thread.cwd,model:thread.model||null,modelProvider:thread.modelProvider||null,historyMode:thread.historyMode,active:thread.status?.type==='active',usage:this.usage.get(threadId)||null,warning:HISTORY_WARNING,
   features:Object.fromEntries(Object.keys(methods).map(k=>[k,{available:this.allowed(k)&&(k!=='revert'||thread.historyMode==='paginated'),reason:k==='revert'&&thread.historyMode!=='paginated'?'Native revert requires paginated history.':this.allowed(k)?null:'This native runtime version is not qualified for this control.'}])),
   turns:(page.data||[]).map(t=>({id:t.id,status:t.status,startedAt:t.startedAt,userText:textOf(t).slice(0,32000)})),nextCursor:page.nextCursor||null,
+  continuationSource:this.db.prepare("SELECT thread AS threadId,at FROM conversation_operations WHERE kind='continue' AND state='accepted' AND json_extract(result,'$.thread.id')=? LIMIT 1").get(threadId)||null,
   operations:this.db.prepare("SELECT id FROM conversation_operations WHERE thread=? AND (device=? OR (? AND state IN ('dispatching','unknown','acknowledged'))) ORDER BY CASE WHEN state IN ('dispatching','unknown') THEN 0 ELSE 1 END,at DESC LIMIT 12").all(threadId,device,this.pairedDevice(device)?1:0).map(r=>this.receipt(device,threadId,r.id)),
   worktree:{available:false,reason:'Managed worktree creation is not exposed by the qualified native protocol. Select an existing worktree folder or use native Codex to create one.'}};}
  validate(threadId,input){identifier(threadId);identifier(input?.id);const kind=input.kind;if(!methods[kind])throw fail('Unsupported conversation operation.',400);const p={id:input.id,kind};
   if(['fork','revert'].includes(kind)){p.turnId=identifier(input.turnId);p.expectedLastTurnId=identifier(input.expectedLastTurnId);}
+  if(kind==='continue'){p.expectedLastTurnId=identifier(input.expectedLastTurnId);if(!input.selection||typeof input.selection.providerId!=='string'||typeof input.selection.model!=='string')throw fail('Choose a provider and explicit model.',400);p.selection={providerId:input.selection.providerId,model:input.selection.model,effort:input.selection.effort||null};if(input.note!=null&&(typeof input.note!=='string'||input.note.length>8000))throw fail('Handoff instructions must be at most 8000 characters.',400);p.note=input.note?.trim()||'';}
   if(kind==='revert'&&input.confirmContextOnly!==true)throw fail(HISTORY_WARNING,400);
   if(kind==='revert')p.confirmContextOnly=true;
   if(kind==='changeDirectory')p.cwd=projectPath(input.cwd);
   if(kind==='review'){const target=input.target||{type:'uncommittedChanges'};if(target.type==='uncommittedChanges')p.target={type:target.type};else if(target.type==='baseBranch'&&typeof target.branch==='string'&&target.branch.trim()&&!target.branch.startsWith('-')&&target.branch.length<=256)p.target={type:target.type,branch:target.branch};else if(target.type==='commit'&&/^[a-fA-F0-9]{7,64}$/.test(target.sha||''))p.target={type:target.type,sha:target.sha};else throw fail('Choose working changes, a base branch or a commit SHA.',400);}
   return p;
  }
- async operate(device,threadId,input){const p=this.validate(threadId,input),request=JSON.stringify(p),old=this.db.prepare('SELECT * FROM conversation_operations WHERE id=?').get(p.id);
+ async operate(device,threadId,input,principal=null){const p=this.validate(threadId,input),request=JSON.stringify(p),old=this.db.prepare('SELECT * FROM conversation_operations WHERE id=?').get(p.id);
   if(old){if(old.device!==device||old.thread!==threadId||old.request!==request)throw fail('This operation identifier belongs to another request.');return this.receipt(device,threadId,p.id);}
-  if(this.busy.has(threadId))throw fail('A conversation control is already running.');this.busy.add(threadId);
+  if(this.busy.has(threadId))throw fail('A conversation control is already running.');this.busy.add(threadId);let handoff;
   try{
    const thread=await this.source(threadId);if(!this.allowed(p.kind))throw fail('This native runtime version does not support the requested control.',422);
    this.checkSource(threadId);this.assertInputAllowed(threadId,{ownOperation:true});if(this.db.prepare("SELECT 1 FROM conversation_operations WHERE thread=? AND kind='fork' AND state IN ('dispatching','unknown') LIMIT 1").get(threadId))throw fail('An earlier fork has an uncertain outcome. Inspect and acknowledge its receipt before creating another branch.');if(p.kind!=='fork')requireDirectSessionInput(thread);
    if(p.kind!=='fork'&&(thread.status?.type==='active'||this.hasPending(threadId)))throw fail('Wait for active work and queued messages to settle before changing this conversation.');
    if(p.kind==='changeDirectory'&&thread.parentThreadId)throw fail('Change folders in a primary conversation. A delegated agent keeps its assigned workspace.');
+   if(p.kind==='continue'&&this.db.prepare("SELECT id FROM conversation_operations WHERE thread=? AND kind='continue' AND state IN ('accepted','dispatching','unknown') AND json_extract(request,'$.expectedLastTurnId')=? LIMIT 1").get(threadId,p.expectedLastTurnId))throw fail('This boundary already has a continuation. Open its original receipt instead of starting the work twice.');
+   if(p.kind==='continue'){
+    this.admissions?.record('conversation',p.id,principal);
+    this.db.prepare("INSERT INTO conversation_operations(id,device,thread,kind,request,state,at) VALUES(?,?,?,?,?,'preparing',?)").run(p.id,device,threadId,p.kind,request,this.clock());
+    try{
+    handoff=await this.handoff.prepare(thread,p,()=>{this.checkSource(threadId);this.assertInputAllowed(threadId,{ownOperation:true,ownOperationId:p.id});if(this.hasPending(threadId))throw fail('Source input is pending. Settle it before continuing.');});
+    await handoff.checkQueue();const latest=await this.source(threadId),head=await this.turns(threadId);handoff.current();
+    if(latest.status?.type==='active'||head.data?.[0]?.id!==p.expectedLastTurnId||head.data?.[0]?.status==='inProgress')throw fail('The source changed while saving the checkpoint. No continuation was started.');
+    }catch(error){this.db.prepare("UPDATE conversation_operations SET state='failed',error=? WHERE id=?").run(String(error.message).slice(0,2000),p.id);return this.receipt(device,threadId,p.id);}
+   }
    let selected;
    if(['fork','revert'].includes(p.kind)){
     if(p.kind==='revert'&&thread.historyMode!=='paginated')throw fail('Native revert is available only for paginated history.',422);
@@ -61,21 +75,36 @@ export class ConversationTools {
     if(selected.status==='inProgress')throw fail('Choose a settled turn.');
    }
    const params={threadId};if(p.kind==='fork')Object.assign(params,{lastTurnId:p.turnId,excludeTurns:true,deferGoalContinuation:true});if(p.kind==='revert')params.beforeTurnId=p.turnId;if(p.kind==='review')Object.assign(params,{target:p.target,delivery:'inline'});if(p.kind==='changeDirectory')params.cwd=p.cwd;
-   this.db.prepare("INSERT INTO conversation_operations(id,device,thread,kind,request,state,at) VALUES(?,?,?,?,?,'dispatching',?)").run(p.id,device,threadId,p.kind,request,this.clock());
+   if(handoff)this.db.prepare("UPDATE conversation_operations SET state='dispatching' WHERE id=?").run(p.id);
+   else this.db.prepare("INSERT INTO conversation_operations(id,device,thread,kind,request,state,at) VALUES(?,?,?,?,?,'dispatching',?)").run(p.id,device,threadId,p.kind,request,this.clock());
    try{
     // These explicit controls need a loaded session. Resume preserves every native
     // setting and never sends model input. Fork loads its own persisted source.
-    if(p.kind!=='fork'){const resumed=await this.codex.call('thread/resume',{threadId,excludeTurns:true});if(resumed.thread?.id!==threadId)throw fail('Native attachment returned another session.');}
-    const native=await this.codex.call(methods[p.kind],params);const result={};
+    if(p.kind!=='fork'&&p.kind!=='continue'){const resumed=await this.codex.call('thread/resume',{threadId,excludeTurns:true});if(resumed.thread?.id!==threadId)throw fail('Native attachment returned another session.');}
+    const native=await this.codex.call(methods[p.kind],handoff?handoff.params:params);const result={};
+    if(handoff){
+     if(!native.thread?.id||native.thread.id===threadId)throw fail('Native destination identity was not confirmed.');
+     result.thread=native.thread;result.checkpoint=handoff.checkpoint;result.turnOptions=handoff.turnOptions;
+     // Retain destination identity immediately, even if permission verification or
+     // subsequent outbox admission fails. Receipt reads must not create a retry.
+     this.db.prepare('UPDATE conversation_operations SET result=? WHERE id=?').run(JSON.stringify(result),p.id);
+     handoff.current();handoff.verify(native);
+     this.db.exec('BEGIN IMMEDIATE');
+     try{result.outgoingId=this.admitContinuation(native.thread,p,handoff,principal);result.message='Continuation saved and queued. This does not mean the work has completed.';
+      this.db.prepare("UPDATE conversation_operations SET state='accepted',result=? WHERE id=?").run(JSON.stringify(result),p.id);this.db.exec('COMMIT');
+     }catch(error){this.db.exec('ROLLBACK');throw error;}
+    }
     if(p.kind==='fork'){if(!native.thread?.id||native.thread.id===threadId||native.thread.forkedFromId&&native.thread.forkedFromId!==threadId)throw fail('Native fork identity was not confirmed.');result.thread=native.thread;this.onFork(native.thread);}
     if(p.kind==='revert'){if(native.thread?.id!==threadId)throw fail('Native history replacement identity was not confirmed.');result.draft=selected?textOf(selected):'';result.beforeTurnId=p.turnId;result.warning=HISTORY_WARNING;result.historyHead=this.revertEvents.has(threadId)?this.revertEvents.get(threadId):this.onChanged(threadId,'revert');}
     if(p.kind==='review')result.turnId=native.turn?.id||null;
     if(p.kind==='compact')result.message='Compaction requested. Completion and context usage follow native events.';
     if(p.kind==='changeDirectory'){result.cwd=p.cwd;this.onChanged(threadId,'changeDirectory');}
-    this.db.prepare("UPDATE conversation_operations SET state='accepted',result=? WHERE id=?").run(JSON.stringify(result),p.id);
+    if(!handoff)this.db.prepare("UPDATE conversation_operations SET state='accepted',result=? WHERE id=?").run(JSON.stringify(result),p.id);
    }catch(e){this.db.prepare('UPDATE conversation_operations SET state=?,error=? WHERE id=?').run(e.rpc?'failed':'unknown',String(e.message).slice(0,2000),p.id);}
-   const receipt=this.receipt(device,threadId,p.id);this.publish('conversationOperation',{threadId,operation:receipt});return receipt;
-  }finally{this.busy.delete(threadId);this.revertEvents.delete(threadId);}
+   const receipt=this.receipt(device,threadId,p.id);this.publish('conversationOperation',{threadId,operation:receipt});
+   if(handoff&&receipt.state==='accepted'){this.onFork(receipt.thread);this.dispatchContinuation(receipt.result.outgoingId,receipt.thread);}
+   return receipt;
+  }finally{handoff?.release();this.busy.delete(threadId);this.revertEvents.delete(threadId);}
  }
  acknowledge(device,threadId,id){
   if(device==='owner')throw fail('Human recovery requires a paired device; an administrator cannot impersonate it.',403);
@@ -97,4 +126,4 @@ export async function workspaceDiff(cwd){const git=async args=>(await execute('g
  const status=await git(['status','--short','--untracked-files=normal']);const untracked=(await git(['ls-files','--others','--exclude-standard','-z'])).split('\0').filter(Boolean);let text=tracked;let omitted=0;
  for(const path of untracked.slice(0,30)){const absolute=resolve(cwd,path);const canonical=await realpath(absolute).catch(()=>null);if(!canonical||!inside(root,canonical)){omitted++;continue;}const st=await stat(canonical);if(!st.isFile()||st.size>64000||text.length>800000){omitted++;continue;}const body=await readFile(canonical,'utf8');text+='\nUntracked: '+path+'\n'+(body.includes('\0')?'[binary file]\n':body.split('\n').map(l=>'+'+l).join('\n'))+'\n';}
  return {cwd,root,status,diff:text,untrackedCount:untracked.length,omittedUntracked:omitted+Math.max(0,untracked.length-30),readOnly:true};}
-export function registerConversationTools(app,controller,route){const root='/api/threads/:id';app.get(root+'/conversation-tools',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.describe(req.params.id,req.device.id,req.query.cursor||null))));app.post(root+'/conversation-operations',route(async(req,res)=>res.json(await controller.operate(req.device.id,req.params.id,req.body))));app.get(root+'/conversation-operations/:operationId',route(async(req,res)=>{const r=controller.receipt(req.device.id,req.params.id,req.params.operationId);if(!r)return res.status(404).json({error:'Operation not found.'});res.set('Cache-Control','no-store').json(r);}));app.post(root+'/conversation-operations/:operationId/acknowledge',route(async(req,res)=>{if(req.body?.inspected!==true)throw fail('Inspect the conversation and workspace before acknowledging an unknown result.',400);res.json(controller.acknowledge(req.device.id,req.params.id,req.params.operationId));}));app.get(root+'/workspace-files',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.files(req.params.id,req.query.q))));app.get(root+'/workspace-selection',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.selection(req.params.id,req.query))));app.get(root+'/workspace-diff',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.diff(req.params.id))));}
+export function registerConversationTools(app,controller,route){const root='/api/threads/:id';app.get(root+'/conversation-tools',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.describe(req.params.id,req.device.id,req.query.cursor||null))));app.post(root+'/conversation-operations',route(async(req,res)=>res.json(await controller.operate(req.device.id,req.params.id,req.body,req.humanPrincipal))));app.get(root+'/conversation-operations/:operationId',route(async(req,res)=>{const r=controller.receipt(req.device.id,req.params.id,req.params.operationId);if(!r)return res.status(404).json({error:'Operation not found.'});res.set('Cache-Control','no-store').json(r);}));app.post(root+'/conversation-operations/:operationId/acknowledge',route(async(req,res)=>{if(req.body?.inspected!==true)throw fail('Inspect the conversation and workspace before acknowledging an unknown result.',400);res.json(controller.acknowledge(req.device.id,req.params.id,req.params.operationId));}));app.get(root+'/workspace-files',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.files(req.params.id,req.query.q))));app.get(root+'/workspace-selection',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.selection(req.params.id,req.query))));app.get(root+'/workspace-diff',route(async(req,res)=>res.set('Cache-Control','no-store').json(await controller.diff(req.params.id))));}

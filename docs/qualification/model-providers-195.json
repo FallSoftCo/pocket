@@ -1,0 +1,80 @@
+{
+  "feature": "Native Codex model providers and explicit new-session provider selection",
+  "date": "2026-11-20",
+  "android": {
+    "versionCode": 195,
+    "versionName": "0.5.0-alpha.177",
+    "variants": [
+      {
+        "signerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+        "path": "nextcomp-195-b28f55b44c93.apk",
+        "sha256": "c7bc4b1f978914ac3ab9e04802538cc14ea8a85864289f52819e99ea2c56015e",
+        "size": 52964239
+      },
+      {
+        "signerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+        "path": "nextcomp-195-22ecabe28e15.apk",
+        "sha256": "4a2105de43f43fb2616269764887934736e0a73800cd5281d6725f3874ea5786",
+        "size": 52964239
+      }
+    ],
+    "productionSourceSha": "160de2e998933f481ca88fba22fac3a707af42cfc542a7c93b4a111e35fd38f4",
+    "qualificationInputSha": "9041b6c827c9556d8cfafeac7e5948a1131316d2f2fdfedb051b72a5e1cdebeb",
+    "requiredNativeJourneys": 21,
+    "optimizedApkSha": "4a2105de43f43fb2616269764887934736e0a73800cd5281d6725f3874ea5786",
+    "providerFormReachable": true,
+    "saveReachable": true,
+    "retainedQaPreferencesRestored": true,
+    "visualReview": "Exact optimized APK: New task shows Provider and Manage providers without overlap; provider sheet shows editable name, ID, URL, masked-key field and host-key-variable alternative. Save provider and Done are within the viewport; Save is correctly disabled while credentials are empty. Canonical catalog card retains readable preview and footer controls; transcript shows each request before its corresponding answer once. Synthetic UI only; physical handset rendering unverified."
+  },
+  "backend": {
+    "immutableClosure": "78e40ed3ff712666cdb5a89866cb1d7d0cdfbff3524a28d19a967fcd6113efc5",
+    "workstationAndMacDeployed": true,
+    "checks": {
+      "tests": 805,
+      "passed": 803,
+      "intentionalDomSkips": 2,
+      "failed": 0,
+      "separateDomLanePassed": true
+    }
+  },
+  "web": {
+    "deployed": true,
+    "nativeBrowserDesktopAndNarrowReview": true,
+    "syntheticProviderSavedOnce": true,
+    "noLiveCredentialInUiQualification": true
+  },
+  "providerProof": {
+    "nativeRuntime": "0.171.0",
+    "isolatedNativeResponsesProtocol": true,
+    "ownerExistingDeepSeekKeyConfigured": true,
+    "realDeepSeekTextCompleted": true,
+    "realDeepSeekReadOnlyToolCompleted": true,
+    "defaultOpenAiUnchanged": true,
+    "existingUserConversationsRetargeted": false
+  },
+  "publication": {
+    "workstation": "195 published and authenticated compatible metadata readback passed",
+    "macbook": "195 published and authenticated compatible metadata readback passed",
+    "announcement": "One updater announcement, accepted by FCM on the first attempt; physical handset installation not asserted"
+  },
+  "handoff": {
+    "status": "design and native protocol investigation; continuation UI not implemented",
+    "finding": "Raw native provider-changing fork forwarded opaque reasoning. Use fresh native destination with portable checkpoint and public transcript references.",
+    "reference": "../MODEL-PROVIDERS.md"
+  },
+  "retainedFailures": [
+    "Initial gateway activation exposed native daemon membership in the gateway cgroup. Runtime ownership was separated; a subsequent gateway reload preserved the original native process and pairings.",
+    "Reading journey exposed off-main lifecycle observer disposal. Main-dispatcher registration and cleanup fixed the reproduced failure.",
+    "Combined context/apps/plugins/auth/reload journey exceeded its fixed three-minute runner budget while progressing. Its overall bound is now ten minutes, retaining per-assertion bounds; the unchanged APK passed.",
+    "Supplemental optimized review encountered an Android/QEMU graphics-pipe stall. App and System UI evidence was retained; the same APK passed provider review after the owned emulator recovered.",
+    "Supplemental review initially looked in the global settings drawer. The corrected real route Find to New task to Manage providers passed without product source changes."
+  ],
+  "limits": [
+    "Provider setup qualified on native0.171.0; Mac native0.163 reports unavailable without an unrequested daemon upgrade.",
+    "Provider selection applies to new sessions; no cross-provider handoff UI yet.",
+    "Physical phone install/rendering and handset audio remain separate from emulator/native account audio evidence.",
+    "One low dependency advisory remains; no moderate/high/critical audit finding.",
+    "Clean gallery review assets staged; main index rebuild blocked by an unrelated pre-existing missing poster."
+  ]
+}

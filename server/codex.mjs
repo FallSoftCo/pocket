@@ -8,8 +8,8 @@ import {createInterface} from 'node:readline';
 import {codexConnectionError,isServerDraining,isHistoryLineageError,historyLineageError} from './connection-errors.mjs';
 
 export class Codex extends EventEmitter {
-  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null}={}) {
-    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;
+  constructor(socket = process.env.CODEX_SOCKET || `${process.env.CODEX_HOME || homedir() + '/.codex'}/app-server-control/app-server-control.sock`,{maxPayload=100*1024*1024,command=null,processCwd=undefined,managedStart=null,requestTimeoutMs=25000}={}) {
+    super(); this.socket = socket; this.processCwd=processCwd; this.command=command||parseCommand(process.env.POCKET_CODEX_COMMAND);this.managedRecovery=new ManagedDaemonRecovery(managedStart);this.pending = new Map(); this.seq = 1; this.ready = false;this.maxPayload=maxPayload;this.problem=null;this.requestTimeoutMs=requestTimeoutMs;
   }
   executionOptions(){
     const sandbox=process.env.POCKET_CODEX_SANDBOX,approvalPolicy=process.env.POCKET_CODEX_APPROVAL_POLICY;
@@ -87,13 +87,26 @@ export class Codex extends EventEmitter {
   }
   // Explicit native mutation lifetime is distinct from the caller's ordinary 25 s wait.
   // Native globally serializes these writes: retain at most one original reply.
-  operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation);}
+  operationCapacityAvailable(){return ![...this.pending.values()].some(p=>p.operation&&!['turn/start','turn/steer'].includes(p.method));}
   callOperation(method,params,onOutcome){
     if(!['plugin/install','plugin/uninstall','mcpServer/oauth/login','config/mcpServer/reload'].includes(method)||typeof onOutcome!=='function'||!this.operationCapacityAvailable())return Promise.reject(Error('Native operation observation is unavailable.'));
     return this.callPending(method,params,onOutcome);
   }
   call(method,params={}){return this.callPending(method,params);}
-  callPending(method,params,onOutcome=null){
+  // A bounded owned background worker waits for the ORIGINAL lifecycle outcome.
+  // Its display deadline is not permission to forget a successful late start.
+  callWorker(method,params){
+    if(!['thread/start','thread/unsubscribe','thread/archive','thread/delete','turn/start','turn/interrupt'].includes(method)||[...this.pending.values()].filter(p=>p.operation).length>=4)return Promise.reject(Error('Worker lifecycle capacity unavailable.'));
+    return this.callPending(method,params,()=>{},true);
+  }
+  // Keep observing the original mutation after the UI deadline. A late native
+  // acknowledgement is authoritative; a second turn submission is not recovery.
+  callTurn(method,params,onOutcome){
+    if(!['turn/start','turn/steer'].includes(method)||typeof onOutcome!=='function')throw Error('Invalid observed turn mutation.');
+    if([...this.pending.values()].filter(p=>p.operation).length>=64)return Promise.reject(codexConnectionError('CODEX_UNAVAILABLE'));
+    return this.callPending(method,params,onOutcome);
+  }
+  callPending(method,params,onOutcome=null,waitForOutcome=false){
     return new Promise((resolve,reject)=>{
       const observe=outcome=>{if(onOutcome)try{onOutcome(outcome);}catch{console.error('CODEX_OPERATION_RECEIPT_UPDATE_FAILED');}};
       const rejected=error=>{observe({error,terminal:!!error.rpc});reject(error);};
@@ -103,8 +116,10 @@ export class Codex extends EventEmitter {
         // UI expiry never cancels or resubmits an admitted mutation. Its one
         // observer remains until the original response or transport closure.
         if(!onOutcome)this.pending.delete(id);
-        reject(codexConnectionError('CODEX_TIMEOUT'));
-      },25000);
+        const error=Object.assign(codexConnectionError('CODEX_TIMEOUT'),{rpcMethod:method});
+        this.emit('rpcTimeout',{method,pending:this.pending.size,observedMutation:!!onOutcome});
+        if(!waitForOutcome)reject(error);
+      },this.requestTimeoutMs);
       this.pending.set(id,{resolve:result=>{observe({result,terminal:true});resolve(result);},reject:rejected,timer,method,operation:!!onOutcome});
       try{this.send({id,method,params});}catch(error){clearTimeout(timer);this.pending.delete(id);rejected(error);}
     });

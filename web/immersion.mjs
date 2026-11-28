@@ -5,6 +5,7 @@ import {clientURL} from './paths.mjs';
 export class ImmersionLayer {
  constructor(api,base,onStatus){Object.assign(this,{api,base,onStatus,enabled:false,phase:0,plans:new Map(),nodes:new Map(),submitted:new Map(),stable:new WeakMap(),lastSubmitted:new Map(),lexicon:{},epoch:performance.now()});
   this.held=new Map();
+  this.phraseChoices=new Map();
   this.observer=new MutationObserver(records=>{if(records.some(r=>!r.target.parentElement?.closest('.immersion-stack')&&![...r.addedNodes].every(n=>n.nodeType===1&&n.classList.contains('immersion-stack'))))this.schedule();});
   this.observer.observe(document.body,{childList:true,subtree:true});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')this.schedule();});
   fetch(clientURL(base,'interface-grammar.json')).then(r=>r.json()).then(v=>{this.lexicon=v;this.schedule();}).catch(()=>{});
@@ -32,8 +33,13 @@ export class ImmersionLayer {
    if(!pair){element.dataset.immersionCoverage="incomplete";const now=performance.now(),prior=this.stable.get(element);if(!prior||prior.source!==source){this.stable.set(element,{source,at:now});setTimeout(()=>this.schedule(),800);continue;}if(now-prior.at<750)continue;const box=element.getBoundingClientRect();if(box.bottom>0&&box.top<innerHeight&&this.submitted.get(source)!==true){const id=element.dataset.immersionId||'web-label/'+source.slice(0,140);if(now-(this.lastSubmitted.get(id)||-Infinity)<15000){setTimeout(()=>this.schedule(),15000);continue;}this.lastSubmitted.set(id,now);sources.push({id,text:source,kind:element.classList.contains('body')?'message':'ui'});if(sources.length===24)break;}continue;}
    element.dataset.immersionCoverage=pair.eligible===pair.distinct?"paired":"identity-review";
    const identity=element.dataset.immersionId||source,phase=this.held.get(identity)??this.phase;
+   // Bind manual language choices to exact content/alignment, not recycled DOM
+   // nodes. An edited message or replacement plan cannot inherit stale offsets.
+   const choiceKey=JSON.stringify([identity,source,pair.slots.map(u=>[u.target,u.meaning])]);
+   const choices=this.phraseChoices.get(choiceKey)||new Map();
+   const onChoice=()=>{this.phraseChoices.delete(choiceKey);this.phraseChoices.set(choiceKey,choices);while(this.phraseChoices.size>256)this.phraseChoices.delete(this.phraseChoices.keys().next().value);};
    const stack=document.createElement('span');stack.className='immersion-stack';stack.dataset.flipPhase=String(phase);stack.dataset.flipEligible=String(pair.eligible);stack.dataset.flipDistinct=String(pair.distinct);
-   const current=document.createElement('span');current.className='immersion-current';const rich=element.classList.contains('body'),resolveUrl=element._resolveUrl||((url)=>url);const render=value=>{if(rich)return richText(value,resolveUrl);const fragment=document.createDocumentFragment();fragment.append(document.createTextNode(value));return fragment;};const slots=phraseSlots(pair,phase,render,{interactive:!element.closest('button,a,label,summary,[role=button]')});current.append(slots.root);stack.append(current);element.replaceChildren(stack);element.dataset.immersionManaged='true';
+   const current=document.createElement('span');current.className='immersion-current';const rich=element.classList.contains('body'),resolveUrl=element._resolveUrl||((url)=>url);const render=value=>{if(rich)return richText(value,resolveUrl);const fragment=document.createDocumentFragment();fragment.append(document.createTextNode(value));return fragment;};const slots=phraseSlots(pair,phase,render,{interactive:!element.closest('button,a,label,summary,[role=button]'),choices,onChoice});current.append(slots.root);stack.append(current);element.replaceChildren(stack);element.dataset.immersionManaged='true';
    this.nodes.set(element,{identity,source,pair,current,stack,rich,phase,slots,resolveUrl});
   }
   if(sources.length){sources.forEach(s=>this.submitted.set(s.text,true));try{this.accept(await this.api('/api/immersion/v2/translate',{sources}));}catch(e){this.onStatus('Immersion waiting · '+e.message);}}

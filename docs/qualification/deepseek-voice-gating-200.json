@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "date": "2026-11-22",
+  "requirement": "DeepSeek environments must remain usable for typed coordinator and session control while hiding voice capture, playback and hardware volume-key capture, instead of showing controls that fail with VOICE_UNAVAILABLE.",
+  "observedProblem": "Android 199 rendered voice controls on the DeepSeek environment; invoking them reached a 409 VOICE_UNAVAILABLE response because DeepSeek has no Realtime audio implementation in NextComp.",
+  "android": {
+    "versionCode": 200,
+    "versionName": "0.5.0-alpha.182",
+    "publicSignerSha256": "b28f55b44c9300b10db340e0c7cabfb90c0980713da9bac82324dfbf6013ccbf",
+    "publicApkSha256": "8d2fcf7c427fc94ca4b39bb01fa4edeaddb5bef68b6e7eb6f315fad1515bf0c5",
+    "phoneCompatibleSignerSha256": "22ecabe28e15be3b5ce9b718c8d85932d9d4855506f215a29d3828d2304c6f31",
+    "phoneCompatibleApkSha256": "2fd121250761518d3e715f3c9b62277e61b79df539e1486802d922c94a45ebbb",
+    "qualificationApkSha256": "1a30ec05dc97d77db607271573f32f4b188b05c1e8824c2c684f74902045d6f9",
+    "testApkSha256": "853b8bf8d6b70b5647409a5ab9f4cd5103165bfe8b6762eca9d2c1bb9a55fd58",
+    "productionSourceSha": "6b1bb3fb9b896934bc45f0106c353cd665d14fbe181d3d1a35afdacaab7b8c90",
+    "qualificationInputSha": "9bddc57f7646eddb8eda04c4644c29262497b695fffe48d1d04d82862dd43b2b",
+    "policySha": "6a56ef93d5bd03a412d51f3b38776c47d698e375248e48f3bd0af097381e00ee"
+  },
+  "implementation": [
+    "The backend derives a provider-scoped voice availability projection from the active provider; DeepSeek reports input=false, output=false and an explicit text-only reason.",
+    "Android stores that capability per paired environment and hides microphone, speech playback, Listen controls and coordinator speech controls when either input or output is unavailable.",
+    "Hardware volume-key capture is ineligible when voice is unavailable while an already-active capture can still be stopped or cancelled.",
+    "Coordinator text remains available and continues to resolve the hidden native session from the environment provider and model instead of a client model argument.",
+    "The DeepSeek footer continues to show account balance and observed conversation token usage without substituting the stock ChatGPT allowance meter."
+  ],
+  "releasePolicy": {
+    "qualification": "codex-only-upgrade-canonical-history-and-deepseek-voice-gating",
+    "requiredNativeCases": 22,
+    "optimizedReview": "native-codex-catalog-and-history",
+    "excludedCase": "co.fallsoft.pocket.CoordinatorNativeAudioLiveTest#liveInputFinalizesAndOutputPlaysBeforeCompleteBuffer",
+    "exclusionReason": "The retained ChatGPT account returned its provider usage limit until 2026-11-26 07:07 America/New_York before any model or audio work. The stock OpenAI Realtime case is not certified by v200; existing OpenAI voice code was not removed and DeepSeek remains text-only."
+  },
+  "verification": {
+    "nodeSuite": {
+      "tests": 835,
+      "failed": 0,
+      "skipped": 2,
+      "total": 837
+    },
+    "androidUnit": {
+      "debug": {
+        "tests": 494,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      "release": {
+        "tests": 494,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      }
+    },
+    "native": {
+      "requiredCasesPassed": 22,
+      "requiredCasesTotal": 22,
+      "state": "complete",
+      "emulator": "emulator-5620 / nextcomp_env_qa",
+      "phoneTouched": false
+    },
+    "optimizedReview": {
+      "state": "complete",
+      "apkSha256": "2fd121250761518d3e715f3c9b62277e61b79df539e1486802d922c94a45ebbb",
+      "observations": {
+        "codexCatalogDrawn": true,
+        "canonicalPairOrder": true,
+        "reopenOriginalPairExactlyOnce": true,
+        "questionSkipOnce": true,
+        "optimizedPayloadVerified": true,
+        "catalogSnapshotStable": true
+      },
+      "artifacts": [
+        {
+          "path": "optimized-native-catalog.png",
+          "sha256": "54438fc020f2e39d42c67af81060add0c4c009c6abeec4b0ca8d268779540daa"
+        },
+        {
+          "path": "optimized-native-canonical.png",
+          "sha256": "6aa97c341199843dafbb0b59e186a2478c486160eb7fd2407a27fd68b7386e75"
+        }
+      ],
+      "visualLimit": "Synthetic fixture and software emulator; no physical-phone rendering, audio or haptic observation."
+    },
+    "liveDeepSeekCapabilities": {
+      "linux": {
+        "version": "0.5.0-alpha.182",
+        "voiceAvailable": false,
+        "voiceInput": false,
+        "voiceOutput": false,
+        "providerUsageAvailable": true,
+        "providerUsageCurrency": "USD"
+      },
+      "macbook": {
+        "version": "0.5.0-alpha.182",
+        "voiceAvailable": false,
+        "voiceInput": false,
+        "voiceOutput": false,
+        "providerUsageAvailable": true,
+        "providerUsageCurrency": "USD"
+      }
+    }
+  },
+  "delivery": {
+    "publishedFeeds": [
+      "/home/ai/Development/codex-pocket/data/app-updates",
+      "/home/ai/.local/share/nextcomp-deepseek/data/app-updates",
+      "/Users/Apple/.local/share/nextcomp-stock/data/app-updates",
+      "/Users/Apple/.local/share/nextcomp-deepseek/data/app-updates"
+    ],
+    "authenticatedMetadataReadback": "200 available with both exact public and phone-compatible APK hashes on all four feeds",
+    "announcement": {
+      "notificationId": 3172,
+      "announced": 1,
+      "channel": "stock notifier with the registered phone push token",
+      "deliveryState": "accepted_by_fcm"
+    },
+    "phoneStaging": {
+      "path": "/storage/emulated/0/Download/nextcomp-200-deepseek-text-only.apk",
+      "sha256": "2fd121250761518d3e715f3c9b62277e61b79df539e1486802d922c94a45ebbb",
+      "size": 52980627,
+      "installationVerified": false
+    }
+  },
+  "limits": [
+    "v200 does not certify stock OpenAI Realtime audio or the account's Realtime entitlement because provider quota blocked that case before model/audio work.",
+    "The optimized review covers the Codex catalog/history path on a synthetic fixture; the DeepSeek text-only suppression is additionally covered by provider-capability tests and live backend readback, not by a DeepSeek-specific handset screenshot.",
+    "The phone-compatible APK was staged over Termux shared storage and its hash verified; installation and on-device FCM banner display remain unverified.",
+    "DeepSeek balance is account-wide API credit, while token totals are per-conversation Codex observations; neither is stock ChatGPT allowance or account-wide token spend."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "versionCode": 197,
+  "versionName": "0.5.0-alpha.179",
+  "date": "2026-11-20",
+  "state": "published-both-android-channels-and-live-web",
+  "androidSourceCommit": "4c48275d",
+  "webSourceCommit": "8084f05bad8e6ba19d2755d3353e584a30d167e0",
+  "productionSourceSha": "b9445d3152dd18cdcb0b678ec244db3c1ea790ba1ab2998698f79551dee5c887",
+  "qualificationInputSha": "f207764e18a3c760e453c871e9ff2c1924982991878d5599851ca0fc4d3565a9",
+  "phoneCompatibleApkSha256": "d78fdc6fa194e64065b7915389d002057be0397cd620939f06292e59c83f9c57",
+  "native": {
+    "completedRequiredCases": 23,
+    "allPassed": true,
+    "overflow": [
+      "long diagnostic",
+      "multiline",
+      "unbroken token",
+      "both immersion language forms",
+      "normal and doubled font size",
+      "adjacent action remains usable"
+    ],
+    "optimized": "Exact phone-compatible signed APK catalog/history/reopen/question journey passed; screenshots optically reviewed",
+    "audio": "Actual account audio passed with isolated same-version Codex transport; not shared runtime health or physical microphone proof"
+  },
+  "web": {
+    "releaseDigest": "0a6e87884c123ab68cd878ea1f580dace74d43fd64ec1adb20666a2e5f0a9681",
+    "renderedChecks": [
+      "Desktop English two-line ellipsis",
+      "Narrow enlarged Italian and English bounded previews",
+      "Adjacent card click and language switch"
+    ],
+    "priorConnectionsAndBackendPreserved": true
+  },
+  "delivery": {
+    "channels": [
+      "workstation",
+      "Mac"
+    ],
+    "authenticatedExactApkReadbacks": true,
+    "announcementId": 3126,
+    "announcements": 1,
+    "phoneInstalled": null
+  },
+  "limits": [
+    "No physical-phone install or current-device visual claim",
+    "Web gateway serves the additional noninteractive-label wrapping refinement; Android pinned qualification input is retained separately",
+    "Existing active web pages need a reload for the CSS update"
+  ]
+}

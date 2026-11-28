@@ -37,14 +37,14 @@ export function validateVoiceAudio(audio){
   if(!Buffer.isBuffer(audio)||audio.length<3244||audio.length>MAX_RECORDING_WAV_BYTES||audio.toString('ascii',0,4)!=='RIFF'||audio.toString('ascii',8,12)!=='WAVE'||audio.toString('ascii',12,16)!=='fmt '||audio.readUInt32LE(16)!==16||audio.readUInt16LE(20)!==1||audio.readUInt16LE(22)!==1||audio.readUInt32LE(24)!==16000||audio.readUInt16LE(34)!==16||audio.toString('ascii',36,40)!=='data'||audio.readUInt32LE(40)!==audio.length-44||audio.readUInt32LE(4)!==audio.length-8||audio.length%2)throw fail('Record between 0.1 and 600 seconds of mono 16 kHz speech.');
 }
 export class VoiceController {
-  constructor({db,codex,api,transcribe,cwd,host,catchup=null,hidden=()=>false,reports=null}){
-    Object.assign(this,{db,codex,api,transcribe,cwd,host,catchup,hidden,reports});this.starting=new Map();this.active=new Map();this.resumed=new Set();this.queueing=new Set();
+  constructor({db,codex,api,transcribe,cwd,host,catchup=null,hidden=()=>false,reports=null,provider=null}){
+    Object.assign(this,{db,codex,api,transcribe,cwd,host,catchup,hidden,reports,provider});this.starting=new Map();this.active=new Map();this.resumed=new Set();this.queueing=new Set();
     db.exec(`CREATE TABLE IF NOT EXISTS voice_sessions(device TEXT PRIMARY KEY,thread_id TEXT,selected TEXT,full INTEGER NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS voice_turns(device TEXT,id TEXT,hash TEXT,state TEXT,transcript TEXT,response TEXT,error TEXT,actions TEXT DEFAULT '[]',created_at INTEGER,PRIMARY KEY(device,id));
       CREATE TABLE IF NOT EXISTS voice_calls(device TEXT,turn_id TEXT,call_id TEXT,state TEXT,result TEXT,PRIMARY KEY(device,turn_id,call_id));
       CREATE TABLE IF NOT EXISTS voice_retired_controllers(thread_id TEXT PRIMARY KEY,device TEXT NOT NULL,reason TEXT NOT NULL,created_at INTEGER NOT NULL);`);
     const sessionColumns=db.prepare('PRAGMA table_info(voice_sessions)').all().map(c=>c.name);
-    for(const [name,definition] of [['focus',"TEXT NOT NULL DEFAULT 'coordinator'"],['refs',"TEXT NOT NULL DEFAULT '[]'"],['proactive',"INTEGER NOT NULL DEFAULT 0"],['tool_revision','INTEGER NOT NULL DEFAULT 0'],['selected_environment','TEXT'],['tool_contract','TEXT']])if(!sessionColumns.includes(name))db.exec(`ALTER TABLE voice_sessions ADD COLUMN ${name} ${definition}`);
+    for(const [name,definition] of [['focus',"TEXT NOT NULL DEFAULT 'coordinator'"],['refs',"TEXT NOT NULL DEFAULT '[]'"],['proactive',"INTEGER NOT NULL DEFAULT 0"],['tool_revision','INTEGER NOT NULL DEFAULT 0'],['selected_environment','TEXT'],['tool_contract','TEXT'],['coordinator_provider','TEXT'],['coordinator_model','TEXT']])if(!sessionColumns.includes(name))db.exec(`ALTER TABLE voice_sessions ADD COLUMN ${name} ${definition}`);
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='speech_error'))db.exec('ALTER TABLE voice_turns ADD COLUMN speech_error TEXT');
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='origin'))db.exec('ALTER TABLE voice_turns ADD COLUMN origin TEXT');
     if(!db.prepare('PRAGMA table_info(voice_turns)').all().some(c=>c.name==='correction'))db.exec('ALTER TABLE voice_turns ADD COLUMN correction TEXT');
@@ -73,18 +73,52 @@ export class VoiceController {
     if(value.environmentId!==undefined&&(typeof value.environmentId!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(value.environmentId)))throw fail('Invalid voice environment.');
     return {backend:'stock-codex-voice',version:1,focus:value.focus,selected,full:value.full,...(value.focus!=='coordinator'&&value.environmentId?{environmentId:value.environmentId}:{})};
   }
+  async coordinatorSelection(){
+    if(!this.provider)return null;
+    const value=await this.provider({cwd:this.cwd});
+    if(!value)return null;
+    const providerId=value.providerId;
+    if(typeof providerId!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(providerId))throw fail('The coordinator provider selection is invalid.',500);
+    const model=typeof value.model==='string'&&value.model.trim()?value.model.trim():null;
+    if(model&&!/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,159}$/.test(model))throw fail('The coordinator model selection is invalid.',500);
+    if(providerId!=='openai'&&!model)throw fail('Choose a model for the coordinator provider.',500);
+    return {providerId,model,allowProviderModelFallback:false};
+  }
+  storedSelectionMatches(s,selection){return !selection||(s.coordinator_provider===selection.providerId&&(s.coordinator_model||null)===(selection.model||null));}
+  nativeSelectionMatches(thread,selection){return !selection||(thread?.modelProvider===selection.providerId&&(!selection.model||thread?.model===selection.model));}
   async ensure(device){
     if(this.starting.has(device))return this.starting.get(device);
     const work=(async()=>{await this.codex.connect();let s=this.session(device);
       if(!s){this.db.prepare('INSERT INTO voice_sessions(device) VALUES(?)').run(device);s=this.session(device);}
-      if(s.thread_id&&s.tool_contract===VOICE_TOOL_CONTRACT&&!this.resumed.has(s.thread_id)){try{await this.codex.call('thread/resume',{threadId:s.thread_id,excludeTurns:true,sandbox:s.full?'danger-full-access':'read-only',approvalPolicy:'never',developerInstructions:VOICE_INSTRUCTIONS});}catch(e){if(!e.rpc||!/no rollout found|thread not found/i.test(e.message))throw e;this.db.prepare('INSERT OR IGNORE INTO voice_retired_controllers(thread_id,device,reason,created_at) VALUES(?,?,?,?)').run(s.thread_id,device,'missing',Date.now());this.db.prepare('UPDATE voice_sessions SET thread_id=NULL WHERE device=?').run(device);s=this.session(device);}}
-      if(!s.thread_id||s.tool_contract!==VOICE_TOOL_CONTRACT){
-        const previousId=s.thread_id||null;
-        // Never interrupt an existing native coordinator or any delegated work.
-        if(previousId){try{const old=await this.codex.call('thread/read',{threadId:previousId,includeTurns:false});if(old.thread?.id!==previousId)throw fail('The existing coordinator identity changed.',409);if(old.thread.status?.type==='active')throw fail('The coordinator is still working. Let it finish before upgrading its controls.',409);}catch(e){if(!e.rpc||!/no rollout found|thread not found/i.test(e.message))throw e;}}
+      const selection=await this.coordinatorSelection();
+      let previousId=s.thread_id||null,contractMatches=!!previousId&&s.tool_contract===VOICE_TOOL_CONTRACT,storedMatches=this.storedSelectionMatches(s,selection),oldThread=null;
+      if(previousId&&(!contractMatches||!storedMatches)){
+        try{const old=await this.codex.call('thread/read',{threadId:previousId,includeTurns:false});if(old.thread?.id!==previousId)throw fail('The existing coordinator identity changed.',409);oldThread=old.thread;}
+        catch(e){
+          if(!e.rpc||!/no rollout found|thread not found/i.test(e.message))throw e;
+          this.db.prepare('INSERT OR IGNORE INTO voice_retired_controllers(thread_id,device,reason,created_at) VALUES(?,?,?,?)').run(previousId,device,'missing',Date.now());
+          this.db.prepare('UPDATE voice_sessions SET thread_id=NULL WHERE device=? AND thread_id=?').run(device,previousId);s=this.session(device);previousId=null;contractMatches=false;storedMatches=false;
+        }
+      }
+      const selectionMatches=!selection||storedMatches||this.nativeSelectionMatches(oldThread,selection);
+      // Never interrupt an existing native coordinator or any delegated work.
+      if(previousId&&oldThread?.status?.type==='active'&&!(contractMatches&&selectionMatches))throw fail('The coordinator is still working. Let it finish before upgrading its controls.',409);
+      if(previousId&&contractMatches&&selectionMatches){
+        if(!storedMatches)this.db.prepare('UPDATE voice_sessions SET coordinator_provider=?,coordinator_model=? WHERE device=? AND thread_id=?').run(selection.providerId,selection.model||null,device,previousId);
+        if(!this.resumed.has(previousId)){
+          try{await this.codex.call('thread/resume',{threadId:previousId,excludeTurns:true,sandbox:s.full?'danger-full-access':'read-only',approvalPolicy:'never',developerInstructions:VOICE_INSTRUCTIONS});}
+          catch(e){
+            if(!e.rpc||!/no rollout found|thread not found/i.test(e.message))throw e;
+            this.db.prepare('INSERT OR IGNORE INTO voice_retired_controllers(thread_id,device,reason,created_at) VALUES(?,?,?,?)').run(previousId,device,'missing',Date.now());
+            this.db.prepare('UPDATE voice_sessions SET thread_id=NULL WHERE device=? AND thread_id=?').run(device,previousId);s=this.session(device);previousId=null;
+          }
+        }
+        if(previousId){this.resumed.add(previousId);return s;}
+      }
+      {
         let candidate;
         try{
-          const {thread}=await this.codex.call('thread/start',{cwd:this.cwd,sandbox:s.full?'danger-full-access':'read-only',approvalPolicy:'never',...newThreadComputerUseOptions(VOICE_INSTRUCTIONS),dynamicTools:[VOICE_TOOL],config:{'features.multi_agent':false}});candidate=thread.id;
+          const {thread}=await this.codex.call('thread/start',{cwd:this.cwd,...(selection?{modelProvider:selection.providerId,...(selection.model?{model:selection.model}:{}),allowProviderModelFallback:false}:{}),sandbox:s.full?'danger-full-access':'read-only',approvalPolicy:'never',...newThreadComputerUseOptions(VOICE_INSTRUCTIONS),dynamicTools:[VOICE_TOOL],config:{'features.multi_agent':false}});candidate=thread.id;
           this.db.prepare('INSERT OR IGNORE INTO voice_retired_controllers(thread_id,device,reason,created_at) VALUES(?,?,?,?)').run(candidate,device,'candidate',Date.now());
           await this.codex.call('thread/name/set',{threadId:candidate,name:'NextComp voice controller'});
           // Rehydrate a bounded recent checkpoint; history retrieves the complete journal.
@@ -102,7 +136,7 @@ export class VoiceController {
           this.db.exec('BEGIN IMMEDIATE');
           try{
             if(previousId)this.db.prepare('INSERT OR IGNORE INTO voice_retired_controllers(thread_id,device,reason,created_at) VALUES(?,?,?,?)').run(previousId,device,'superseded',Date.now());
-            const changed=this.db.prepare('UPDATE voice_sessions SET thread_id=?,tool_revision=?,tool_contract=? WHERE device=? AND thread_id IS ?').run(candidate,VOICE_TOOL_REVISION,VOICE_TOOL_CONTRACT,device,previousId);
+            const changed=this.db.prepare('UPDATE voice_sessions SET thread_id=?,tool_revision=?,tool_contract=?,coordinator_provider=?,coordinator_model=? WHERE device=? AND thread_id IS ?').run(candidate,VOICE_TOOL_REVISION,VOICE_TOOL_CONTRACT,selection?.providerId||null,selection?.model||null,device,previousId);
             if(!changed.changes)throw fail('The coordinator changed during its upgrade. Try again.',409);
             this.db.prepare('DELETE FROM voice_retired_controllers WHERE thread_id=?').run(candidate);
             this.db.exec('COMMIT');

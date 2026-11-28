@@ -66,7 +66,7 @@ let liveAudioPreferences;
 // All remaining cases use reviewed synthetic services.
 const teamCase=name==='co.fallsoft.pocket.TeamControlWorkflowNativeTest#existingAgentDisclosureOpensIndependentSessionAndKeepsPrivateRepliesScoped'||name.startsWith('co.fallsoft.pocket.RoomNavigationNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomRoutingNativeTest#')||name.startsWith('co.fallsoft.pocket.RoomVoiceNativeTest#');
 const voiceCase=name.startsWith('co.fallsoft.pocket.HollywoodVoiceKeysNativeTest#');
-const environmentCase=name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
+const environmentCase=name.startsWith('co.fallsoft.pocket.SettingsDrawerNativeTest#')||name.startsWith('co.fallsoft.pocket.UpdateOriginNativeTest#')||name.startsWith('co.fallsoft.pocket.EnvironmentIsolationNativeTest#');
 const canonicalCase=name.startsWith('co.fallsoft.pocket.QueuedMessagesNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeReadingParityNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeCanonicalTranscriptNativeTest#')||name.startsWith('co.fallsoft.pocket.NativeTranscriptStoreNativeTest#');
 const parityCase=name.startsWith('co.fallsoft.pocket.NativeParityControlsNativeTest#');
 const mixedCase=name.startsWith('co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#');
@@ -165,7 +165,10 @@ try{
   if(setup.status!==0||run(['exec-out','run-as','co.fallsoft.pocket','cat','shared_prefs/pocket.xml'])!==liveAudioPreferences)throw Error('Isolated audio preferences readback differs.');
  }
  receipt.qaRunId='release'+manifest.versionCode+'_'+crypto.randomUUID();persist();
- const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,...(parityCase?['-e','nativeParityFixture','loopback']:[]),'-e','qaRunId',receipt.qaRunId,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
+ // This combined context/apps/plugins/auth/reload journey contains multiple full
+ // workflows. Keep each UI assertion's 15s bound; give the complete journey a
+ // separate finite budget rather than killing it during a later healthy stage.
+ const r=spawnSync(adb,['-s',serial,'shell','am','instrument','-w','-e','class',name,'-e','qaAvdName',avdName,...(parityCase?['-e','nativeParityFixture','loopback']:[]),'-e','qaRunId',receipt.qaRunId,'co.fallsoft.pocket.test/androidx.test.runner.AndroidJUnitRunner'],{encoding:'utf8',env:childEnv,timeout:name==='co.fallsoft.pocket.NativeParityControlsNativeTest#contextRecoveryRevertAndSettingsPreserveDrafts'?600000:name==='co.fallsoft.pocket.HollywoodMixedCatalogNativeTest#hollywoodEntryRetainsMixedSourcesAndOriginalActionsThroughAnOutage'?300000:180000,maxBuffer:4*1024*1024});
  const output=(r.stdout||'')+(r.stderr||'');writeFileSync(join(directory,log),output,{flag:'wx',mode:0o600});receipt.logSha=fileSha(join(directory,log));receipt.exitCode=r.status;
  if(liveAudioCase){
   for(const artifact of ['coordinator-native-audio-live.json','coordinator-native-audio-diagnostics.json']){
