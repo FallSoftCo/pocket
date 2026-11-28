@@ -62,10 +62,4 @@ composition or layout. Decoding/prefetch runs asynchronously. Freshly decoded pa
 back to the static symbol. Motion pauses outside the resumed activity and when
 Android's animator duration scale is zero, including a live setting change.
 
-Author scenes as native Houdini Indie files. Model and package on OZZZ-OS and
-render on OZZZ-GPU-RENDER through guarded farm plans, with verified source hashes,
-RGBA masters and device telemetry. Retain native 3840-square masters and
-1920-square deliveries. Review real-size sheets, perspectives, lights, motion and
-native UI independently; a successful render is not a visual approval.
-
 Implementation references: [Android bitmap upload guidance](https://developer.android.com/topic/performance/vitals/render), [Bitmap.prepareToDraw](https://developer.android.com/reference/android/graphics/Bitmap#prepareToDraw()), and [Compose display frame clock](https://developer.android.com/reference/kotlin/androidx/compose/runtime/MonotonicFrameClock). These describe mechanisms; they do not establish our handset frame delivery.
