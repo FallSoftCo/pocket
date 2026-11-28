@@ -16,7 +16,7 @@
     "artifactSha256": "821007158ca4867974272c10913f76576c32846db7f9b7366962bc886207efd4",
     "system76": {
       "service": "nextcomp-deepseek.service",
-      "releasePath": "/home/ai/.local/share/nextcomp-federation-release-20261030-r01/releases/6dc3d63285c1b303b0367120e55f9e2d262c261c72b32904fe2101bd37396501",
+      "releasePath": "${PRIVATE_HOME}/.local/share/nextcomp-federation-release-20261030-r01/releases/6dc3d63285c1b303b0367120e55f9e2d262c261c72b32904fe2101bd37396501",
       "health": "ok",
       "providerUsageAvailable": true,
       "providerUsageCurrency": "USD",
@@ -51,8 +51,8 @@
     "size": 52980623,
     "build": "optimized release signed for the existing phone-compatible identity",
     "publishedFeeds": [
-      "/home/ai/Development/codex-pocket/data/app-updates",
-      "/home/ai/.local/share/nextcomp-deepseek/data/app-updates",
+      "${PRIVATE_HOME}/Development/codex-pocket/data/app-updates",
+      "${PRIVATE_HOME}/.local/share/nextcomp-deepseek/data/app-updates",
       "/Users/Apple/.local/share/nextcomp-stock/data/app-updates",
       "/Users/Apple/.local/share/nextcomp-deepseek/data/app-updates"
     ],

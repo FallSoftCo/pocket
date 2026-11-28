@@ -102,8 +102,8 @@
   },
   "delivery": {
     "publishedFeeds": [
-      "/home/ai/Development/codex-pocket/data/app-updates",
-      "/home/ai/.local/share/nextcomp-deepseek/data/app-updates",
+      "${PRIVATE_HOME}/Development/codex-pocket/data/app-updates",
+      "${PRIVATE_HOME}/.local/share/nextcomp-deepseek/data/app-updates",
       "/Users/Apple/.local/share/nextcomp-stock/data/app-updates",
       "/Users/Apple/.local/share/nextcomp-deepseek/data/app-updates"
     ],

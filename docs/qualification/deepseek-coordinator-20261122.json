@@ -31,7 +31,7 @@
     "system76": {
       "service": "nextcomp-deepseek.service",
       "mainPid": 2762916,
-      "releasePath": "/home/ai/.local/share/nextcomp-federation-release-20261030-r01/releases/793c2ccb190f450baa14bdc8add74b2f1f8d4545894a20e5cb73c6a968d604e3",
+      "releasePath": "${PRIVATE_HOME}/.local/share/nextcomp-federation-release-20261030-r01/releases/793c2ccb190f450baa14bdc8add74b2f1f8d4545894a20e5cb73c6a968d604e3",
       "health": "ok",
       "stockMainPidBefore": 798947,
       "stockMainPidAfter": 798947,
