@@ -12,8 +12,6 @@ Selected canonical source bytes and prepared native packet bytes are different m
 
 ## Qualification and boundaries
 
-R340 used an API35 Android emulator on OZZZ-OS, actual paired NextComp gateway, Hollywood H126/schema40, connector SDK168 and immutable native R02. One newly provisioned agent's Reader, Writer and Responder made real gpt-6.1-sol/xhigh calls for a finite file task. The independently checked output matched the frozen 37-byte fixture, including its leading-zero identifier.
-
 The native Android journey selected that actual completed Work, prepared the native packet, approved it, observed an acknowledgement dropped after real upstream acceptance, retained the original pending operation across close/reopen and a second real environment, and resolved it by GET. The original Writer thread advanced from generation0 to1. The gateway trace contains one original task POST and one approval POST. The primary room draft survived; the other environment did not display the original review controls.
 
 The final original-operation journey passed after disclosed setup and test-tool corrections, not on the first attempt. Preserved evidence covers first-boot System UI ANR, setup readiness/journal-directory/Global-role corrections, a QA proxy gzip-header defect, the obsolete provider-override snippet, and accessibility navigation/scroll-helper corrections. No model output, canonical Work, task response or final artifact was replaced by the operator. A screenshot review found cramped cancellation text; the candidate now wraps action buttons as whole controls.
@@ -21,7 +19,3 @@ The final original-operation journey passed after disclosed setup and test-tool 
 The real model run was bounded to900 seconds and350000 reported uncached-input-plus-output tokens; workers and transparent provider observer were stopped at the deadline. The task used10 completed provider requests,63953 reported uncached-input-plus-output tokens, across all3 purposes. No post-refresh model inference is claimed by this Android run; earlier R338 contains separate real-model continuation evidence.
 
 Current application scope is **idle Writer only**. Active-turn refresh, Reader/Responder refresh, arbitrary native-action/whole-window marks, free-text seed editing and full provider-input token preview remain unfinished. This run does not qualify physical-phone delivery, push, provider audio, arbitrary enterprise installation or complete replacement of every Codex workflow. Existing phone profiles, live services, deliberate agent stops and the other owner's voice changes were preserved.
-
-Private evidence root on OZZZ-OS:
- /var/lib/lax-nextcomp-context-review-20261025-r340
-
