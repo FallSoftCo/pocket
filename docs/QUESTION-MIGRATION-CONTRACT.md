@@ -1,3 +1,14 @@
+<!-- retired-host-audit: historical-only; current-routing=workspace HOSTS.md -->
+> **Current host routing — 2026-11-26:** The former seven Hetzner compute hosts
+> are retired. Use the workspace HOSTS.md.
+> Production uses `fallsoft-production` and its five-product allowlist; LLedit
+> uses system76-pc. New Piratebae set media follows the native Mac workflow.
+> No replacement CGI farm is authorized. Host-specific commands, connection
+> examples and deployment assertions below that name retired infrastructure
+> are historical references, not current execution instructions. Preserve
+> deliberate stops, source identity and original receipts; do not mechanically
+> retarget old jobs, provisioners or stopped applications to the shared host.
+
 # Questions and session migration continuity
 
 Human room requirements652 and718 authorize native question answers and interface continuity during multihost migration. This source work does not authorize a live migration, service restart or handset installation. The existing115 r02 signed artifacts predate these changes and cannot qualify them.
