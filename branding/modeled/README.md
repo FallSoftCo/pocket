@@ -26,13 +26,6 @@ presented as an original NextComp brand mark. All other designs and builders are
 original to this brief. Dependencies are Houdini/Karma, OpenImageIO, NumPy,
 Pillow, FFmpeg and Zstandard; no third-party tutorial scene or stock model is used.
 
-Preparation and packaging run on OZZZ-OS; render jobs use Karma XPU on
-OZZZ-GPU-RENDER with CPU fallback disabled. Farm plans and runtime receipts bind
-actual Indie scenes, geometry, file checksums, RGBA dimensions and measured GPU
-activity. Square native masters retain the established 3840 × 3840 atlas aspect;
-1920 × 1920 derivatives and transparent app PNGs are separate deliveries.
-Temporary task volumes keep the farm's 35 GiB free-space guard intact.
-
 The look uses porcelain, teal, silver and graphite, with coral warning rims and
 gold pencil/bell details. Broad forms take priority over microdetail. The CGI
 library's source-grounded modeling packet and Pixar *Character Design: Visual
