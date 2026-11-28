@@ -66,19 +66,6 @@ Next acceptance gaps:
 - Keep documentation and deployment receipts current without rebuilding an
   unchanged artifact solely for documentation updates.
 
-## Verified progress
-
-- Alpha50/code68 installed in place on the Pixel. 271 Android tests and lint
-  pass. Canonical overlapping-page positions repaired without rolling back
-  newer live text or dropping loaded local history.
-- Additional backend defect reproduced with a synthetic interleaved stream:
-  deleting/reinserting updated items moved earlier messages after later tools.
-  Live release now replaces values without deleting their ordered key. Eight
-  targeted backend tests pass on OZZZ-OS, including byte-accounting validation.
-- Existing backend process predates the terminal-fork candidate now in this
-  checkout. Do not restart that checkout merely to load the ordering fix: stage
-  a narrow release against the actual deployed source and preserve active work.
-
 ## Operating rule
 
 Stored public reports do not wake workers. This UX audit does not authorize
@@ -88,15 +75,6 @@ completion requires direct evidence for each acceptance flow above.
 
 ## Narrow backend delivery — 2026-10-11
 
-Release d2ae39d is based on e713b61 with only timeline ordering and its test changed.
-423 tests pass on OZZZ-OS. Workstation service now loads the isolated release;
-shared private data remains in the original location. Before reload there were
-zero sending/queued messages, processing voice turns or creating sessions.
-Authenticated status is connected afterward, all grouped outgoing/voice/start
-receipt counts are unchanged, and original Codex daemon PID2213121 is alive.
-Pixel installed alpha50/code68 verified again. Live phone visual ordering remains
-unverified. Terminal-fork source and provider registration remain unactivated.
-
 - Further refresh-race reproduction and repair: a newer answer arriving during
   history fetch formerly survived at the front of the seeded cache, ahead of
   earlier user/tool rows. Release 6c7ba69 now rebuilds canonical snapshot order
@@ -104,17 +82,6 @@ unverified. Terminal-fork source and provider registration remain unactivated.
   pass on OZZZ; connected health, unchanged receipt counts and preserved Codex
   daemon verified after scoped reload. Available emulator 5587 identifies as
   another workload, so no shared emulator input/install was performed.
-
-## Native emulator qualification
-
-OZZZ-OS owned nextcomp_env_qa emulator5620 passed the extended native
-TranscriptRefreshNativeTest in17.733s. It verifies visible updating feedback,
-retained older history/cache/draft, no repeated-preview polling, chronological
-repair and preservation/display of newer text arriving during a history request.
-The fixture deliberately holds a refresh response until loading feedback is
-observed. Android permissions were pregranted only in the disposable emulator.
-This is the nonshrunk qualification variant, not proof of optimized-phone frame
-pacing, physical volume buttons, real provider transport or physical ordering.
 
 ## Outgoing action controls
 
@@ -332,13 +299,6 @@ recording transitions preserved drafts, silent capture errors stayed visible, an
 read freshness/error/retry checks passed. This resolves the earlier synthetic
 recording-visibility regression for this run; physical handset remains unqualified.
 
-Alpha54/code72 sourcee50c858 built both signed variants on OZZZ-OS;273unit
-tests per variant and both lints pass. Same-signed phone installation succeeded;
-package manager confirms72/alpha54. Private updater published both hash-verified
-variants, authenticated71-to72 metadata checked. No data clear/backend restart
-or worker wakeup. Physical scrolling/perceived smoothness remains unverified.
-Owned emulator5620 and fixture19998 stopped. Full UX goal remains open.
-
 ## Automatic short-page pacing
 
 Native before/after reproduction found the alpha54 loader initiated3older
@@ -409,28 +369,10 @@ to conversation/environment. Early/recent local anchors share the bounded wire
 budget; no role-based sorting/model calls. Compatibility paging uses stable
 item/turn boundaries when new output arrives.
 
-277 unit tests per signed variant and both builds/lints pass on OZZZ-OS. Full
-native freshness/keyboard/voice regression43.571s; in-flight preview case9.469s.
-Narrow backend6b7d307 (base4a81b84) passes431tests; full source459tests. Backend
-PID1598556 and original daemon2213121 preserved; delivery/recovery grouped counts
-unchanged. Real user-anchor-to-loaded-reply lookup passes144ms across4bounded
-requests; unauthenticated401/invalid-body400. Other environments/web gateways
-unchanged. Private updater hashes match both APKs; phone package independently
-confirms76/alpha58. Owned fixture/emulator stopped. See
-qualification/anchored-history-20261011.json.
-
 Remaining: exact physical causal pair/scrolling/frame pacing; cross-turn ordering
 and reconnect breadth; pathological gaps beyond bounded position search; other
 environment owning releases/browser parity; notification/audio and full immersion/
 accessibility audit. The quality goal is not complete.
-
-Alpha59 candidate: six native conversation-scope/freshness/history/voice checks pass
-on OZZZ-OS. Old scheduled reads no longer suppress new-chat refresh; background
-session events do not reload foreground history; hidden provider reads pause.
-Narrow backend5a1ada9 deployed with433tests and original daemon preserved.
-Routine detail excludes accepted receipts but durable lookup remains accepted.
-See qualification/conversation-refresh-scope-20261011.json for delivery status.
-Physical chronology/frame pacing and wider quality audit remain outstanding.
 
 Alpha59/code77 delivered in place; independent phone package confirmation.
 Both private updater variants validated. Physical transcript interaction remains
@@ -478,8 +420,6 @@ occlusion, precise material catch-up presentation, and existing full quality mat
 Alpha62/code80 is independently verified installed. Current alpha63 candidate adds source-bound typed reply journaling and safe receipt validation, identical-retyped-draft preservation, and live-activity history invalidation without inventory polling. Native live-activity case passes12.508s; repeated events cause no new reads. Current authenticated history read49ms; exact user stale viewport remains unobserved because Android system UI was foreground. Existing global footer labels still truncate at2x and remain an open ergonomics gap. Signed release/install and broad native regression are pending.
 
 Alpha63/code81 delivered: one in-place install returned Success, independent package and installed base APK checksum match verified compatible build. Nine pairing/profile/draft preference hashes unchanged. Both authenticated updater signer variants verified. Signed285tests each/lints/builds pass; native history/keyboard/voice41.889s and source/failure/draft31.672s pass. Only owned emulator/fixture stopped; live backend and workers preserved. Exact physical stale viewport still unobserved; quality goal remains active.
-
-Alpha64 layout candidate: reviewed native captures at normal/1.3x/2x revealed clipped mic caption, unknown-quota text and compact Retry caption. Primary capture/keyboard now have whole tiles and vertical44dp icons with wrapping labels; compact capture uses a larger symbol without inner caption. Unknown quota uses dash plus full accessibility state; cached Italian update/capture labels use existing inline transitions. Native28.599s direct capture/IME/draft/volume/settings and15.683s coordinator Italian/IME/source checks pass. Long capture errors now expand inline on tap, final qualification pending. All app compilation continues on OZZZ-OS. Physical large-text/key presses remain unverified.
 
 Alpha65/code83 and alpha66/code84 delivered in place. Alpha65 extends retryable
 foreground history recovery beyond the quick retry budget; alpha66 repairs missed
