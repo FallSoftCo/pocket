@@ -16,17 +16,6 @@ of the official Codex circle-terminal mark. The latter is an OpenAI trademark,
 not an original NextComp mark: exact source SVG and publisher/package provenance
 are retained under `source/references/`.
 
-The GPU proof (960 square, 32 samples) was rendered on OZZZ-GPU-RENDER with Karma
-XPU, CPU fallback disabled and device evidence retained. It was visually reviewed
-before packaging on OZZZ-OS. Preview-derived 35 symbols and launcher bitmap
-are adequate for UI integration but are not native UHD delivery masters.
-
-An explicitly planned CPU compatibility pass supplies UI-sized animation and
-role glyphs while earlier shared GPU media work holds the exclusive lock. These
-are identified as CPU renders. OZZZ-OS outputs and Houdini temporary files use
-an isolated `/dev/shm/nextcomp-ui` directory because production disk free space
-fell below the render guard’s 35 GiB reserve; the guard was preserved.
-
 Native 3840 square RGBA masters, 1920 square HD derivatives and full native animation
 remain separate GPU production jobs. Preview gallery cards are marked
 `ready=false` and `finalReady=false` until reviewed deliveries exist.
