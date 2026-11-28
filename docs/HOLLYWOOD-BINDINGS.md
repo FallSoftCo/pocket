@@ -53,7 +53,6 @@ identity/state import, host enrollment and production cutover remain release
 gates. Native mode deliberately does not expose unsafe old routes to fill these
 gaps. No current production defaults, phone pairing or APK were changed.
 
-
 ## Canonical Android room controls
 
 `HollywoodClient` captures the paired endpoint, credential and installation/human
@@ -77,15 +76,6 @@ service for both directions. Manual reading disables automatic following. The
 Android projection preserves UUID identities and native execution attribution.
 Native mode avoids the old stock catalog/reply readers and uses Hollywood status
 for its authenticated transport handshake.
-
-A fresh bounded Android 35 emulator on OZZZ-OS ran against actual NextComp and
-PostgreSQL/Hollywood. It loaded a 125-message history, retained independent room
-drafts, submitted an explicit request, answered a real native LAX question, and
-expanded the resulting command. The same native turn wrote the exact answer to
-the workspace proof file. First-run notification setup, loopback routing and
-accessibility-tag failures were reconciled before the request was admitted.
-The worker, gateway and emulator were stopped after the finite proof. This is
-emulator evidence, not physical-phone, native voice/push or production cutover.
 
 ## Native notification reply qualification in alpha99
 
